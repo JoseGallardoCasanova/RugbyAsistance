@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Rugby Asistencia",
+    "slug": "rugby-attendance",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/logo_Old_Green.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a472a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.oldgreen.rugbyasistencia"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo_Old_Green.png",
+        "backgroundColor": "#1a472a"
+      },
+      "package": "com.oldgreen.rugbyasistencia"
+    },
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "19762a08-f396-41e1-b48c-6aa7b066951a"
+      }
+    }
+  }
+}
