@@ -16,16 +16,23 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.oldgreen.rugbyasistencia"
+      "bundleIdentifier": "com.oldgreen.rugbyasistencia",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_Old_Green.png",
         "backgroundColor": "#1a472a"
       },
-      "package": "com.oldgreen.rugbyasistencia"
+      "package": "com.oldgreen.rugbyasistencia",
+      "kotlinVersion": "1.9.25"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ],
     "extra": {
       "eas": {
         "projectId": "19762a08-f396-41e1-b48c-6aa7b066951a"

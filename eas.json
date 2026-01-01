@@ -8,18 +8,27 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_ANDROID_KOTLIN_VERSION": "1.9.25"
+        }
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_ANDROID_KOTLIN_VERSION": "1.9.25"
+        }
       }
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_ANDROID_KOTLIN_VERSION": "1.9.25"
+        }
       }
     }
   },

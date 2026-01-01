@@ -10,7 +10,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   isLoading: boolean;
-  usandoBD: boolean; // Indica si está usando BD o mock
+  usandoBD: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [usandoBD, setUsandoBD] = useState(false);
+  const [usandoBD, setUsandoBD] = useState(true);
 
   useEffect(() => {
     loadUser();
@@ -28,12 +28,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userJson = await AsyncStorage.getItem('currentUser');
       if (userJson) {
-        setUser(JSON.parse(userJson));
+        const loadedUser = JSON.parse(userJson);
+        console.log('📂 [AUTH] Usuario cargado de AsyncStorage:', loadedUser);
+        console.log('📂 [AUTH] role:', loadedUser.role);
+        console.log('📂 [AUTH] nombre:', loadedUser.nombre);
+        setUser(loadedUser);
       }
       
-      // Verificar si hay configuración de BD
-      const configJson = await AsyncStorage.getItem('google_sheets_config');
-      setUsandoBD(!!configJson);
+      setUsandoBD(true);
     } catch (error) {
       console.error('Error al cargar usuario:', error);
     } finally {
@@ -42,57 +44,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('🔐 Intentando login:', { email });
+    console.log('🔐 [AUTH] Intentando login:', { email });
     
     try {
-      // Intentar primero con la BD si está configurada
-      const configJson = await AsyncStorage.getItem('google_sheets_config');
+      console.log('📊 [AUTH] Intentando login con BD...');
+      const usuario = await DatabaseService.verificarCredenciales(email, password);
       
-      if (configJson) {
-        console.log('📊 Intentando login con BD...');
-        const usuarios = await DatabaseService.obtenerUsuarios();
+      // ✅ NUEVO: Logs de debug detallados
+      console.log('🔍 [AUTH] Usuario recibido de BD:', JSON.stringify(usuario, null, 2));
+      console.log('🔍 [AUTH] usuario.role =', usuario?.role);
+      console.log('🔍 [AUTH] usuario.nombre =', usuario?.nombre);
+      console.log('🔍 [AUTH] usuario.id =', usuario?.id);
+      
+      if (usuario) {
+        console.log('✅ [AUTH] Usuario encontrado en BD:', usuario.nombre);
+        console.log('💾 [AUTH] Guardando usuario en AsyncStorage...');
         
-        if (usuarios.length > 0) {
-          const foundUser = usuarios.find(
-            u => u.email === email && u.password === password && u.activo !== false
-          );
-
-          if (foundUser) {
-            console.log('✅ Usuario encontrado en BD:', foundUser.nombre, 'Rol:', foundUser.role);
-            await AsyncStorage.setItem('currentUser', JSON.stringify(foundUser));
-            setUser(foundUser);
-            setUsandoBD(true);
-            return true;
-          }
-        }
+        await AsyncStorage.setItem('currentUser', JSON.stringify(usuario));
+        
+        console.log('✅ [AUTH] Usuario guardado, actualizando estado...');
+        setUser(usuario);
+        setUsandoBD(true);
+        
+        console.log('✅ [AUTH] Estado actualizado, user.role =', usuario.role);
+        return true;
       }
       
-      // Fallback a datos mock
-      console.log('📝 Usando datos mock...');
+      console.log('⚠️ [AUTH] Usuario no encontrado en BD, intentando con mock...');
       const foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
 
       if (foundUser) {
-        console.log('✅ Usuario encontrado en mock:', foundUser.nombre, 'Rol:', foundUser.role);
+        console.log('✅ [AUTH] Usuario encontrado en mock:', foundUser.nombre);
         await AsyncStorage.setItem('currentUser', JSON.stringify(foundUser));
         setUser(foundUser);
         setUsandoBD(false);
         return true;
       }
 
-      console.log('❌ Credenciales inválidas');
+      console.log('❌ [AUTH] Credenciales inválidas');
       return false;
       
     } catch (error) {
-      console.error('❌ Error al hacer login:', error);
+      console.error('❌ [AUTH] Error al hacer login:', error);
       
-      // Fallback final a mock
+      console.log('⚠️ [AUTH] Error en BD, intentando con mock...');
       const foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
 
       if (foundUser) {
+        console.log('✅ [AUTH] Usuario encontrado en mock:', foundUser.nombre);
         await AsyncStorage.setItem('currentUser', JSON.stringify(foundUser));
         setUser(foundUser);
         setUsandoBD(false);
@@ -104,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    console.log('👋 Cerrando sesión');
+    console.log('👋 [AUTH] Cerrando sesión');
     await AsyncStorage.removeItem('currentUser');
     setUser(null);
   };
@@ -113,15 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
 
     const updatedUser = { ...user, ...updates };
-    console.log('📝 Actualizando usuario:', updates);
+    console.log('📝 [AUTH] Actualizando usuario:', updates);
     
-    // Si está usando BD, actualizar también en la BD
     if (usandoBD && user.id) {
       try {
         await DatabaseService.actualizarUsuario(user.id, updates);
-        console.log('✅ Usuario actualizado en BD');
+        console.log('✅ [AUTH] Usuario actualizado en BD');
       } catch (error) {
-        console.error('❌ Error al actualizar en BD:', error);
+        console.error('❌ [AUTH] Error al actualizar en BD:', error);
       }
     }
     

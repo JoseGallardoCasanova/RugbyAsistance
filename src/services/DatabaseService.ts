@@ -1,460 +1,470 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Jugador, Categoria } from '../types';
 
-const CACHE_KEY_USUARIOS = 'usuarios_cache';
-const CACHE_KEY_JUGADORES = 'jugadores_cache';
-const CACHE_KEY_CATEGORIAS = 'categorias_cache';
-const CONFIG_KEY = 'google_sheets_config';
-const CATEGORIAS_INITIALIZED_KEY = 'categorias_initialized';
+// ✅ URL HARDCODEADA - BASE DE DATOS
+const CONFIG = {
+  scriptUrlBD: 'https://script.google.com/macros/s/AKfycbxmASfJp4y8APYgLzFo72gTXAE0GKr2YFSOZLxRMnQkPAVbh0dkynbzpTeNUwxnMmy6HQ/exec',
+};
 
-// ✅ CATEGORÍAS POR DEFECTO (primera vez)
-const CATEGORIAS_DEFAULT: Omit<Categoria, 'id' | 'creadoEn' | 'modificadoEn'>[] = [
-  { numero: 1, nombre: 'Categoría 1', color: '#1a472a', activo: true },
-  { numero: 2, nombre: 'Categoría 2', color: '#2d5a3d', activo: true },
-  { numero: 3, nombre: 'Categoría 3', color: '#3f6d50', activo: true },
-  { numero: 4, nombre: 'Categoría 4', color: '#518063', activo: true },
-  { numero: 5, nombre: 'Categoría 5', color: '#639376', activo: true },
-  { numero: 6, nombre: 'Categoría 6', color: '#75a689', activo: true },
-  { numero: 7, nombre: 'Categoría 7', color: '#87b99c', activo: true },
-];
+// Cache keys
+const CACHE_KEYS = {
+  USUARIOS: '@usuarios_cache',
+  JUGADORES: '@jugadores_cache',
+  CATEGORIAS: '@categorias_cache',
+};
+
+// Mock data para desarrollo (solo se usa si falla la conexión)
+const MOCK_DATA = {
+  usuarios: [
+    {
+      id: 1,
+      email: 'admin@rugby.cl',
+      password: 'admin123',
+      nombre: 'Administrador',
+      role: 'admin',
+      activo: true
+    },
+  ],
+  jugadores: [],
+  categorias: [],
+};
+
+// ✅ NUEVO: Helper para normalizar campos de BD (Nombre → nombre)
+function normalizarCampos(obj: any): any {
+  if (!obj) return obj;
+  
+  const normalizado: any = {};
+  
+  for (const key in obj) {
+    // Convertir primera letra a minúscula
+    const keyNormalizada = key.charAt(0).toLowerCase() + key.slice(1);
+    normalizado[keyNormalizada] = obj[key];
+    
+    // Mapeos específicos
+    if (key === 'Rol') {
+      normalizado['role'] = obj[key]; // Rol → role
+    }
+    if (key === 'Numero') {
+      normalizado['numero'] = obj[key]; // Numero → numero
+    }
+  }
+  
+  return normalizado;
+}
 
 class DatabaseService {
-  private scriptUrlBD: string | null = null;
+  private scriptUrlBD: string = CONFIG.scriptUrlBD;
 
-  async loadConfig(): Promise<boolean> {
-    try {
-      const configJson = await AsyncStorage.getItem(CONFIG_KEY);
-      if (configJson) {
-        const config = JSON.parse(configJson);
-        this.scriptUrlBD = config.scriptUrlBD || null;
-        console.log('📊 URL de BD cargada:', this.scriptUrlBD ? 'Configurado' : 'No configurado');
-        return !!this.scriptUrlBD;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error al cargar config de BD:', error);
-      return false;
-    }
+  async initialize(): Promise<void> {
+    console.log('🚀 [BD] Inicializando DatabaseService con URL hardcodeada...');
+    this.scriptUrlBD = CONFIG.scriptUrlBD;
+    console.log(`✅ [BD] URL BD configurada: ${this.scriptUrlBD.substring(0, 50)}...`);
   }
 
-  // ==================== INICIALIZACIÓN DE CATEGORÍAS ====================
-
-  async inicializarCategoriasDefault(): Promise<void> {
-    try {
-      // Verificar si ya se inicializaron
-      const initialized = await AsyncStorage.getItem(CATEGORIAS_INITIALIZED_KEY);
-      if (initialized === 'true') {
-        console.log('✅ Categorías ya inicializadas previamente');
-        return;
-      }
-
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.log('⚠️ No hay URL de BD, guardando categorías en cache solamente');
-        await AsyncStorage.setItem(CACHE_KEY_CATEGORIAS, JSON.stringify(CATEGORIAS_DEFAULT));
-        await AsyncStorage.setItem(CATEGORIAS_INITIALIZED_KEY, 'true');
-        return;
-      }
-
-      console.log('🚀 Inicializando categorías por defecto...');
-
-      // Crear cada categoría
-      for (const cat of CATEGORIAS_DEFAULT) {
-        await this.crearCategoria(cat);
-      }
-
-      // Marcar como inicializado
-      await AsyncStorage.setItem(CATEGORIAS_INITIALIZED_KEY, 'true');
-      console.log('✅ Categorías inicializadas correctamente');
-    } catch (error) {
-      console.error('❌ Error al inicializar categorías:', error);
-    }
+  setScriptUrl(url: string): void {
+    console.log('💾 [BD] URL actualizada (solo en memoria)');
+    this.scriptUrlBD = url || CONFIG.scriptUrlBD;
   }
 
-  // ==================== USUARIOS ====================
-
-  async obtenerUsuarios(): Promise<User[]> {
+  private async makeRequest(action: string, data: any = {}): Promise<any> {
     try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.log('⚠️ No hay URL de BD configurada, usando cache');
-        return await this.obtenerDatosCache<User[]>(CACHE_KEY_USUARIOS) || [];
-      }
-
-      console.log('📥 Obteniendo usuarios de BD...');
-
+      console.log(`📤 [BD] Haciendo request: ${action}`);
+      console.log(`🔗 [BD] URL: ${this.scriptUrlBD.substring(0, 50)}...`);
+      console.log(`📦 [BD] Datos:`, JSON.stringify(data, null, 2));
+      
       const response = await axios.post(this.scriptUrlBD, {
-        action: 'getUsuarios'
+        action,
+        ...data,
+      }, {
+        timeout: 15000,
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
 
-      if (response.data.success && response.data.usuarios) {
-        await AsyncStorage.setItem(CACHE_KEY_USUARIOS, JSON.stringify(response.data.usuarios));
-        console.log(`✅ ${response.data.usuarios.length} usuarios obtenidos`);
-        return response.data.usuarios;
-      }
-
-      return [];
+      console.log(`✅ [BD] Response exitoso:`, JSON.stringify(response.data, null, 2));
+      return response.data;
     } catch (error: any) {
-      console.error('❌ Error al obtener usuarios:', error.message);
-      return await this.obtenerDatosCache<User[]>(CACHE_KEY_USUARIOS) || [];
+      console.error(`❌ [BD] Error en request ${action}:`);
+      console.error(`❌ [BD] Error message:`, error.message);
+      if (error.response) {
+        console.error(`❌ [BD] Error response:`, error.response.data);
+        console.error(`❌ [BD] Error status:`, error.response.status);
+      }
+      throw error;
     }
   }
 
-  async crearUsuario(usuario: Omit<User, 'id' | 'creadoEn' | 'modificadoEn'>): Promise<boolean> {
+  // ============================================
+  // USUARIOS
+  // ============================================
+
+  async verificarCredenciales(email: string, password: string): Promise<any> {
     try {
-      await this.loadConfig();
+      console.log(`🔐 [BD] Verificando credenciales para: ${email}`);
+      console.log(`🔗 [BD] Usando URL BD: ${this.scriptUrlBD.substring(0, 50)}...`);
 
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('➕ Creando usuario:', usuario.nombre);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'crearUsuario',
-        usuario: usuario
+      const response = await this.makeRequest('verificarCredenciales', {
+        email,
+        password,
       });
 
-      if (response.data.success) {
-        console.log('✅ Usuario creado');
-        await this.sincronizarDatos();
-        return true;
-      }
+      console.log(`📥 [BD] Response recibido:`, response);
 
-      return false;
+      if (response.success && response.usuario) {
+        // ✅ NUEVO: Normalizar campos antes de retornar
+        const usuarioNormalizado = normalizarCampos(response.usuario);
+        
+        console.log(`✅ [BD] Login exitoso desde GOOGLE SHEETS: ${usuarioNormalizado.nombre}`);
+        console.log(`👤 [BD] Usuario normalizado:`, usuarioNormalizado);
+        return usuarioNormalizado;
+      } else {
+        console.log(`❌ [BD] Login falló: ${response.error || 'Credenciales inválidas'}`);
+        return null;
+      }
     } catch (error: any) {
-      console.error('❌ Error al crear usuario:', error.message);
-      return false;
-    }
-  }
-
-  async actualizarUsuario(id: string, datos: Partial<User>): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
+      console.error(`❌ [BD] Error al verificar credenciales:`);
+      console.error(`❌ [BD] Error completo:`, error);
+      
+      console.log('⚠️ [BD] Intentando con datos MOCK...');
+      const usuario = MOCK_DATA.usuarios.find(
+        u => u.email === email && u.password === password && u.activo
+      );
+      
+      if (usuario) {
+        console.log(`✅ [MOCK] Login exitoso con usuario MOCK: ${usuario.nombre}`);
+        return usuario;
       }
-
-      console.log('✏️ Actualizando usuario:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'actualizarUsuario',
-        id: id,
-        datos: datos
-      });
-
-      if (response.data.success) {
-        console.log('✅ Usuario actualizado');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al actualizar usuario:', error.message);
-      return false;
-    }
-  }
-
-  async eliminarUsuario(id: string): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('🗑️ Eliminando usuario:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'eliminarUsuario',
-        id: id
-      });
-
-      if (response.data.success) {
-        console.log('✅ Usuario eliminado');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al eliminar usuario:', error.message);
-      return false;
-    }
-  }
-
-  // ==================== JUGADORES ====================
-
-  async obtenerJugadores(): Promise<Jugador[]> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.log('⚠️ No hay URL de BD configurada, usando cache');
-        return await this.obtenerDatosCache<Jugador[]>(CACHE_KEY_JUGADORES) || [];
-      }
-
-      console.log('📥 Obteniendo jugadores de BD...');
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'getJugadores'
-      });
-
-      if (response.data.success && response.data.jugadores) {
-        await AsyncStorage.setItem(CACHE_KEY_JUGADORES, JSON.stringify(response.data.jugadores));
-        console.log(`✅ ${response.data.jugadores.length} jugadores obtenidos`);
-        return response.data.jugadores;
-      }
-
-      return [];
-    } catch (error: any) {
-      console.error('❌ Error al obtener jugadores:', error.message);
-      return await this.obtenerDatosCache<Jugador[]>(CACHE_KEY_JUGADORES) || [];
-    }
-  }
-
-  async crearJugador(jugador: Omit<Jugador, 'id' | 'creadoEn' | 'modificadoEn'>): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('➕ Creando jugador:', jugador.nombre);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'crearJugador',
-        jugador: jugador
-      });
-
-      if (response.data.success) {
-        console.log('✅ Jugador creado');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al crear jugador:', error.message);
-      return false;
-    }
-  }
-
-  async actualizarJugador(id: string, datos: Partial<Jugador>): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('✏️ Actualizando jugador:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'actualizarJugador',
-        id: id,
-        datos: datos
-      });
-
-      if (response.data.success) {
-        console.log('✅ Jugador actualizado');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al actualizar jugador:', error.message);
-      return false;
-    }
-  }
-
-  async eliminarJugador(id: string): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('🗑️ Eliminando jugador:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'eliminarJugador',
-        id: id
-      });
-
-      if (response.data.success) {
-        console.log('✅ Jugador eliminado');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al eliminar jugador:', error.message);
-      return false;
-    }
-  }
-
-  // ==================== CATEGORÍAS ====================
-
-  async obtenerCategorias(): Promise<Categoria[]> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.log('⚠️ No hay URL de BD configurada, usando cache');
-        const cached = await this.obtenerDatosCache<Categoria[]>(CACHE_KEY_CATEGORIAS);
-        if (cached && cached.length > 0) return cached;
-        // Si no hay cache, inicializar
-        await this.inicializarCategoriasDefault();
-        return await this.obtenerDatosCache<Categoria[]>(CACHE_KEY_CATEGORIAS) || [];
-      }
-
-      console.log('📥 Obteniendo categorías de BD...');
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'getCategorias'
-      });
-
-      if (response.data.success && response.data.categorias) {
-        await AsyncStorage.setItem(CACHE_KEY_CATEGORIAS, JSON.stringify(response.data.categorias));
-        console.log(`✅ ${response.data.categorias.length} categorías obtenidas`);
-        return response.data.categorias;
-      }
-
-      // Si no hay categorías en BD, inicializar
-      await this.inicializarCategoriasDefault();
-      return await this.obtenerDatosCache<Categoria[]>(CACHE_KEY_CATEGORIAS) || [];
-    } catch (error: any) {
-      console.error('❌ Error al obtener categorías:', error.message);
-      const cached = await this.obtenerDatosCache<Categoria[]>(CACHE_KEY_CATEGORIAS);
-      if (cached && cached.length > 0) return cached;
-      // Si falla todo, inicializar
-      await this.inicializarCategoriasDefault();
-      return await this.obtenerDatosCache<Categoria[]>(CACHE_KEY_CATEGORIAS) || [];
-    }
-  }
-
-  async crearCategoria(categoria: Omit<Categoria, 'id' | 'creadoEn' | 'modificadoEn'>): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('➕ Creando categoría:', categoria.nombre);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'crearCategoria',
-        categoria: categoria
-      });
-
-      if (response.data.success) {
-        console.log('✅ Categoría creada');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al crear categoría:', error.message);
-      return false;
-    }
-  }
-
-  async actualizarCategoria(id: string, datos: Partial<Categoria>): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('✏️ Actualizando categoría:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'actualizarCategoria',
-        id: id,
-        datos: datos
-      });
-
-      if (response.data.success) {
-        console.log('✅ Categoría actualizada');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al actualizar categoría:', error.message);
-      return false;
-    }
-  }
-
-  async eliminarCategoria(id: string): Promise<boolean> {
-    try {
-      await this.loadConfig();
-
-      if (!this.scriptUrlBD) {
-        console.error('❌ No hay URL de BD configurada');
-        return false;
-      }
-
-      console.log('🗑️ Eliminando categoría:', id);
-
-      const response = await axios.post(this.scriptUrlBD, {
-        action: 'eliminarCategoria',
-        id: id
-      });
-
-      if (response.data.success) {
-        console.log('✅ Categoría eliminada');
-        await this.sincronizarDatos();
-        return true;
-      }
-
-      return false;
-    } catch (error: any) {
-      console.error('❌ Error al eliminar categoría:', error.message);
-      return false;
-    }
-  }
-
-  // ==================== SINCRONIZACIÓN ====================
-
-  async sincronizarDatos(): Promise<void> {
-    console.log('🔄 Sincronizando datos...');
-    await this.obtenerUsuarios();
-    await this.obtenerJugadores();
-    await this.obtenerCategorias();
-    console.log('✅ Sincronización completa');
-  }
-
-  async obtenerDatosCache<T>(key: string): Promise<T | null> {
-    try {
-      const data = await AsyncStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.error(`Error al obtener cache ${key}:`, error);
+      
+      console.log('❌ [MOCK] Usuario no encontrado en MOCK');
       return null;
     }
+  }
+
+  async obtenerUsuarios(): Promise<any[]> {
+    try {
+      console.log('📥 [BD] Obteniendo usuarios...');
+      
+      const response = await this.makeRequest('obtenerUsuarios');
+
+      if (response.success && response.usuarios) {
+        // ✅ NUEVO: Normalizar cada usuario
+        const usuariosNormalizados = response.usuarios.map(normalizarCampos);
+        
+        console.log(`✅ [BD] ${usuariosNormalizados.length} usuarios obtenidos de GOOGLE SHEETS`);
+        await AsyncStorage.setItem(CACHE_KEYS.USUARIOS, JSON.stringify(usuariosNormalizados));
+        return usuariosNormalizados;
+      }
+
+      const cached = await AsyncStorage.getItem(CACHE_KEYS.USUARIOS);
+      if (cached) {
+        console.log('📦 [CACHE] Usando usuarios de cache');
+        return JSON.parse(cached);
+      }
+
+      return [];
+    } catch (error: any) {
+      console.error('❌ [BD] Error al obtener usuarios:', error.message);
+      
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEYS.USUARIOS);
+        if (cached) {
+          console.log('📦 [CACHE] Usando usuarios de cache (error en BD)');
+          return JSON.parse(cached);
+        }
+      } catch {}
+
+      return [];
+    }
+  }
+
+  async crearUsuario(usuario: any): Promise<boolean> {
+    try {
+      console.log('➕ [BD] Creando usuario:', usuario.email);
+
+      const response = await this.makeRequest('crearUsuario', { usuario });
+
+      if (response.success) {
+        console.log('✅ [BD] Usuario creado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.USUARIOS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al crear usuario:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al crear usuario:', error.message);
+      return false;
+    }
+  }
+
+  async actualizarUsuario(id: number, cambios: any): Promise<boolean> {
+    try {
+      console.log(`✏️ [BD] Actualizando usuario ${id}`);
+
+      const response = await this.makeRequest('actualizarUsuario', {
+        id,
+        cambios,
+      });
+
+      if (response.success) {
+        console.log('✅ [BD] Usuario actualizado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.USUARIOS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al actualizar usuario:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al actualizar usuario:', error.message);
+      return false;
+    }
+  }
+
+  async eliminarUsuario(id: number): Promise<boolean> {
+    try {
+      console.log(`🗑️ [BD] Eliminando usuario ${id}`);
+
+      const response = await this.makeRequest('eliminarUsuario', { id });
+
+      if (response.success) {
+        console.log('✅ [BD] Usuario eliminado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.USUARIOS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al eliminar usuario:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al eliminar usuario:', error.message);
+      return false;
+    }
+  }
+
+  // ============================================
+  // JUGADORES
+  // ============================================
+
+  async obtenerJugadores(): Promise<any[]> {
+    try {
+      console.log('📥 [BD] Obteniendo jugadores...');
+
+      const response = await this.makeRequest('obtenerJugadores');
+
+      if (response.success && response.jugadores) {
+        // ✅ NUEVO: Normalizar cada jugador
+        const jugadoresNormalizados = response.jugadores.map(normalizarCampos);
+        
+        console.log(`✅ [BD] ${jugadoresNormalizados.length} jugadores obtenidos`);
+        await AsyncStorage.setItem(CACHE_KEYS.JUGADORES, JSON.stringify(jugadoresNormalizados));
+        return jugadoresNormalizados;
+      }
+
+      const cached = await AsyncStorage.getItem(CACHE_KEYS.JUGADORES);
+      if (cached) {
+        console.log('📦 [CACHE] Usando jugadores de cache');
+        return JSON.parse(cached);
+      }
+
+      return [];
+    } catch (error: any) {
+      console.error('❌ [BD] Error al obtener jugadores:', error.message);
+      
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEYS.JUGADORES);
+        if (cached) {
+          console.log('📦 [CACHE] Usando jugadores de cache (error en BD)');
+          return JSON.parse(cached);
+        }
+      } catch {}
+
+      return [];
+    }
+  }
+
+  async crearJugador(jugador: any): Promise<boolean> {
+    try {
+      console.log('➕ [BD] Creando jugador:', jugador.nombre);
+
+      const response = await this.makeRequest('crearJugador', { jugador });
+
+      if (response.success) {
+        console.log('✅ [BD] Jugador creado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.JUGADORES);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al crear jugador:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al crear jugador:', error.message);
+      return false;
+    }
+  }
+
+  async actualizarJugador(rut: string, cambios: any): Promise<boolean> {
+    try {
+      console.log(`✏️ [BD] Actualizando jugador ${rut}`);
+
+      const response = await this.makeRequest('actualizarJugador', {
+        rut,
+        cambios,
+      });
+
+      if (response.success) {
+        console.log('✅ [BD] Jugador actualizado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.JUGADORES);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al actualizar jugador:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al actualizar jugador:', error.message);
+      return false;
+    }
+  }
+
+  async eliminarJugador(rut: string): Promise<boolean> {
+    try {
+      console.log(`🗑️ [BD] Eliminando jugador ${rut}`);
+
+      const response = await this.makeRequest('eliminarJugador', { rut });
+
+      if (response.success) {
+        console.log('✅ [BD] Jugador eliminado exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.JUGADORES);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al eliminar jugador:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al eliminar jugador:', error.message);
+      return false;
+    }
+  }
+
+  // ============================================
+  // CATEGORÍAS
+  // ============================================
+
+  async obtenerCategorias(): Promise<any[]> {
+    try {
+      console.log('📥 [BD] Obteniendo categorías...');
+
+      const response = await this.makeRequest('obtenerCategorias');
+
+      if (response.success && response.categorias) {
+        // ✅ NUEVO: Normalizar cada categoría
+        const categoriasNormalizadas = response.categorias.map(normalizarCampos);
+        
+        console.log(`✅ [BD] ${categoriasNormalizadas.length} categorías obtenidas`);
+        await AsyncStorage.setItem(CACHE_KEYS.CATEGORIAS, JSON.stringify(categoriasNormalizadas));
+        return categoriasNormalizadas;
+      }
+
+      const cached = await AsyncStorage.getItem(CACHE_KEYS.CATEGORIAS);
+      if (cached) {
+        console.log('📦 [CACHE] Usando categorías de cache');
+        return JSON.parse(cached);
+      }
+
+      return [];
+    } catch (error: any) {
+      console.error('❌ [BD] Error al obtener categorías:', error.message);
+      
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEYS.CATEGORIAS);
+        if (cached) {
+          console.log('📦 [CACHE] Usando categorías de cache (error en BD)');
+          return JSON.parse(cached);
+        }
+      } catch {}
+
+      return [];
+    }
+  }
+
+  async crearCategoria(categoria: any): Promise<boolean> {
+    try {
+      console.log('➕ [BD] Creando categoría:', categoria.nombre);
+
+      const response = await this.makeRequest('crearCategoria', { categoria });
+
+      if (response.success) {
+        console.log('✅ [BD] Categoría creada exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.CATEGORIAS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al crear categoría:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al crear categoría:', error.message);
+      return false;
+    }
+  }
+
+  async actualizarCategoria(numero: number, cambios: any): Promise<boolean> {
+    try {
+      console.log(`✏️ [BD] Actualizando categoría ${numero}`);
+
+      const response = await this.makeRequest('actualizarCategoria', {
+        numero,
+        cambios,
+      });
+
+      if (response.success) {
+        console.log('✅ [BD] Categoría actualizada exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.CATEGORIAS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al actualizar categoría:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al actualizar categoría:', error.message);
+      return false;
+    }
+  }
+
+  async eliminarCategoria(numero: number): Promise<boolean> {
+    try {
+      console.log(`🗑️ [BD] Eliminando categoría ${numero}`);
+
+      const response = await this.makeRequest('eliminarCategoria', { numero });
+
+      if (response.success) {
+        console.log('✅ [BD] Categoría eliminada exitosamente');
+        await AsyncStorage.removeItem(CACHE_KEYS.CATEGORIAS);
+        return true;
+      }
+
+      console.error('❌ [BD] Error al eliminar categoría:', response.error);
+      return false;
+    } catch (error: any) {
+      console.error('❌ [BD] Error al eliminar categoría:', error.message);
+      return false;
+    }
+  }
+
+  // ============================================
+  // UTILIDADES
+  // ============================================
+
+  async limpiarCache(): Promise<void> {
+    console.log('🧹 Limpiando cache...');
+    await AsyncStorage.multiRemove([
+      CACHE_KEYS.USUARIOS,
+      CACHE_KEYS.JUGADORES,
+      CACHE_KEYS.CATEGORIAS,
+    ]);
+    console.log('✅ Cache limpiado');
+  }
+
+  getScriptUrl(): string {
+    return this.scriptUrlBD;
   }
 }
 

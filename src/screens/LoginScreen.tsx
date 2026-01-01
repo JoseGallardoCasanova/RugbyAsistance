@@ -16,6 +16,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅ NUEVO
   const { login } = useAuth();
 
   const handleLogin = async () => {
@@ -55,22 +56,32 @@ const LoginScreen = () => {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Usuario"
             placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
-            keyboardType="email-address"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          {/* ✅ MEJORADO: Input de contraseña con botón show/hide */}
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Contraseña"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.eyeIcon}>
+                {showPassword ? '🙈' : '👁️'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -83,13 +94,7 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Ayuda */}
-        <View style={styles.help}>
-          <Text style={styles.helpTitle}>Usuarios de prueba:</Text>
-          <Text style={styles.helpText}>Admin: admin@rugby.cl / admin123</Text>
-          <Text style={styles.helpText}>Entrenador: entrenador@rugby.cl / entrenador123</Text>
-          <Text style={styles.helpText}>Ayudante: ayudante@rugby.cl / ayudante123</Text>
-        </View>
+        {/* ...se eliminó la sección de usuarios de prueba... */}
       </View>
     </KeyboardAvoidingView>
   );
@@ -140,6 +145,26 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
+  },
+  // ✅ NUEVO: Estilos para el contenedor de contraseña
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 15,
+    paddingRight: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 10,
+  },
+  eyeIcon: {
+    fontSize: 20,
   },
   button: {
     backgroundColor: '#ff6b35',

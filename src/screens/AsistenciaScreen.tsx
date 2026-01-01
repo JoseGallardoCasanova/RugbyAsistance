@@ -98,8 +98,16 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           onPress: async () => {
             setEnviando(true);
 
-            // Preparar datos
-            const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            // ✅ CORREGIDO: Usar fecha local en lugar de UTC
+            const ahora = new Date();
+            const año = ahora.getFullYear();
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0'); // getMonth() es 0-11
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const fecha = `${año}-${mes}-${dia}`; // YYYY-MM-DD en hora local
+            
+            console.log('📅 Fecha local:', fecha);
+            console.log('🕐 Hora local completa:', ahora.toLocaleString('es-CL'));
+            
             const asistenciaData: AsistenciaCategoria = {
               categoria,
               fecha,
