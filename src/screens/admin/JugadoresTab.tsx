@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,11 @@ import {
 import { Jugador, Categoria } from '../../types';
 import DatabaseService from '../../services/DatabaseService';
 import FormJugador from './FormJugador';
+import { useAuth } from '../../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const JugadoresTab: React.FC = () => {
+  const { user } = useAuth();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,11 +29,15 @@ const JugadoresTab: React.FC = () => {
   const [jugadorEditar, setJugadorEditar] = useState<Jugador | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  const categoriasEntrenador = useMemo(() => {
+    if (user?.role !== 'entrenador') return undefined;
+    return user.categoriasAsignadas;
+  }, [user?.categoriasAsignadas, user?.role]);
 
-  const cargarDatos = async () => {
+  const entrenadorSinCategorias =
+    user?.role === 'entrenador' && (!Array.isArray(categoriasEntrenador) || categoriasEntrenador.length === 0);
+
+  const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       const [jugadoresData, categoriasData] = await Promise.all([
@@ -38,10 +45,25 @@ const JugadoresTab: React.FC = () => {
         DatabaseService.obtenerCategorias(),
       ]);
       
-      const activos = jugadoresData.filter(j => j.activo !== false);
-      setJugadores(activos);
+      let activos = jugadoresData.filter(j => j.activo !== false);
       
-      const categoriasActivas = categoriasData.filter(c => c.activo !== false).sort((a, b) => a.numero - b.numero);
+      let categoriasActivas = categoriasData
+        .filter(c => c.activo !== false)
+        .sort((a, b) => a.numero - b.numero);
+
+      // ✅ Permisos entrenador: solo su categoría asignada (1)
+      if (user?.role === 'entrenador') {
+        if (Array.isArray(categoriasEntrenador) && categoriasEntrenador.length > 0) {
+          activos = activos.filter(j => categoriasEntrenador.includes(j.categoria));
+          categoriasActivas = categoriasActivas.filter(c => categoriasEntrenador.includes(c.numero));
+        } else {
+          activos = [];
+          categoriasActivas = [];
+          setCategoriaFiltro(null);
+        }
+      }
+
+      setJugadores(activos);
       setCategorias(categoriasActivas);
       
       console.log(`📥 Jugadores cargados: ${activos.length}`);
@@ -52,7 +74,17 @@ const JugadoresTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoriasEntrenador, user?.role]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -71,6 +103,13 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleCrear = () => {
+    if (entrenadorSinCategorias) {
+      Alert.alert(
+        'Sin categorías asignadas',
+        'No tienes categorías asignadas para inscribir jugadores. Pide a un administrador que te asigne una o más categorías.'
+      );
+      return;
+    }
     setJugadorEditar(undefined);
     setModalVisible(true);
   };
@@ -91,8 +130,8 @@ const JugadoresTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(jugador.id);
-              const success = await DatabaseService.eliminarJugador(jugador.id);
+              setDeletingId(jugador.rut);
+              const success = await DatabaseService.eliminarJugador(jugador.rut);
               if (success) {
                 Alert.alert('✅ Éxito', 'Jugador eliminado correctamente');
                 cargarDatos();
@@ -114,8 +153,21 @@ const JugadoresTab: React.FC = () => {
     try {
       let success = false;
 
+      // ✅ Permisos entrenador: debe ser una categoría asignada
+      if (user?.role === 'entrenador') {
+        if (!Array.isArray(categoriasEntrenador) || categoriasEntrenador.length === 0) {
+          Alert.alert('Sin categorías', 'No tienes categorías asignadas para crear/editar jugadores.');
+          return;
+        }
+        const categoriaElegida = datos.categoria;
+        if (typeof categoriaElegida !== 'number' || !categoriasEntrenador.includes(categoriaElegida)) {
+          Alert.alert('Sin acceso', 'Solo puedes usar tus categorías asignadas.');
+          return;
+        }
+      }
+
       if (jugadorEditar) {
-        success = await DatabaseService.actualizarJugador(jugadorEditar.id, datos);
+        success = await DatabaseService.actualizarJugador(jugadorEditar.rut, datos);
       } else {
         success = await DatabaseService.crearJugador({
           nombre: datos.nombre!,
@@ -145,7 +197,7 @@ const JugadoresTab: React.FC = () => {
   });
 
   const renderJugador = ({ item }: { item: Jugador }) => {
-    const isDeleting = deletingId === item.id;
+    const isDeleting = deletingId === item.rut;
 
     return (
       <View style={styles.card}>
@@ -194,6 +246,20 @@ const JugadoresTab: React.FC = () => {
     );
   }
 
+  if (entrenadorSinCategorias) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={{ fontSize: 40, marginBottom: 12 }}>🏉</Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+          Sin categorías asignadas
+        </Text>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', paddingHorizontal: 30 }}>
+          Pide a un administrador que te asigne una o más categorías para poder inscribir jugadores.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Barra de búsqueda */}
@@ -224,7 +290,7 @@ const JugadoresTab: React.FC = () => {
 
         {categorias.map((cat) => (
           <TouchableOpacity
-            key={cat.id}
+            key={String(cat.numero)}
             style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
             onPress={() => setCategoriaFiltro(cat.numero)}
           >
@@ -239,7 +305,7 @@ const JugadoresTab: React.FC = () => {
       {/* Lista de jugadores */}
       <FlatList
         data={jugadoresFiltrados}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.rut}
         renderItem={renderJugador}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
@@ -261,7 +327,11 @@ const JugadoresTab: React.FC = () => {
       />
 
       {/* Botón crear */}
-      <TouchableOpacity style={styles.fab} onPress={handleCrear}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={handleCrear}
+        disabled={entrenadorSinCategorias}
+      >
         <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
       </TouchableOpacity>
 
@@ -269,6 +339,7 @@ const JugadoresTab: React.FC = () => {
       <FormJugador
         visible={modalVisible}
         jugador={jugadorEditar}
+        categoriasPermitidas={user?.role === 'entrenador' ? categoriasEntrenador : undefined}
         onClose={() => setModalVisible(false)}
         onSave={handleGuardar}
       />

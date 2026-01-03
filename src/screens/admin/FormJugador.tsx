@@ -16,11 +16,12 @@ import DatabaseService from '../../services/DatabaseService';
 interface FormJugadorProps {
   visible: boolean;
   jugador?: Jugador;
+  categoriasPermitidas?: number[];
   onClose: () => void;
   onSave: (datos: Partial<Jugador>) => Promise<void>;
 }
 
-const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, onClose, onSave }) => {
+const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasPermitidas, onClose, onSave }) => {
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
   const [categoria, setCategoria] = useState<number>(1);
@@ -29,6 +30,8 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, onClose, on
   // ✅ NUEVO: Cargar categorías dinámicas
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
+
+  const esEntrenadorRestringido = Array.isArray(categoriasPermitidas);
 
   useEffect(() => {
     if (visible) {
@@ -40,7 +43,13 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, onClose, on
     try {
       setLoadingCategorias(true);
       const cats = await DatabaseService.obtenerCategorias();
-      const activas = cats.filter(c => c.activo !== false).sort((a, b) => a.numero - b.numero);
+      let activas = cats
+        .filter(c => c.activo !== false)
+        .sort((a, b) => a.numero - b.numero);
+
+      if (Array.isArray(categoriasPermitidas) && categoriasPermitidas.length > 0) {
+        activas = activas.filter(c => categoriasPermitidas.includes(c.numero));
+      }
       setCategorias(activas);
       
       // Si no hay categoría seleccionada y hay categorías disponibles, seleccionar la primera
@@ -136,14 +145,16 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, onClose, on
             ) : categorias.length === 0 ? (
               <View style={styles.noCategoriesContainer}>
                 <Text style={styles.noCategoriesText}>
-                  No hay categorías disponibles. Ve al tab de Categorías para crear una.
+                  {esEntrenadorRestringido
+                    ? 'No tienes categorías asignadas (o no hay categorías disponibles para tus permisos). Pide a un administrador que te asigne categorías.'
+                    : 'No hay categorías disponibles. Ve al tab de Categorías para crear una.'}
                 </Text>
               </View>
             ) : (
               <View style={styles.categoriaSelector}>
                 {categorias.map((cat) => (
                   <TouchableOpacity
-                    key={cat.id}
+                    key={String(cat.numero)}
                     style={[
                       styles.categoriaOption,
                       categoria === cat.numero && styles.categoriaOptionActive,

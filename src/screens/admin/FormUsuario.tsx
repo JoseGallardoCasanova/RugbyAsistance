@@ -241,7 +241,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
                       <TouchableOpacity
-                        key={cat.id}
+                        key={String(cat.numero)}
                         style={[
                           styles.categoriaOption,
                           categoriaAsignada === cat.numero && styles.categoriaOptionActive,
@@ -275,7 +275,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
                       <TouchableOpacity
-                        key={cat.id}
+                        key={String(cat.numero)}
                         style={[
                           styles.categoriaOption,
                           categoriasAsignadas.includes(cat.numero) && styles.categoriaOptionActive,

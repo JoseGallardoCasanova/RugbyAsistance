@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rugby Asistencia",
     "slug": "rugby-attendance",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/logo_Old_Green.png",
@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.oldgreen.rugbyasistencia",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

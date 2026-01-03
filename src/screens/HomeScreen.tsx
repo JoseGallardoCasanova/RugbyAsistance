@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import DatabaseService from '../services/DatabaseService';
 import { Categoria } from '../types';
@@ -27,14 +28,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     cargarCategorias();
   }, []);
 
-  useEffect(() => {
-    // Recargar cuando vuelve a esta pantalla
-    const unsubscribe = navigation.addListener('focus', () => {
+  // ✅ Auto-recargar categorías al volver a esta pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 [HOME] Pantalla enfocada, recargando categorías...');
       cargarCategorias();
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+    }, [])
+  );
 
   const cargarCategorias = async () => {
     try {
@@ -91,9 +91,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const handleAdminPress = () => {
     if (user?.role === 'admin') {
       navigation.navigate('Admin');
-    } else {
-      Alert.alert('Sin permisos', 'Solo los administradores pueden acceder al panel de admin');
+      return;
     }
+
+    if (user?.role === 'entrenador') {
+      navigation.navigate('Admin', { initialTab: 'jugadores' });
+      return;
+    }
+
+    Alert.alert('Sin permisos', 'Solo administradores y entrenadores pueden acceder');
   };
 
   const handleConfigPress = () => {
@@ -118,7 +124,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const puedeVerCategoria = (categoria: Categoria): boolean => {
     if (user?.role === 'admin') return true;
     if (user?.role === 'ayudante') return user.categoriaAsignada === categoria.numero;
-    if (user?.role === 'entrenador') return user.categoriasAsignadas?.includes(categoria.numero) || false;
+    if (user?.role === 'entrenador') {
+      return user.categoriasAsignadas?.includes(categoria.numero) || false;
+    }
     return false;
   };
 
@@ -154,14 +162,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
         
         <View style={styles.headerButtons}>
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || user?.role === 'entrenador') && (
             <>
               <TouchableOpacity onPress={handleAdminPress} style={styles.iconButton}>
                 <Text style={styles.iconButtonText}>⚙️</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfigPress} style={styles.iconButton}>
-                <Text style={styles.iconButtonText}>🔧</Text>
-              </TouchableOpacity>
+              {user?.role === 'admin' && (
+                <TouchableOpacity onPress={handleConfigPress} style={styles.iconButton}>
+                  <Text style={styles.iconButtonText}>🔧</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
           <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>

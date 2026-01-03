@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import DatabaseService from '../services/DatabaseService';
 import GoogleSheetsService from '../services/GoogleSheetsService';
@@ -32,6 +33,41 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
     cargarJugadores();
   }, [categoria]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      cargarJugadores();
+    }, [categoria])
+  );
+
+  const getFechaLocalHoy = (): string => {
+    const ahora = new Date();
+    const año = ahora.getFullYear();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+  };
+
+  const cargarAsistenciaDelDia = async () => {
+    try {
+      const fecha = getFechaLocalHoy();
+      console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoria}`);
+      
+      const data = await GoogleSheetsService.obtenerAsistenciaDelDia(categoria, fecha);
+      
+      if (data && Object.keys(data).length > 0) {
+        setAsistencia(data);
+        console.log(`✅ [ASISTENCIA] Asistencia cargada: ${Object.keys(data).length} jugadores marcados`);
+        console.log('📋 [ASISTENCIA] Datos:', data);
+      } else {
+        console.log('ℹ️ [ASISTENCIA] No hay asistencia guardada para hoy, iniciando en blanco');
+        setAsistencia({});
+      }
+    } catch (error) {
+      console.log('⚠️ [ASISTENCIA] Error al cargar asistencia, iniciando en blanco:', error);
+      setAsistencia({});
+    }
+  };
+
   const cargarJugadores = async () => {
     try {
       setLoading(true);
@@ -44,6 +80,9 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       
       setJugadores(jugadoresCategoria);
       console.log(`📥 Jugadores de categoría ${categoria}:`, jugadoresCategoria.length);
+      
+      // ✅ Cargar asistencia DESPUÉS de tener los jugadores
+      await cargarAsistenciaDelDia();
     } catch (error) {
       console.error('Error al cargar jugadores:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -98,15 +137,10 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           onPress: async () => {
             setEnviando(true);
 
-            // ✅ CORREGIDO: Usar fecha local en lugar de UTC
-            const ahora = new Date();
-            const año = ahora.getFullYear();
-            const mes = String(ahora.getMonth() + 1).padStart(2, '0'); // getMonth() es 0-11
-            const dia = String(ahora.getDate()).padStart(2, '0');
-            const fecha = `${año}-${mes}-${dia}`; // YYYY-MM-DD en hora local
+            const fecha = getFechaLocalHoy();
             
             console.log('📅 Fecha local:', fecha);
-            console.log('🕐 Hora local completa:', ahora.toLocaleString('es-CL'));
+            console.log('🕐 Hora local completa:', new Date().toLocaleString('es-CL'));
             
             const asistenciaData: AsistenciaCategoria = {
               categoria,
@@ -134,8 +168,8 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Limpiar asistencia
-                      setAsistencia({});
+                      // NO limpiar asistencia para que persista en la pantalla
+                      // setAsistencia({});
                       navigation.goBack();
                     },
                   },

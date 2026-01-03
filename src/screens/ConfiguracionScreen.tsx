@@ -91,7 +91,8 @@ const ConfiguracionScreen: React.FC<ConfiguracionScreenProps> = ({ navigation })
     }
 
     // Determinar nombre del sheet
-    let mesNombre, año;
+    let mesNombre: string;
+    let año: number;
     
     if (sheetName.trim()) {
       // Usar nombre manual

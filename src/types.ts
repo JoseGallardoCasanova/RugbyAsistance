@@ -3,16 +3,17 @@
 export type UserRole = 'admin' | 'entrenador' | 'ayudante';
 
 export interface User {
-  id: string;
+  id: string | number;
   nombre: string;
   email: string;
   password: string;
   role: UserRole;
+  foto?: string;
   categoriaAsignada?: number; // Para ayudante
   categoriasAsignadas?: number[]; // Para entrenador
   activo: boolean;
-  creadoEn: string;
-  modificadoEn: string;
+  creadoEn?: string;
+  modificadoEn?: string;
 }
 
 export interface Jugador {
@@ -21,8 +22,8 @@ export interface Jugador {
   nombre: string;
   categoria: number;
   activo: boolean;
-  creadoEn: string;
-  modificadoEn: string;
+  creadoEn?: string;
+  modificadoEn?: string;
 }
 
 // ✅ NUEVO: Modelo de Categoría
@@ -32,8 +33,8 @@ export interface Categoria {
   nombre: string; // "M-14", "M-16", "Sub 18", etc.
   color?: string; // Hex color (opcional, para UI)
   activo: boolean;
-  creadoEn: string;
-  modificadoEn: string;
+  creadoEn?: string;
+  modificadoEn?: string;
 }
 
 export interface AsistenciaCategoria {

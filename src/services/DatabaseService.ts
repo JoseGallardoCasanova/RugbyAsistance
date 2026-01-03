@@ -48,6 +48,49 @@ function normalizarCampos(obj: any): any {
       normalizado['numero'] = obj[key]; // Numero → numero
     }
   }
+
+  // Normalizaciones de tipos comunes (Sheets suele devolver strings)
+  if (typeof normalizado.numero === 'string') {
+    const n = Number(normalizado.numero);
+    if (Number.isFinite(n)) normalizado.numero = n;
+  }
+  if (typeof normalizado.categoria === 'string') {
+    const n = Number(normalizado.categoria);
+    if (Number.isFinite(n)) normalizado.categoria = n;
+  }
+  if (typeof normalizado.categoriaAsignada === 'string') {
+    const n = Number(normalizado.categoriaAsignada);
+    if (Number.isFinite(n)) normalizado.categoriaAsignada = n;
+  }
+
+  // categoriasAsignadas puede venir como: "1,2,3" o "[1,2,3]" o "1"
+  if (typeof normalizado.categoriasAsignadas === 'string') {
+    const raw = normalizado.categoriasAsignadas.trim();
+    let arr: number[] = [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        arr = parsed.map((x) => Number(x)).filter((x) => Number.isFinite(x));
+      } else if (parsed != null) {
+        const n = Number(parsed);
+        if (Number.isFinite(n)) arr = [n];
+      }
+    } catch {
+      arr = raw
+        .split(',')
+        .map((s: string) => Number(s.trim()))
+        .filter((x: number) => Number.isFinite(x));
+    }
+
+    normalizado.categoriasAsignadas = arr;
+  }
+
+  if (Array.isArray(normalizado.categoriasAsignadas)) {
+    normalizado.categoriasAsignadas = normalizado.categoriasAsignadas
+      .map((x: any) => Number(x))
+      .filter((x: any) => Number.isFinite(x));
+  }
   
   return normalizado;
 }

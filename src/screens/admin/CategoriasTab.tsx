@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Categoria } from '../../types';
 import DatabaseService from '../../services/DatabaseService';
 import GoogleSheetsService from '../../services/GoogleSheetsService'; // ✅ AGREGADO
 import FormCategoria from './FormCategoria';
+import { useFocusEffect } from '@react-navigation/native';
 
 const CategoriasTab: React.FC = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -25,11 +26,7 @@ const CategoriasTab: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sincronizando, setSincronizando] = useState(false); // ✅ NUEVO
 
-  useEffect(() => {
-    cargarCategorias();
-  }, []);
-
-  const cargarCategorias = async () => {
+  const cargarCategorias = useCallback(async () => {
     try {
       setLoading(true);
       const data = await DatabaseService.obtenerCategorias();
@@ -44,7 +41,17 @@ const CategoriasTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargarCategorias();
+  }, [cargarCategorias]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarCategorias();
+    }, [cargarCategorias])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -104,13 +111,14 @@ const CategoriasTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(categoria.id);
-              const success = await DatabaseService.eliminarCategoria(categoria.id);
+              setDeletingId(String(categoria.numero));
+              const success = await DatabaseService.eliminarCategoria(categoria.numero);
               if (success) {
-                // ✅ SINCRONIZAR después de eliminar
+                // ✅ SINCRONIZAR automáticamente después de eliminar
+                console.log('🔄 [CATEGORIAS] Sincronizando con Google Sheets...');
                 await GoogleSheetsService.sincronizarCategoriasEnHojas();
+                console.log('✅ [CATEGORIAS] Categoría eliminada y sincronizada');
                 
-                Alert.alert('✅ Éxito', 'Categoría eliminada y sincronizada con Google Sheets');
                 cargarCategorias();
               } else {
                 Alert.alert('❌ Error', 'No se pudo eliminar la categoría');
@@ -131,7 +139,7 @@ const CategoriasTab: React.FC = () => {
       let success = false;
 
       if (categoriaEditar) {
-        success = await DatabaseService.actualizarCategoria(categoriaEditar.id, datos);
+        success = await DatabaseService.actualizarCategoria(categoriaEditar.numero, datos);
       } else {
         const maxNumero = categorias.length > 0 
           ? Math.max(...categorias.map(c => c.numero))
@@ -146,23 +154,20 @@ const CategoriasTab: React.FC = () => {
       }
 
       if (success) {
-        // ✅ SINCRONIZAR después de crear/editar
+        // ✅ SINCRONIZAR automáticamente después de crear/editar
+        console.log('🔄 [CATEGORIAS] Sincronizando con Google Sheets...');
         setSincronizando(true);
         await GoogleSheetsService.sincronizarCategoriasEnHojas();
         setSincronizando(false);
+        console.log('✅ [CATEGORIAS] Categoría guardada y sincronizada');
         
-        Alert.alert(
-          '✅ Éxito', 
-          categoriaEditar 
-            ? 'Categoría actualizada y sincronizada con Google Sheets' 
-            : 'Categoría creada y sincronizada con Google Sheets'
-        );
         setModalVisible(false);
         cargarCategorias();
       } else {
         Alert.alert('❌ Error', 'No se pudo guardar la categoría');
       }
     } catch (error) {
+      console.error('Error al guardar:', error);
       Alert.alert('❌ Error', 'Error al guardar categoría');
     }
   };
@@ -173,7 +178,7 @@ const CategoriasTab: React.FC = () => {
   );
 
   const renderCategoria = ({ item }: { item: Categoria }) => {
-    const isDeleting = deletingId === item.id;
+    const isDeleting = deletingId === String(item.numero);
 
     return (
       <View style={styles.card}>
@@ -257,7 +262,7 @@ const CategoriasTab: React.FC = () => {
       {/* Lista de categorías */}
       <FlatList
         data={categoriasFiltradas}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.numero)}
         renderItem={renderCategoria}
         contentContainerStyle={styles.list}
         ListEmptyComponent={

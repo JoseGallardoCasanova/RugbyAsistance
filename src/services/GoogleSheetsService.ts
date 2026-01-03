@@ -18,6 +18,17 @@ interface SheetsConfig {
 class GoogleSheetsService {
   private config: SheetsConfig = CONFIG; // ✅ SIEMPRE usa CONFIG
 
+  private parseLocalYMD(fecha: string): Date {
+    // Evita el bug de timezone de new Date('YYYY-MM-DD') (se interpreta como UTC)
+    const match = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+    if (match) {
+      const [y, m, d] = fecha.split('-').map(Number);
+      // 12:00 para evitar bordes DST
+      return new Date(y, m - 1, d, 12, 0, 0, 0);
+    }
+    return new Date(fecha);
+  }
+
   async loadConfig(): Promise<boolean> {
     console.log('📊 [SHEETS] Usando configuración HARDCODEADA');
     console.log(`📊 [SHEETS] URL Asistencias: ${CONFIG.scriptUrl.substring(0, 50)}...`);
@@ -66,7 +77,7 @@ class GoogleSheetsService {
 
   async enviarAsistencia(asistencia: AsistenciaCategoria): Promise<boolean> {
     try {
-      const fechaObj = new Date(asistencia.fecha);
+      const fechaObj = this.parseLocalYMD(asistencia.fecha);
       const mesActual = this.getNombreMes(fechaObj.getMonth());
       const añoActual = fechaObj.getFullYear();
       const sheetNameAuto = `${mesActual}_${añoActual}`;
@@ -130,7 +141,7 @@ class GoogleSheetsService {
   }
 
   private getDiaDelMes(fecha: string): number {
-    const date = new Date(fecha);
+    const date = this.parseLocalYMD(fecha);
     return date.getDate();
   }
 
@@ -220,7 +231,7 @@ class GoogleSheetsService {
     fecha: string
   ): Promise<{ [rut: string]: boolean } | null> {
     try {
-      const fechaObj = new Date(fecha);
+      const fechaObj = this.parseLocalYMD(fecha);
       const mesActual = this.getNombreMes(fechaObj.getMonth());
       const añoActual = fechaObj.getFullYear();
       const sheetNameAuto = `${mesActual}_${añoActual}`;
@@ -240,14 +251,28 @@ class GoogleSheetsService {
       if (response.data.success && response.data.asistencias) {
         console.log('✅ [SHEETS] Asistencias obtenidas:', response.data.asistencias.length);
         
+        // El script retorna asistencias por NOMBRE, necesitamos convertir a RUT
+        const jugadoresBD = await DatabaseService.obtenerJugadores();
         const asistenciasObj: { [rut: string]: boolean } = {};
+        
         response.data.asistencias.forEach((item: any) => {
-          asistenciasObj[item.rut] = item.asistio;
+          // Buscar jugador por nombre
+          const jugador = jugadoresBD.find(j => 
+            j.nombre.trim().toLowerCase() === item.nombre.trim().toLowerCase()
+          );
+          
+          if (jugador) {
+            asistenciasObj[jugador.rut] = item.asistio;
+            console.log(`✅ [SHEETS] Match: ${item.nombre} → RUT: ${jugador.rut}, Asistió: ${item.asistio}`);
+          } else {
+            console.log(`⚠️ [SHEETS] No se encontró jugador para: ${item.nombre}`);
+          }
         });
         
         return asistenciasObj;
       }
 
+      console.log('ℹ️ [SHEETS] No hay asistencias guardadas para este día');
       return null;
     } catch (error: any) {
       console.error('❌ [SHEETS] Error al obtener asistencia:', error.message);

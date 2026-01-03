@@ -120,7 +120,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (usandoBD && user.id) {
       try {
-        await DatabaseService.actualizarUsuario(user.id, updates);
+        const idNumero = typeof user.id === 'number' ? user.id : Number(user.id);
+        if (Number.isFinite(idNumero)) {
+          await DatabaseService.actualizarUsuario(idNumero, updates);
+        } else {
+          console.warn('⚠️ [AUTH] ID de usuario inválido; no se actualiza en BD');
+        }
         console.log('✅ [AUTH] Usuario actualizado en BD');
       } catch (error) {
         console.error('❌ [AUTH] Error al actualizar en BD:', error);

@@ -15,10 +15,10 @@ function AppNavigator() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // ✅ Inicializar categorías por defecto la primera vez
+    // ✅ Inicializar servicios la primera vez
     const inicializar = async () => {
-      console.log('🚀 Inicializando categorías...');
-      await DatabaseService.inicializarCategoriasDefault();
+      console.log('🚀 Inicializando servicios...');
+      await DatabaseService.initialize();
     };
 
     inicializar();

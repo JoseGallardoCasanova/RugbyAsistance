@@ -10,6 +10,9 @@ npm-debug.*
 *.orig.*
 web-build/
 
+# Local EAS submit credentials (do not commit)
+credentials/
+
 # macOS
 .DS_Store
 

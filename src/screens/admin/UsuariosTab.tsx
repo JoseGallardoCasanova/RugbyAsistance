@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { User, Categoria } from '../../types';
 import DatabaseService from '../../services/DatabaseService';
 import FormUsuario from './FormUsuario';
+import { useFocusEffect } from '@react-navigation/native';
 
 const UsuariosTab: React.FC = () => {
   const [usuarios, setUsuarios] = useState<User[]>([]);
@@ -24,11 +25,7 @@ const UsuariosTab: React.FC = () => {
   const [usuarioEditar, setUsuarioEditar] = useState<User | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
       // ✅ Cargar tanto usuarios como categorías
@@ -51,7 +48,17 @@ const UsuariosTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [cargarDatos])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -91,8 +98,14 @@ const UsuariosTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(usuario.id);
-              const success = await DatabaseService.eliminarUsuario(usuario.id);
+              setDeletingId(String(usuario.id));
+              const idNumero = typeof usuario.id === 'number' ? usuario.id : Number(usuario.id);
+              if (!Number.isFinite(idNumero)) {
+                Alert.alert('❌ Error', 'ID de usuario inválido. Verifica la configuración de la base de datos.');
+                return;
+              }
+
+              const success = await DatabaseService.eliminarUsuario(idNumero);
               if (success) {
                 Alert.alert('✅ Éxito', 'Usuario eliminado correctamente');
                 cargarDatos();
@@ -115,7 +128,12 @@ const UsuariosTab: React.FC = () => {
       let success = false;
 
       if (usuarioEditar) {
-        success = await DatabaseService.actualizarUsuario(usuarioEditar.id, datos);
+        const idNumero = typeof usuarioEditar.id === 'number' ? usuarioEditar.id : Number(usuarioEditar.id);
+        if (!Number.isFinite(idNumero)) {
+          Alert.alert('❌ Error', 'ID de usuario inválido. Verifica la configuración de la base de datos.');
+          return;
+        }
+        success = await DatabaseService.actualizarUsuario(idNumero, datos);
       } else {
         success = await DatabaseService.crearUsuario({
           nombre: datos.nombre!,
@@ -242,7 +260,7 @@ const UsuariosTab: React.FC = () => {
       {/* Lista de usuarios */}
       <FlatList
         data={usuariosFiltrados}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         renderItem={renderUsuario}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
