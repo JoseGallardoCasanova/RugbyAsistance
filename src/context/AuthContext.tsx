@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { USERS } from '../data/mockData';
-import DatabaseService from '../services/DatabaseService';
+import SupabaseService from '../services/SupabaseService';
 
 interface AuthContextType {
   user: User | null;
@@ -47,30 +47,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔐 [AUTH] Intentando login:', { email });
     
     try {
-      console.log('📊 [AUTH] Intentando login con BD...');
-      const usuario = await DatabaseService.verificarCredenciales(email, password);
+      console.log('📊 [AUTH] Intentando login con Supabase...');
+      const usuario = await SupabaseService.verificarCredenciales(email, password);
       
-      // ✅ NUEVO: Logs de debug detallados
-      console.log('🔍 [AUTH] Usuario recibido de BD:', JSON.stringify(usuario, null, 2));
+      console.log('🔍 [AUTH] Usuario recibido de Supabase:', JSON.stringify(usuario, null, 2));
       console.log('🔍 [AUTH] usuario.role =', usuario?.role);
       console.log('🔍 [AUTH] usuario.nombre =', usuario?.nombre);
       console.log('🔍 [AUTH] usuario.id =', usuario?.id);
       
       if (usuario) {
-        console.log('✅ [AUTH] Usuario encontrado en BD:', usuario.nombre);
+        console.log('✅ [AUTH] Usuario encontrado en Supabase:', usuario.nombre);
         console.log('💾 [AUTH] Guardando usuario en AsyncStorage...');
         
         await AsyncStorage.setItem('currentUser', JSON.stringify(usuario));
         
         console.log('✅ [AUTH] Usuario guardado, actualizando estado...');
-        setUser(usuario);
+        setUser(usuario as any);
         setUsandoBD(true);
         
         console.log('✅ [AUTH] Estado actualizado, user.role =', usuario.role);
         return true;
       }
       
-      console.log('⚠️ [AUTH] Usuario no encontrado en BD, intentando con mock...');
+      console.log('⚠️ [AUTH] Usuario no encontrado en Supabase, intentando con mock...');
       const foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
@@ -89,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('❌ [AUTH] Error al hacer login:', error);
       
-      console.log('⚠️ [AUTH] Error en BD, intentando con mock...');
+      console.log('⚠️ [AUTH] Error en Supabase, intentando con mock...');
       const foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
@@ -122,13 +121,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const idNumero = typeof user.id === 'number' ? user.id : Number(user.id);
         if (Number.isFinite(idNumero)) {
-          await DatabaseService.actualizarUsuario(idNumero, updates);
+          await SupabaseService.actualizarUsuario(idNumero, updates as any);
         } else {
-          console.warn('⚠️ [AUTH] ID de usuario inválido; no se actualiza en BD');
+          console.warn('⚠️ [AUTH] ID de usuario inválido; no se actualiza en Supabase');
         }
-        console.log('✅ [AUTH] Usuario actualizado en BD');
+        console.log('✅ [AUTH] Usuario actualizado en Supabase');
       } catch (error) {
-        console.error('❌ [AUTH] Error al actualizar en BD:', error);
+        console.error('❌ [AUTH] Error al actualizar en Supabase:', error);
       }
     }
     

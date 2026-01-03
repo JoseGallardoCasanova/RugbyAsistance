@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { User, Categoria } from '../../types';
-import DatabaseService from '../../services/DatabaseService';
+import SupabaseService from '../../services/SupabaseService';
 import FormUsuario from './FormUsuario';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -30,8 +30,8 @@ const UsuariosTab: React.FC = () => {
       setLoading(true);
       // ✅ Cargar tanto usuarios como categorías
       const [usuariosData, categoriasData] = await Promise.all([
-        DatabaseService.obtenerUsuarios(),
-        DatabaseService.obtenerCategorias(),
+        SupabaseService.obtenerUsuarios(),
+        SupabaseService.obtenerCategorias(),
       ]);
       
       const activos = usuariosData.filter(u => u.activo !== false);
@@ -105,7 +105,7 @@ const UsuariosTab: React.FC = () => {
                 return;
               }
 
-              const success = await DatabaseService.eliminarUsuario(idNumero);
+              const success = await SupabaseService.eliminarUsuario(idNumero);
               if (success) {
                 Alert.alert('✅ Éxito', 'Usuario eliminado correctamente');
                 cargarDatos();
@@ -133,9 +133,9 @@ const UsuariosTab: React.FC = () => {
           Alert.alert('❌ Error', 'ID de usuario inválido. Verifica la configuración de la base de datos.');
           return;
         }
-        success = await DatabaseService.actualizarUsuario(idNumero, datos);
+        success = await SupabaseService.actualizarUsuario(idNumero, datos);
       } else {
-        success = await DatabaseService.crearUsuario({
+        success = await SupabaseService.crearUsuario({
           nombre: datos.nombre!,
           email: datos.email!,
           password: datos.password!,

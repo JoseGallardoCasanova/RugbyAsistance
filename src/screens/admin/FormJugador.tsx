@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
-import DatabaseService from '../../services/DatabaseService';
+import SupabaseService from '../../services/SupabaseService';
 
 interface FormJugadorProps {
   visible: boolean;
@@ -42,7 +42,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
   const cargarCategorias = async () => {
     try {
       setLoadingCategorias(true);
-      const cats = await DatabaseService.obtenerCategorias();
+      const cats = await SupabaseService.obtenerCategorias();
       let activas = cats
         .filter(c => c.activo !== false)
         .sort((a, b) => a.numero - b.numero);

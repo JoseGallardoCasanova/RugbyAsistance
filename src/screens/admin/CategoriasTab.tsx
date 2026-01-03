@@ -11,8 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Categoria } from '../../types';
-import DatabaseService from '../../services/DatabaseService';
-import GoogleSheetsService from '../../services/GoogleSheetsService'; // ✅ AGREGADO
+import SupabaseService from '../../services/SupabaseService';
 import FormCategoria from './FormCategoria';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -24,12 +23,11 @@ const CategoriasTab: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [categoriaEditar, setCategoriaEditar] = useState<Categoria | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [sincronizando, setSincronizando] = useState(false); // ✅ NUEVO
 
   const cargarCategorias = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await DatabaseService.obtenerCategorias();
+      const data = await SupabaseService.obtenerCategorias();
       const ordenadas = data
         .filter(c => c.activo !== false)
         .sort((a, b) => a.numero - b.numero);
@@ -59,37 +57,6 @@ const CategoriasTab: React.FC = () => {
     setRefreshing(false);
   };
 
-  // ✅ NUEVO: Sincronizar categorías con Google Sheets
-  const sincronizarConGoogleSheets = async () => {
-    try {
-      setSincronizando(true);
-      
-      Alert.alert(
-        '🔄 Sincronizando...',
-        'Actualizando nombres de categorías en todas las hojas de asistencia...'
-      );
-
-      const success = await GoogleSheetsService.sincronizarCategoriasEnHojas();
-
-      if (success) {
-        Alert.alert(
-          '✅ Sincronización completa',
-          'Los nombres de las categorías se actualizaron en todas las hojas de asistencia.'
-        );
-      } else {
-        Alert.alert(
-          '⚠️ Sincronización parcial',
-          'No se pudieron actualizar algunas hojas. Verifica que la URL de asistencias esté configurada correctamente.'
-        );
-      }
-    } catch (error) {
-      console.error('Error al sincronizar:', error);
-      Alert.alert('❌ Error', 'No se pudo sincronizar con Google Sheets');
-    } finally {
-      setSincronizando(false);
-    }
-  };
-
   const handleCrear = () => {
     setCategoriaEditar(undefined);
     setModalVisible(true);
@@ -112,13 +79,9 @@ const CategoriasTab: React.FC = () => {
           onPress: async () => {
             try {
               setDeletingId(String(categoria.numero));
-              const success = await DatabaseService.eliminarCategoria(categoria.numero);
+              const success = await SupabaseService.eliminarCategoria(categoria.numero);
               if (success) {
-                // ✅ SINCRONIZAR automáticamente después de eliminar
-                console.log('🔄 [CATEGORIAS] Sincronizando con Google Sheets...');
-                await GoogleSheetsService.sincronizarCategoriasEnHojas();
-                console.log('✅ [CATEGORIAS] Categoría eliminada y sincronizada');
-                
+                console.log('✅ [CATEGORIAS] Categoría eliminada');
                 cargarCategorias();
               } else {
                 Alert.alert('❌ Error', 'No se pudo eliminar la categoría');
@@ -139,13 +102,13 @@ const CategoriasTab: React.FC = () => {
       let success = false;
 
       if (categoriaEditar) {
-        success = await DatabaseService.actualizarCategoria(categoriaEditar.numero, datos);
+        success = await SupabaseService.actualizarCategoria(categoriaEditar.numero, datos);
       } else {
         const maxNumero = categorias.length > 0 
           ? Math.max(...categorias.map(c => c.numero))
           : 0;
         
-        success = await DatabaseService.crearCategoria({
+        success = await SupabaseService.crearCategoria({
           numero: maxNumero + 1,
           nombre: datos.nombre!,
           color: datos.color || '#1a472a',
@@ -154,13 +117,7 @@ const CategoriasTab: React.FC = () => {
       }
 
       if (success) {
-        // ✅ SINCRONIZAR automáticamente después de crear/editar
-        console.log('🔄 [CATEGORIAS] Sincronizando con Google Sheets...');
-        setSincronizando(true);
-        await GoogleSheetsService.sincronizarCategoriasEnHojas();
-        setSincronizando(false);
-        console.log('✅ [CATEGORIAS] Categoría guardada y sincronizada');
-        
+        console.log('✅ [CATEGORIAS] Categoría guardada');
         setModalVisible(false);
         cargarCategorias();
       } else {
@@ -236,27 +193,6 @@ const CategoriasTab: React.FC = () => {
           value={busqueda}
           onChangeText={setBusqueda}
         />
-      </View>
-
-      {/* ✅ NUEVO: Botón de sincronización manual */}
-      <View style={styles.syncContainer}>
-        <TouchableOpacity 
-          style={[styles.syncButton, sincronizando && styles.syncButtonDisabled]}
-          onPress={sincronizarConGoogleSheets}
-          disabled={sincronizando}
-        >
-          {sincronizando ? (
-            <>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.syncButtonText}> Sincronizando...</Text>
-            </>
-          ) : (
-            <Text style={styles.syncButtonText}>🔄 Sincronizar con Google Sheets</Text>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.syncHint}>
-          Actualiza los nombres de categorías en todas las hojas de asistencia
-        </Text>
       </View>
 
       {/* Lista de categorías */}

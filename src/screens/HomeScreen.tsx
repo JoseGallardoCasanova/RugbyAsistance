@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import DatabaseService from '../services/DatabaseService';
+import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
 
 interface HomeScreenProps {
@@ -39,7 +39,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const cargarCategorias = async () => {
     try {
       setLoading(true);
-      const data = await DatabaseService.obtenerCategorias();
+      const data = await SupabaseService.obtenerCategorias();
       
       // Filtrar activas y ordenar por número
       const activas = data
@@ -200,7 +200,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
               return (
                 <TouchableOpacity
-                  key={categoria.id}
+                  key={`categoria-${categoria.numero}`}
                   style={[
                     styles.categoryCard,
                     !tieneAcceso && styles.categoryCardDisabled,

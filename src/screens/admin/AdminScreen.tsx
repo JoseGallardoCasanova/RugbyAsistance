@@ -6,9 +6,10 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import UsuariosTab from './UsuariosTab'; // ✅ Mismo directorio
-import JugadoresTab from './JugadoresTab'; // ✅ Mismo directorio
-import CategoriasTab from './CategoriasTab'; // ✅ Mismo directorio
+import UsuariosTab from './UsuariosTab';
+import JugadoresTab from './JugadoresTab';
+import CategoriasTab from './CategoriasTab';
+import ModalExportarAsistencias from './ModalExportarAsistencias';
 import { useAuth } from '../../context/AuthContext';
 
 interface AdminScreenProps {
@@ -21,6 +22,7 @@ type TabType = 'usuarios' | 'jugadores' | 'categorias';
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
   const routeInitialTab: TabType | undefined = route?.params?.initialTab;
+  const [modalExportarVisible, setModalExportarVisible] = useState(false);
 
   const allowedTabs = useMemo<TabType[]>(() => {
     if (user?.role === 'admin') return ['usuarios', 'jugadores', 'categorias'];
@@ -80,7 +82,17 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Panel de Admin</Text>
-        <View style={{ width: 40 }} />
+        
+        {/* Botón Exportar (solo para admins) */}
+        {user?.role === 'admin' && (
+          <TouchableOpacity 
+            style={styles.exportButton}
+            onPress={() => setModalExportarVisible(true)}
+          >
+            <Text style={styles.exportIcon}>📊</Text>
+          </TouchableOpacity>
+        )}
+        {user?.role !== 'admin' && <View style={{ width: 40 }} />}
       </View>
 
       {/* Tabs */}
@@ -125,6 +137,12 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
         {activeTab === 'jugadores' && allowedTabs.includes('jugadores') && <JugadoresTab />}
         {activeTab === 'categorias' && allowedTabs.includes('categorias') && <CategoriasTab />}
       </View>
+
+      {/* Modal de Exportación */}
+      <ModalExportarAsistencias
+        visible={modalExportarVisible}
+        onClose={() => setModalExportarVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -152,6 +170,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  exportButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 8,
+  },
+  exportIcon: {
+    fontSize: 24,
   },
   tabsContainer: {
     flexDirection: 'row',

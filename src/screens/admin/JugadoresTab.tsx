@@ -12,7 +12,7 @@ import {
   ScrollView, // ✅ AGREGADO: Import faltante
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
-import DatabaseService from '../../services/DatabaseService';
+import SupabaseService from '../../services/SupabaseService';
 import FormJugador from './FormJugador';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,8 +41,8 @@ const JugadoresTab: React.FC = () => {
     try {
       setLoading(true);
       const [jugadoresData, categoriasData] = await Promise.all([
-        DatabaseService.obtenerJugadores(),
-        DatabaseService.obtenerCategorias(),
+        SupabaseService.obtenerJugadores(),
+        SupabaseService.obtenerCategorias(),
       ]);
       
       let activos = jugadoresData.filter(j => j.activo !== false);
@@ -131,7 +131,7 @@ const JugadoresTab: React.FC = () => {
           onPress: async () => {
             try {
               setDeletingId(jugador.rut);
-              const success = await DatabaseService.eliminarJugador(jugador.rut);
+              const success = await SupabaseService.eliminarJugador(jugador.rut);
               if (success) {
                 Alert.alert('✅ Éxito', 'Jugador eliminado correctamente');
                 cargarDatos();
@@ -167,9 +167,9 @@ const JugadoresTab: React.FC = () => {
       }
 
       if (jugadorEditar) {
-        success = await DatabaseService.actualizarJugador(jugadorEditar.rut, datos);
+        success = await SupabaseService.actualizarJugador(jugadorEditar.rut, datos);
       } else {
-        success = await DatabaseService.crearJugador({
+        success = await SupabaseService.crearJugador({
           nombre: datos.nombre!,
           rut: datos.rut!,
           categoria: datos.categoria!,

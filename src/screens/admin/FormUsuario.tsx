@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { User, UserRole, Categoria } from '../../types';
-import DatabaseService from '../../services/DatabaseService';
+import SupabaseService from '../../services/SupabaseService';
 
 interface FormUsuarioProps {
   visible: boolean;
@@ -43,7 +43,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   const cargarCategorias = async () => {
     try {
       setLoadingCategorias(true);
-      const cats = await DatabaseService.obtenerCategorias();
+      const cats = await SupabaseService.obtenerCategorias();
       const activas = cats.filter(c => c.activo !== false).sort((a, b) => a.numero - b.numero);
       setCategorias(activas);
     } catch (error) {

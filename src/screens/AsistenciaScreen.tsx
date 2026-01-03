@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import DatabaseService from '../services/DatabaseService';
-import GoogleSheetsService from '../services/GoogleSheetsService';
-import { AsistenciaCategoria, Jugador } from '../types';
+import SupabaseService from '../services/SupabaseService';
+import { Jugador } from '../types';
 
 interface AsistenciaScreenProps {
   navigation: any;
@@ -52,7 +51,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       const fecha = getFechaLocalHoy();
       console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoria}`);
       
-      const data = await GoogleSheetsService.obtenerAsistenciaDelDia(categoria, fecha);
+      const data = await SupabaseService.obtenerAsistenciaDelDia(categoria, fecha);
       
       if (data && Object.keys(data).length > 0) {
         setAsistencia(data);
@@ -71,7 +70,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const cargarJugadores = async () => {
     try {
       setLoading(true);
-      const todosJugadores = await DatabaseService.obtenerJugadores();
+      const todosJugadores = await SupabaseService.obtenerJugadores();
       
       // Filtrar por categoría
       const jugadoresCategoria = todosJugadores.filter(j => 
@@ -142,34 +141,30 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             console.log('📅 Fecha local:', fecha);
             console.log('🕐 Hora local completa:', new Date().toLocaleString('es-CL'));
             
-            const asistenciaData: AsistenciaCategoria = {
+            // Preparar registros de asistencia para Supabase
+            const registros = jugadores.map(j => ({
               categoria,
               fecha,
-              jugadores: jugadores.map(j => ({
-                rut: j.rut,
-                asistio: asistencia[j.rut] || false,
-              })),
-              marcadoPor: user.nombre,
-              enviado: true,
-            };
+              rut_jugador: j.rut,
+              asistio: asistencia[j.rut] || false,
+              marcado_por: user.nombre,
+            }));
 
-            console.log('📤 Enviando asistencia:', asistenciaData);
+            console.log('📤 Enviando asistencia a Supabase:', registros.length, 'registros');
 
-            // Enviar a Google Sheets
-            const success = await GoogleSheetsService.enviarAsistencia(asistenciaData);
+            // Enviar a Supabase
+            const success = await SupabaseService.guardarAsistencia(registros);
 
             setEnviando(false);
 
             if (success) {
               Alert.alert(
                 '✅ Enviado',
-                'La asistencia se ha guardado en Google Sheets',
+                'La asistencia se ha guardado correctamente',
                 [
                   {
                     text: 'OK',
                     onPress: () => {
-                      // NO limpiar asistencia para que persista en la pantalla
-                      // setAsistencia({});
                       navigation.goBack();
                     },
                   },
@@ -178,7 +173,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             } else {
               Alert.alert(
                 '❌ Error',
-                'No se pudo enviar la asistencia. Verifica tu conexión y la configuración de Google Sheets.',
+                'No se pudo enviar la asistencia. Verifica tu conexión.',
                 [{ text: 'OK' }]
               );
             }
