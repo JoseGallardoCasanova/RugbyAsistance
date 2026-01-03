@@ -9,6 +9,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
 import SupabaseService from '../../services/SupabaseService';
 
 interface Props {
@@ -75,20 +78,11 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
         return;
       }
 
-      // Por ahora solo mostramos resumen
-      const resumen = `
-📊 REPORTE DE ASISTENCIAS
-
-📅 Período: ${inicio} al ${fin}
-📋 Categorías: ${categorias.length}
-👥 Jugadores: ${jugadores.length}
-✅ Asistencias registradas: ${asistencias.length}
-
-La funcionalidad de exportación a Excel estará lista pronto.
-Por ahora puedes revisar estos datos en Supabase.
-      `.trim();
-
-      Alert.alert('📊 Resumen Generado', resumen);
+      // Generar Excel
+      await generarExcel(asistencias, jugadores, categorias, inicio, fin, rango.titulo);
+      
+      Alert.alert('✅ Excel Generado', 'El archivo se ha exportado correctamente');
+      onClose();
       
     } catch (error: any) {
       console.error('❌ Error al generar reporte:', error);
@@ -97,6 +91,112 @@ Por ahora puedes revisar estos datos en Supabase.
       setCargando(false);
       setRangoSeleccionado(null);
     }
+  };
+
+  const generarExcel = async (
+    asistencias: any[],
+    jugadores: any[],
+    categorias: any[],
+    fechaInicio: string,
+    fechaFin: string,
+    rangoTitulo: string
+  ) => {
+    // Obtener todas las fechas únicas ordenadas
+    const fechasUnicas = [...new Set(asistencias.map(a => a.fecha))].sort();
+
+    // Crear workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Agrupar por categoría
+    categorias.forEach(categoria => {
+      const jugadoresCategoria = jugadores.filter(j => j.categoria === categoria.numero);
+      
+      if (jugadoresCategoria.length === 0) return;
+
+      // Crear matriz de datos
+      const data: any[][] = [];
+
+      // Header: Jugador | Fecha1 | Fecha2 | ... | Total | %
+      const header = ['Jugador', ...fechasUnicas.map(f => formatearFechaCorta(f)), 'Total', '%'];
+      data.push(header);
+
+      // Filas de jugadores
+      jugadoresCategoria.forEach(jugador => {
+        const fila: any[] = [jugador.nombre];
+
+        let totalPresentes = 0;
+        let totalRegistros = 0;
+
+        // Para cada fecha, buscar asistencia
+        fechasUnicas.forEach(fecha => {
+          const asistencia = asistencias.find(
+            a => a.rut_jugador === jugador.rut && a.fecha === fecha
+          );
+
+          if (asistencia) {
+            totalRegistros++;
+            if (asistencia.asistio) {
+              fila.push('✓');
+              totalPresentes++;
+            } else {
+              fila.push('✗');
+            }
+          } else {
+            fila.push('-');
+          }
+        });
+
+        // Total y porcentaje
+        fila.push(totalPresentes);
+        const porcentaje = totalRegistros > 0 ? Math.round((totalPresentes / totalRegistros) * 100) : 0;
+        fila.push(`${porcentaje}%`);
+
+        data.push(fila);
+      });
+
+      // Crear sheet
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+      // Ajustar anchos de columna
+      const columnWidths = [
+        { wch: 25 }, // Jugador
+        ...fechasUnicas.map(() => ({ wch: 12 })), // Fechas
+        { wch: 8 },  // Total
+        { wch: 8 }   // %
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Agregar sheet al workbook
+      const sheetName = categoria.nombre.substring(0, 30); // Max 31 chars en Excel
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    });
+
+    // Convertir a base64
+    const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+
+    // Guardar archivo
+    const filename = `Asistencias_${rangoTitulo.replace(/\s+/g, '_')}_${new Date().getTime()}.xlsx`;
+    const fileUri = FileSystem.documentDirectory + filename;
+
+    await FileSystem.writeAsStringAsync(fileUri, wbout, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Compartir archivo
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: 'Exportar Asistencias',
+        UTI: 'com.microsoft.excel.xlsx',
+      });
+    } else {
+      Alert.alert('Error', 'No se puede compartir archivos en este dispositivo');
+    }
+  };
+
+  const formatearFechaCorta = (fechaISO: string): string => {
+    const [año, mes, dia] = fechaISO.split('-');
+    return `${dia}/${mes}`;
   };
 
   return (
@@ -143,10 +243,14 @@ Por ahora puedes revisar estos datos en Supabase.
           ))}
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitulo}>ℹ️ Próximamente</Text>
+            <Text style={styles.infoTitulo}>ℹ️ Formato del Excel</Text>
             <Text style={styles.infoTexto}>
-              La exportación a Excel se está implementando.{'\n\n'}
-              Por ahora puedes ver un resumen de las asistencias y acceder a los datos completos en Supabase.
+              El archivo Excel contendrá:{'\n\n'}
+              • Una pestaña por categoría{'\n'}
+              • Jugadores en filas{'\n'}
+              • Fechas en columnas{'\n'}
+              • ✓ = Presente | ✗ = Ausente | - = Sin registro{'\n'}
+              • Total de asistencias y porcentaje
             </Text>
           </View>
         </ScrollView>
