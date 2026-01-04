@@ -67,7 +67,6 @@ fumaCheckbox.addEventListener('change', (e) => {
 
 // Validar RUT chileno
 function validarRUT(rut) {
-    // Formato básico: 12345678-9
     const rutRegex = /^\d{7,8}-[\dkK]$/;
     return rutRegex.test(rut.trim());
 }
@@ -85,8 +84,6 @@ function mostrarError(mensaje) {
 function mostrarExito() {
     successMessage.classList.add('active');
     form.style.display = 'none';
-    
-    // Opcional: redirigir después de 3 segundos
     setTimeout(() => {
         window.location.reload();
     }, 5000);
@@ -96,7 +93,6 @@ function mostrarExito() {
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Obtener valores
     const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
     const rut = document.getElementById('rut').value.trim();
     const fechaNacimiento = document.getElementById('fechaNacimiento').value;
@@ -117,7 +113,6 @@ form.addEventListener('submit', async (e) => {
     const lesiones = document.getElementById('lesiones').value.trim();
     const actividad = document.querySelector('input[name="actividad"]:checked')?.value;
 
-    // Validaciones
     if (!validarRUT(rut)) {
         mostrarError('El RUT no tiene el formato correcto. Debe ser: 12345678-9');
         return;
@@ -128,7 +123,6 @@ form.addEventListener('submit', async (e) => {
         return;
     }
 
-    // Preparar datos
     const nuevoJugador = {
         rut,
         nombre: nombreCompleto,
@@ -151,12 +145,10 @@ form.addEventListener('submit', async (e) => {
         actividad
     };
 
-    // Mostrar loading
     submitBtn.disabled = true;
     loading.classList.add('active');
 
     try {
-        // Verificar si el RUT ya existe
         const { data: existente, error: errorConsulta } = await supabase
             .from('jugadores')
             .select('rut')
@@ -170,7 +162,6 @@ form.addEventListener('submit', async (e) => {
             return;
         }
 
-        // Insertar en Supabase
         const { data, error } = await supabase
             .from('jugadores')
             .insert([nuevoJugador])
@@ -201,5 +192,5 @@ form.addEventListener('submit', async (e) => {
 // Cargar categorías al iniciar
 cargarCategorias();
 
-// Auto-completar fecha de nacimiento con formato correcto
+// Configurar fecha máxima
 document.getElementById('fechaNacimiento').setAttribute('max', new Date().toISOString().split('T')[0]);
