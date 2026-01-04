@@ -1,11 +1,14 @@
-// Configuración de Supabase
-const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NjgwMzgsImV4cCI6MjA1MTQ0NDAzOH0.ptmSoH2-kqd5rDXV2VPuuR4Dh-W6wQfHg0t2lvXzHRs';
+(function() {
+    'use strict';
+    
+    // Configuración de Supabase
+    const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MDM5OTEsImV4cCI6MjA4Mjk3OTk5MX0.Iu5kBp57jbO7dVRhB1V2CzJ724Vz3f0GgEa7HDkl9zQ';
 
-// Inicializar Supabase
-console.log('🔧 Inicializando Supabase...');
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('✅ Supabase inicializado');
+    // Inicializar Supabase
+    console.log('🔧 Inicializando Supabase...');
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('✅ Supabase inicializado');
 
 // Referencias DOM
 const form = document.getElementById('inscripcionForm');
@@ -194,3 +197,5 @@ cargarCategorias();
 
 // Configurar fecha máxima
 document.getElementById('fechaNacimiento').setAttribute('max', new Date().toISOString().split('T')[0]);
+
+})(); // Fin de la función autoejecutable

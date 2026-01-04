@@ -2,8 +2,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 🔧 CONFIGURACIÓN - Reemplaza con tus credenciales de Supabase
-const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co'; // ⚠️ CAMBIAR
-const SUPABASE_ANON_KEY = 'sb_publishable_kB7pkMYhwTkFY5hZVCco2A_TefA9SRc'; // ⚠️ CAMBIAR
+const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MDM5OTEsImV4cCI6MjA4Mjk3OTk5MX0.Iu5kBp57jbO7dVRhB1V2CzJ724Vz3f0GgEa7HDkl9zQ';
 
 // Tipos
 export interface Usuario {
