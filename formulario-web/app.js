@@ -1,9 +1,11 @@
 // Configuración de Supabase
 const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_kB7pkMYhwTkFY5hZVCco2A_TefA9SRc';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU4NjgwMzgsImV4cCI6MjA1MTQ0NDAzOH0.ptmSoH2-kqd5rDXV2VPuuR4Dh-W6wQfHg0t2lvXzHRs';
 
 // Inicializar Supabase
+console.log('🔧 Inicializando Supabase...');
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('✅ Supabase inicializado');
 
 // Referencias DOM
 const form = document.getElementById('inscripcionForm');
@@ -18,24 +20,39 @@ const frecuenciaField = document.getElementById('frecuenciaField');
 // Cargar categorías desde Supabase
 async function cargarCategorias() {
     try {
+        console.log('📥 Cargando categorías desde Supabase...');
+        
         const { data, error } = await supabase
             .from('categorias')
             .select('*')
             .eq('activo', true)
             .order('numero', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            console.error('❌ Error al consultar Supabase:', error);
+            throw error;
+        }
+
+        console.log('✅ Categorías recibidas:', data);
+        console.log('📊 Total categorías:', data ? data.length : 0);
 
         categoriaSelect.innerHTML = '<option value="">-- Selecciona una categoría --</option>';
         
-        data.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.numero;
-            option.textContent = cat.nombre;
-            categoriaSelect.appendChild(option);
-        });
+        if (data && data.length > 0) {
+            data.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.numero;
+                option.textContent = cat.nombre;
+                categoriaSelect.appendChild(option);
+                console.log(`➕ Categoría agregada: ${cat.numero} - ${cat.nombre}`);
+            });
+            console.log('✅ Todas las categorías agregadas al select');
+        } else {
+            console.warn('⚠️ No se encontraron categorías activas');
+            mostrarError('No hay categorías disponibles. Contacta al administrador.');
+        }
     } catch (error) {
-        console.error('Error al cargar categorías:', error);
+        console.error('❌ Error al cargar categorías:', error);
         mostrarError('No se pudieron cargar las categorías. Recarga la página.');
     }
 }
