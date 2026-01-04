@@ -394,19 +394,8 @@ class SupabaseService {
     try {
       console.log(`📤 [SUPABASE] Guardando ${asistencias.length} asistencias...`);
 
-      // Primero eliminar asistencias existentes del mismo día y categoría
-      const fecha = asistencias[0]?.fecha;
-      const categoria = asistencias[0]?.categoria;
-
-      if (fecha && categoria !== undefined) {
-        await this.supabase
-          .from('asistencias')
-          .delete()
-          .eq('fecha', fecha)
-          .eq('categoria', categoria);
-      }
-
-      // Insertar nuevas asistencias
+      // Usar upsert para actualizar asistencias del mismo día
+      // pero mantener el historial de días diferentes
       const registros = asistencias.map(a => ({
         categoria: a.categoria,
         fecha: a.fecha,
@@ -415,9 +404,14 @@ class SupabaseService {
         marcado_por: a.marcado_por,
       }));
 
+      // onConflict: si existe una asistencia con (categoria, fecha, rut_jugador),
+      // actualizar el valor de 'asistio'. Si no existe, insertar nuevo registro.
       const { error } = await this.supabase
         .from('asistencias')
-        .insert(registros);
+        .upsert(registros, { 
+          onConflict: 'categoria,fecha,rut_jugador',
+          ignoreDuplicates: false 
+        });
 
       if (error) throw error;
 

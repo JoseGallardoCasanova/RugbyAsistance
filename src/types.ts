@@ -21,9 +21,37 @@ export interface Jugador {
   rut: string;
   nombre: string;
   categoria: number;
+  numero?: number;
   activo: boolean;
   creadoEn?: string;
   modificadoEn?: string;
+  
+  // Datos personales
+  fecha_nacimiento?: string; // YYYY-MM-DD
+  email?: string;
+  
+  // Contacto de emergencia
+  contacto_emergencia?: string;
+  tel_emergencia?: string;
+  
+  // Información de salud
+  sistema_salud?: string; // Fonasa, Isapre
+  seguro_complementario?: string;
+  
+  // Tutor (para menores)
+  nombre_tutor?: string;
+  rut_tutor?: string;
+  tel_tutor?: string;
+  
+  // Información médica
+  fuma_frecuencia?: string; // "Diaria", "Ocasional", etc.
+  enfermedades?: string;
+  alergias?: string;
+  medicamentos?: string;
+  lesiones?: string;
+  
+  // Actividad
+  actividad?: 'Estudio' | 'Trabajo' | 'Ambos';
 }
 
 // ✅ NUEVO: Modelo de Categoría

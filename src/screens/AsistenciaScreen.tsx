@@ -27,6 +27,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const [loading, setLoading] = useState(true);
   const [asistencia, setAsistencia] = useState<{ [rut: string]: boolean }>({});
   const [enviando, setEnviando] = useState(false);
+  const [yaEnviado, setYaEnviado] = useState(false); // Nuevo estado
 
   useEffect(() => {
     cargarJugadores();
@@ -55,15 +56,18 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       
       if (data && Object.keys(data).length > 0) {
         setAsistencia(data);
+        setYaEnviado(true); // Marcar que ya hay asistencia enviada
         console.log(`✅ [ASISTENCIA] Asistencia cargada: ${Object.keys(data).length} jugadores marcados`);
         console.log('📋 [ASISTENCIA] Datos:', data);
       } else {
         console.log('ℹ️ [ASISTENCIA] No hay asistencia guardada para hoy, iniciando en blanco');
         setAsistencia({});
+        setYaEnviado(false);
       }
     } catch (error) {
       console.log('⚠️ [ASISTENCIA] Error al cargar asistencia, iniciando en blanco:', error);
       setAsistencia({});
+      setYaEnviado(false);
     }
   };
 
@@ -91,6 +95,12 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   };
 
   const toggleAsistencia = (rut: string) => {
+    // Si es entrenador y ya envió, no puede modificar
+    if (user?.role === 'entrenador' && yaEnviado) {
+      Alert.alert('Asistencia enviada', 'Ya enviaste la asistencia de hoy. No puedes modificarla.');
+      return;
+    }
+    
     console.log('✅ Toggle asistencia:', rut, !asistencia[rut]);
     setAsistencia(prev => ({
       ...prev,
@@ -99,6 +109,12 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   };
 
   const marcarTodos = (valor: boolean) => {
+    // Si es entrenador y ya envió, no puede modificar
+    if (user?.role === 'entrenador' && yaEnviado) {
+      Alert.alert('Asistencia enviada', 'Ya enviaste la asistencia de hoy. No puedes modificarla.');
+      return;
+    }
+    
     const nuevaAsistencia: { [rut: string]: boolean } = {};
     jugadores.forEach(j => {
       nuevaAsistencia[j.rut] = valor;
@@ -158,6 +174,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             setEnviando(false);
 
             if (success) {
+              setYaEnviado(true); // Marcar como enviado
               Alert.alert(
                 '✅ Enviado',
                 'La asistencia se ha guardado correctamente',
@@ -313,19 +330,27 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       {/* Botón enviar */}
       {jugadores.length > 0 && (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.enviarButton, enviando && styles.enviarButtonDisabled]}
-            onPress={handleEnviar}
-            disabled={enviando}
-          >
-            {enviando ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.enviarButtonText}>
-                📤 Enviar asistencia ({Object.keys(asistencia).length}/{jugadores.length})
+          {yaEnviado && user?.role === 'entrenador' ? (
+            <View style={styles.enviadoInfoBox}>
+              <Text style={styles.enviadoInfoText}>
+                ✅ Asistencia enviada hoy. Solo puedes visualizarla, no modificarla.
               </Text>
-            )}
-          </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.enviarButton, enviando && styles.enviarButtonDisabled]}
+              onPress={handleEnviar}
+              disabled={enviando}
+            >
+              {enviando ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.enviarButtonText}>
+                  📤 {yaEnviado ? 'Actualizar' : 'Enviar'} asistencia ({Object.keys(asistencia).length}/{jugadores.length})
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -506,6 +531,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+  },
+  enviadoInfoBox: {
+    backgroundColor: '#e8f5e9',
+    padding: 15,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  enviadoInfoText: {
+    color: '#2e7d32',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   enviarButton: {
     backgroundColor: '#1a472a',

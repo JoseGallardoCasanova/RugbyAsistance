@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏉 Inscripción Rugby Club</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d7a4a 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #1a472a;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .form-content {
+            padding: 30px 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a472a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field {
+            margin-bottom: 15px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .field label .required {
+            color: #f44336;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+            transition: all 0.3s;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+            outline: none;
+            border-color: #1a472a;
+            background: white;
+        }
+
+        .field textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .checkbox-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-field input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-field label {
+            margin: 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .radio-option:hover {
+            background: #f0f0f0;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background: #1a472a;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-button:hover {
+            background: #2d7a4a;
+        }
+
+        .submit-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1a472a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message,
+        .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message.active,
+        .error-message.active {
+            display: block;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 0;
+            }
+
+            .container {
+                border-radius: 0;
+            }
+
+            .form-content {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏉 Inscripción Rugby Club</h1>
+            <p>Completa todos los campos para registrarte</p>
+        </div>
+
+        <div class="form-content">
+            <div class="success-message" id="successMessage">
+                ✅ ¡Inscripción exitosa! Te has registrado correctamente. Bienvenido al club.
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <form id="inscripcionForm">
+                <!-- DATOS PERSONALES -->
+                <div class="section">
+                    <div class="section-title">📋 Datos Personales</div>
+                    
+                    <div class="field">
+                        <label>Nombre completo <span class="required">*</span></label>
+                        <input type="text" id="nombreCompleto" required placeholder="Ej: Juan Pérez González">
+                    </div>
+
+                    <div class="field">
+                        <label>RUT <span class="required">*</span></label>
+                        <input type="text" id="rut" required placeholder="Ej: 12345678-9">
+                        <div class="help-text">Formato: 12345678-9</div>
+                    </div>
+
+                    <div class="field">
+                        <label>Fecha de nacimiento <span class="required">*</span></label>
+                        <input type="date" id="fechaNacimiento" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Correo electrónico <span class="required">*</span></label>
+                        <input type="email" id="email" required placeholder="ejemplo@correo.com">
+                    </div>
+                </div>
+
+                <!-- CONTACTO DE EMERGENCIA -->
+                <div class="section">
+                    <div class="section-title">🚨 Contacto de Emergencia</div>
+                    
+                    <div class="field">
+                        <label>Nombre del contacto <span class="required">*</span></label>
+                        <input type="text" id="contactoEmergencia" required placeholder="Nombre completo">
+                    </div>
+
+                    <div class="field">
+                        <label>Teléfono de emergencia <span class="required">*</span></label>
+                        <input type="tel" id="telEmergencia" required placeholder="+56 9 1234 5678">
+                    </div>
+                </div>
+
+                <!-- CATEGORÍA -->
+                <div class="section">
+                    <div class="section-title">🏉 Categoría</div>
+                    
+                    <div class="field">
+                        <label>Selecciona tu categoría <span class="required">*</span></label>
+                        <select id="categoria" required>
+                            <option value="">-- Selecciona una categoría --</option>
+                            <!-- Se llenarán dinámicamente desde Supabase -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SISTEMA DE SALUD -->
+                <div class="section">
+                    <div class="section-title">🏥 Sistema de Salud</div>
+                    
+                    <div class="field">
+                        <label>Sistema de salud <span class="required">*</span></label>
+                        <input type="text" id="sistemaSalud" required placeholder="Fonasa o Isapre">
+                    </div>
+
+                    <div class="field">
+                        <label>Seguro complementario</label>
+                        <input type="text" id="seguroComplementario" placeholder="Nombre del seguro (opcional)">
+                    </div>
+                </div>
+
+                <!-- TUTOR (PARA MENORES) -->
+                <div class="section">
+                    <div class="section-title">👨‍👩‍👧‍👦 Datos del Tutor (Menores de edad)</div>
+                    
+                    <div class="field">
+                        <label>Nombre del tutor</label>
+                        <input type="text" id="nombreTutor" placeholder="Nombre completo del tutor">
+                    </div>
+
+                    <div class="field">
+                        <label>RUT del tutor</label>
+                        <input type="text" id="rutTutor" placeholder="12345678-9">
+                    </div>
+
+                    <div class="field">
+                        <label>Teléfono del tutor</label>
+                        <input type="tel" id="telTutor" placeholder="+56 9 1234 5678">
+                    </div>
+                </div>
+
+                <!-- INFORMACIÓN MÉDICA -->
+                <div class="section">
+                    <div class="section-title">⚕️ Información Médica</div>
+                    
+                    <div class="checkbox-field">
+                        <input type="checkbox" id="fuma">
+                        <label for="fuma">¿Fuma?</label>
+                    </div>
+
+                    <div class="field" id="frecuenciaField" style="display: none;">
+                        <label>Frecuencia</label>
+                        <input type="text" id="fumaFrecuencia" placeholder="Ej: Ocasional, Diaria">
+                    </div>
+
+                    <div class="field">
+                        <label>¿Posee alguna enfermedad de alto riesgo?</label>
+                        <textarea id="enfermedades" placeholder="Describe si tienes alguna enfermedad"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label>¿Posee alguna alergia?</label>
+                        <textarea id="alergias" placeholder="Describe si tienes alergias"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label>¿Toma algún tipo de medicamento?</label>
+                        <textarea id="medicamentos" placeholder="Lista los medicamentos que tomas"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label>¿Posee alguna lesión importante de informar?</label>
+                        <textarea id="lesiones" placeholder="Describe lesiones importantes"></textarea>
+                    </div>
+                </div>
+
+                <!-- ACTIVIDAD -->
+                <div class="section">
+                    <div class="section-title">📚 Actividad</div>
+                    
+                    <div class="field">
+                        <label>¿Estudias o trabajas? <span class="required">*</span></label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="estudio" name="actividad" value="Estudio" required>
+                                <label for="estudio">Estudio</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="trabajo" name="actividad" value="Trabajo">
+                                <label for="trabajo">Trabajo</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="ambos" name="actividad" value="Ambos">
+                                <label for="ambos">Ambos</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-button" id="submitBtn">
+                    ✅ Enviar Inscripción
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Enviando inscripción...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

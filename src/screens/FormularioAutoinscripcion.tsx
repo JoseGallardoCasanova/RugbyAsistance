@@ -1,0 +1,624 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import SupabaseService from '../services/SupabaseService';
+import { Categoria } from '../types';
+
+interface Props {
+  navigation?: any;
+  onSuccess?: () => void;
+}
+
+export default function FormularioAutoinscripcion({ navigation, onSuccess }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  
+  // Datos personales
+  const [nombreCompleto, setNombreCompleto] = useState('');
+  const [rut, setRut] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [email, setEmail] = useState('');
+  
+  // Contacto de emergencia
+  const [contactoEmergencia, setContactoEmergencia] = useState('');
+  const [telEmergencia, setTelEmergencia] = useState('');
+  
+  // Categoría
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
+  
+  // Salud
+  const [sistemaSalud, setSistemaSalud] = useState('');
+  const [seguroComplementario, setSeguroComplementario] = useState('');
+  
+  // Tutor (para menores)
+  const [nombreTutor, setNombreTutor] = useState('');
+  const [rutTutor, setRutTutor] = useState('');
+  const [telTutor, setTelTutor] = useState('');
+  
+  // Información médica
+  const [fuma, setFuma] = useState(false);
+  const [fumaFrecuencia, setFumaFrecuencia] = useState('');
+  const [enfermedades, setEnfermedades] = useState('');
+  const [alergias, setAlergias] = useState('');
+  const [medicamentos, setMedicamentos] = useState('');
+  const [lesiones, setLesiones] = useState('');
+  
+  // Actividad
+  const [actividad, setActividad] = useState<'Estudio' | 'Trabajo' | 'Ambos' | ''>('');
+
+  useEffect(() => {
+    cargarCategorias();
+  }, []);
+
+  const cargarCategorias = async () => {
+    try {
+      const cats = await SupabaseService.obtenerCategorias();
+      setCategorias(cats.filter(c => c.activo));
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    }
+  };
+
+  const validarFormulario = (): boolean => {
+    if (!nombreCompleto.trim()) {
+      Alert.alert('Error', 'El nombre completo es obligatorio');
+      return false;
+    }
+    
+    if (!rut.trim()) {
+      Alert.alert('Error', 'El RUT es obligatorio');
+      return false;
+    }
+    
+    if (!fechaNacimiento.trim()) {
+      Alert.alert('Error', 'La fecha de nacimiento es obligatoria');
+      return false;
+    }
+    
+    if (!email.trim()) {
+      Alert.alert('Error', 'El correo electrónico es obligatorio');
+      return false;
+    }
+    
+    if (!contactoEmergencia.trim()) {
+      Alert.alert('Error', 'El contacto de emergencia es obligatorio');
+      return false;
+    }
+    
+    if (!telEmergencia.trim()) {
+      Alert.alert('Error', 'El teléfono de emergencia es obligatorio');
+      return false;
+    }
+    
+    if (!categoriaSeleccionada) {
+      Alert.alert('Error', 'Debes seleccionar una categoría');
+      return false;
+    }
+    
+    if (!sistemaSalud.trim()) {
+      Alert.alert('Error', 'El sistema de salud es obligatorio');
+      return false;
+    }
+    
+    if (!actividad) {
+      Alert.alert('Error', 'Debes indicar si estudias, trabajas o ambos');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleEnviar = async () => {
+    if (!validarFormulario()) return;
+
+    setLoading(true);
+
+    try {
+      const nuevoJugador = {
+        rut: rut.trim(),
+        nombre: nombreCompleto.trim(),
+        categoria: categoriaSeleccionada!,
+        activo: true,
+        
+        // Datos adicionales
+        fecha_nacimiento: fechaNacimiento,
+        email: email.trim(),
+        contacto_emergencia: contactoEmergencia.trim(),
+        tel_emergencia: telEmergencia.trim(),
+        sistema_salud: sistemaSalud.trim(),
+        seguro_complementario: seguroComplementario.trim() || null,
+        nombre_tutor: nombreTutor.trim() || null,
+        rut_tutor: rutTutor.trim() || null,
+        tel_tutor: telTutor.trim() || null,
+        fuma_frecuencia: fuma ? fumaFrecuencia.trim() : null,
+        enfermedades: enfermedades.trim() || null,
+        alergias: alergias.trim() || null,
+        medicamentos: medicamentos.trim() || null,
+        lesiones: lesiones.trim() || null,
+        actividad,
+      };
+
+      const success = await SupabaseService.crearJugador(nuevoJugador);
+
+      if (success) {
+        Alert.alert(
+          '✅ Inscripción Exitosa',
+          'Te has registrado correctamente. ¡Bienvenido al club!',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                if (onSuccess) {
+                  onSuccess();
+                } else if (navigation) {
+                  navigation.goBack();
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'No se pudo completar la inscripción. Intenta nuevamente.');
+      }
+    } catch (error: any) {
+      console.error('Error al enviar formulario:', error);
+      Alert.alert('Error', error.message || 'Ocurrió un error al enviar el formulario');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        {navigation && (
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backButton}>← Volver</Text>
+          </TouchableOpacity>
+        )}
+        {onSuccess && (
+          <TouchableOpacity onPress={onSuccess}>
+            <Text style={styles.backButton}>✕ Cerrar</Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.title}>📝 Formulario de Inscripción</Text>
+      </View>
+
+      <ScrollView style={styles.content}>
+        <Text style={styles.subtitle}>
+          Completa todos los campos para registrarte en el club
+        </Text>
+
+        {/* DATOS PERSONALES */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📋 Datos Personales</Text>
+          
+          <Text style={styles.label}>Nombre completo *</Text>
+          <TextInput
+            style={styles.input}
+            value={nombreCompleto}
+            onChangeText={setNombreCompleto}
+            placeholder="Ej: Juan Pérez González"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>RUT *</Text>
+          <TextInput
+            style={styles.input}
+            value={rut}
+            onChangeText={setRut}
+            placeholder="Ej: 12345678-9"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>Fecha de nacimiento *</Text>
+          <TextInput
+            style={styles.input}
+            value={fechaNacimiento}
+            onChangeText={setFechaNacimiento}
+            placeholder="YYYY-MM-DD (Ej: 2000-01-15)"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>Correo electrónico *</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="ejemplo@correo.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* CONTACTO DE EMERGENCIA */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🚨 Contacto de Emergencia</Text>
+          
+          <Text style={styles.label}>Nombre del contacto *</Text>
+          <TextInput
+            style={styles.input}
+            value={contactoEmergencia}
+            onChangeText={setContactoEmergencia}
+            placeholder="Nombre completo"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>Teléfono de emergencia *</Text>
+          <TextInput
+            style={styles.input}
+            value={telEmergencia}
+            onChangeText={setTelEmergencia}
+            placeholder="+56 9 1234 5678"
+            keyboardType="phone-pad"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* CATEGORÍA */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏉 Categoría</Text>
+          
+          <Text style={styles.label}>Selecciona tu categoría *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={categoriaSeleccionada}
+              onValueChange={(value: number | null) => setCategoriaSeleccionada(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecciona una categoría..." value={null} />
+              {categorias.map((cat) => (
+                <Picker.Item key={cat.numero} label={cat.nombre} value={cat.numero} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
+        {/* SISTEMA DE SALUD */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏥 Sistema de Salud</Text>
+          
+          <Text style={styles.label}>Sistema de salud *</Text>
+          <TextInput
+            style={styles.input}
+            value={sistemaSalud}
+            onChangeText={setSistemaSalud}
+            placeholder="Fonasa o Isapre"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>Seguro complementario (opcional)</Text>
+          <TextInput
+            style={styles.input}
+            value={seguroComplementario}
+            onChangeText={setSeguroComplementario}
+            placeholder="Nombre del seguro"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* TUTOR (PARA MENORES) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 Datos del Tutor (Menores de edad)</Text>
+          
+          <Text style={styles.label}>Nombre del tutor</Text>
+          <TextInput
+            style={styles.input}
+            value={nombreTutor}
+            onChangeText={setNombreTutor}
+            placeholder="Nombre completo del tutor"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>RUT del tutor</Text>
+          <TextInput
+            style={styles.input}
+            value={rutTutor}
+            onChangeText={setRutTutor}
+            placeholder="12345678-9"
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>Teléfono del tutor</Text>
+          <TextInput
+            style={styles.input}
+            value={telTutor}
+            onChangeText={setTelTutor}
+            placeholder="+56 9 1234 5678"
+            keyboardType="phone-pad"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* INFORMACIÓN MÉDICA */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>⚕️ Información Médica</Text>
+          
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setFuma(!fuma)}
+          >
+            <View style={[styles.checkbox, fuma && styles.checkboxChecked]}>
+              {fuma && <Text style={styles.checkboxText}>✓</Text>}
+            </View>
+            <Text style={styles.checkboxLabel}>¿Fuma?</Text>
+          </TouchableOpacity>
+
+          {fuma && (
+            <>
+              <Text style={styles.label}>Frecuencia</Text>
+              <TextInput
+                style={styles.input}
+                value={fumaFrecuencia}
+                onChangeText={setFumaFrecuencia}
+                placeholder="Ej: Ocasional, Diaria"
+                placeholderTextColor="#999"
+              />
+            </>
+          )}
+
+          <Text style={styles.label}>¿Posee alguna enfermedad de alto riesgo?</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={enfermedades}
+            onChangeText={setEnfermedades}
+            placeholder="Describe si tienes alguna enfermedad"
+            multiline
+            numberOfLines={3}
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>¿Posee alguna alergia?</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={alergias}
+            onChangeText={setAlergias}
+            placeholder="Describe si tienes alergias"
+            multiline
+            numberOfLines={3}
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>¿Toma algún tipo de medicamento?</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={medicamentos}
+            onChangeText={setMedicamentos}
+            placeholder="Lista los medicamentos que tomas"
+            multiline
+            numberOfLines={3}
+            placeholderTextColor="#999"
+          />
+
+          <Text style={styles.label}>¿Posee alguna lesión importante de informar?</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={lesiones}
+            onChangeText={setLesiones}
+            placeholder="Describe lesiones importantes"
+            multiline
+            numberOfLines={3}
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* ACTIVIDAD */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📚 Actividad</Text>
+          
+          <Text style={styles.label}>¿Estudias o trabajas? *</Text>
+          <View style={styles.radioGroup}>
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => setActividad('Estudio')}
+            >
+              <View style={[styles.radio, actividad === 'Estudio' && styles.radioSelected]}>
+                {actividad === 'Estudio' && <View style={styles.radioDot} />}
+              </View>
+              <Text style={styles.radioLabel}>Estudio</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => setActividad('Trabajo')}
+            >
+              <View style={[styles.radio, actividad === 'Trabajo' && styles.radioSelected]}>
+                {actividad === 'Trabajo' && <View style={styles.radioDot} />}
+              </View>
+              <Text style={styles.radioLabel}>Trabajo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioOption}
+              onPress={() => setActividad('Ambos')}
+            >
+              <View style={[styles.radio, actividad === 'Ambos' && styles.radioSelected]}>
+                {actividad === 'Ambos' && <View style={styles.radioDot} />}
+              </View>
+              <Text style={styles.radioLabel}>Ambos</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* BOTÓN ENVIAR */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleEnviar}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>✅ Enviar Inscripción</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#1a472a',
+    paddingTop: 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1a472a',
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    color: '#333',
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 50,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#1a472a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#1a472a',
+  },
+  checkboxText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#333',
+  },
+  radioGroup: {
+    marginTop: 10,
+  },
+  radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1a472a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  radioSelected: {
+    borderColor: '#1a472a',
+  },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#1a472a',
+  },
+  radioLabel: {
+    fontSize: 14,
+    color: '#333',
+  },
+  submitButton: {
+    backgroundColor: '#1a472a',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});

@@ -9,11 +9,14 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
+import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
+import FormularioAutoinscripcion from './FormularioAutoinscripcion';
 
 interface HomeScreenProps {
   navigation: any;
@@ -23,6 +26,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formularioVisible, setFormularioVisible] = useState(false);
 
   useEffect(() => {
     cargarCategorias();
@@ -226,6 +230,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         )}
       </ScrollView>
+
+      {/* Botón flotante - Solo para admin y entrenador */}
+      {(user?.role === 'admin' || user?.role === 'entrenador') && (
+        <BotonFlotanteInscripcion
+          onOpenFormulario={() => setFormularioVisible(true)}
+        />
+      )}
+
+      {/* Modal con formulario */}
+      <Modal
+        visible={formularioVisible}
+        animationType="slide"
+        onRequestClose={() => setFormularioVisible(false)}
+      >
+        <FormularioAutoinscripcion
+          onSuccess={() => {
+            setFormularioVisible(false);
+            Alert.alert('✅ Éxito', 'Jugador inscrito correctamente');
+          }}
+        />
+      </Modal>
     </SafeAreaView>
   );
 };

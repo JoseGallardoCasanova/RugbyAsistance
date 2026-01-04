@@ -14,6 +14,7 @@ import {
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import FormJugador from './FormJugador';
+import ModalDetallesJugador from './ModalDetallesJugador';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -26,7 +27,9 @@ const JugadoresTab: React.FC = () => {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalDetallesVisible, setModalDetallesVisible] = useState(false);
   const [jugadorEditar, setJugadorEditar] = useState<Jugador | undefined>();
+  const [jugadorDetalles, setJugadorDetalles] = useState<Jugador | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const categoriasEntrenador = useMemo(() => {
@@ -117,6 +120,11 @@ const JugadoresTab: React.FC = () => {
   const handleEditar = (jugador: Jugador) => {
     setJugadorEditar(jugador);
     setModalVisible(true);
+  };
+
+  const handleVerDetalles = (jugador: Jugador) => {
+    setJugadorDetalles(jugador);
+    setModalDetallesVisible(true);
   };
 
   const handleEliminar = (jugador: Jugador) => {
@@ -213,25 +221,47 @@ const JugadoresTab: React.FC = () => {
         </View>
 
         <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
-            onPress={() => handleEditar(item)}
-            disabled={isDeleting}
-          >
-            <Text style={styles.buttonText}>✏️ Editar</Text>
-          </TouchableOpacity>
+          {/* Solo admins pueden editar/eliminar */}
+          {user?.role === 'admin' && (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonInfo, isDeleting && styles.buttonDisabled]}
+                onPress={() => handleVerDetalles(item)}
+                disabled={isDeleting}
+              >
+                <Text style={styles.buttonText}>👁️ Detalles</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.buttonDelete, isDeleting && styles.buttonDisabled]}
-            onPress={() => handleEliminar(item)}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.buttonText}>🗑️ Eliminar</Text>
-            )}
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
+                onPress={() => handleEditar(item)}
+                disabled={isDeleting}
+              >
+                <Text style={styles.buttonText}>✏️ Editar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.buttonDelete, isDeleting && styles.buttonDisabled]}
+                onPress={() => handleEliminar(item)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>🗑️ Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+          
+          {/* Entrenadores solo ven mensaje informativo */}
+          {user?.role === 'entrenador' && (
+            <View style={styles.entrenadorInfo}>
+              <Text style={styles.entrenadorInfoText}>
+                👀 Solo visualización
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -326,14 +356,15 @@ const JugadoresTab: React.FC = () => {
         }
       />
 
-      {/* Botón crear */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleCrear}
-        disabled={entrenadorSinCategorias}
-      >
-        <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
-      </TouchableOpacity>
+      {/* Botón crear - Solo para admins */}
+      {user?.role === 'admin' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleCrear}
+        >
+          <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Modal de formulario */}
       <FormJugador
@@ -342,6 +373,13 @@ const JugadoresTab: React.FC = () => {
         categoriasPermitidas={user?.role === 'entrenador' ? categoriasEntrenador : undefined}
         onClose={() => setModalVisible(false)}
         onSave={handleGuardar}
+      />
+
+      {/* Modal de detalles */}
+      <ModalDetallesJugador
+        visible={modalDetallesVisible}
+        jugador={jugadorDetalles}
+        onClose={() => setModalDetallesVisible(false)}
       />
     </View>
   );
@@ -459,6 +497,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  entrenadorInfo: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  entrenadorInfoText: {
+    color: '#666',
+    fontSize: 13,
+    fontWeight: '500',
+  },
   button: {
     flex: 1,
     padding: 10,
@@ -466,6 +519,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 40,
+  },
+  buttonInfo: {
+    backgroundColor: '#9C27B0',
   },
   buttonEdit: {
     backgroundColor: '#2196F3',
