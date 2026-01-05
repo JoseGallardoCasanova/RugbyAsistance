@@ -18,6 +18,24 @@ interface Props {
 export default function ModalDetallesJugador({ visible, jugador, onClose }: Props) {
   if (!jugador) return null;
 
+  // Verificar si hay detalles adicionales
+  const tieneDetallesAdicionales = 
+    jugador.fecha_nacimiento ||
+    jugador.email ||
+    jugador.contacto_emergencia ||
+    jugador.tel_emergencia ||
+    jugador.sistema_salud ||
+    jugador.seguro_complementario ||
+    jugador.nombre_tutor ||
+    jugador.rut_tutor ||
+    jugador.tel_tutor ||
+    jugador.fuma_frecuencia ||
+    jugador.enfermedades ||
+    jugador.alergias ||
+    jugador.medicamentos ||
+    jugador.lesiones ||
+    jugador.actividad;
+
   const renderField = (label: string, value: string | undefined | null) => {
     if (!value) return null;
     
@@ -162,6 +180,20 @@ export default function ModalDetallesJugador({ visible, jugador, onClose }: Prop
             </View>
           )}
 
+          {/* Mensaje si no hay detalles adicionales */}
+          {!tieneDetallesAdicionales && (
+            <View style={styles.section}>
+              <View style={styles.noDetailsContainer}>
+                <Text style={styles.noDetailsIcon}>📝</Text>
+                <Text style={styles.noDetailsTitle}>Sin detalles adicionales</Text>
+                <Text style={styles.noDetailsText}>
+                  Este jugador solo tiene los datos básicos registrados.{'\n'}
+                  Puede editarlo para agregar más información.
+                </Text>
+              </View>
+            </View>
+          )}
+
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
@@ -227,6 +259,27 @@ const styles = StyleSheet.create({
   },
   textMultiline: {
     lineHeight: 22,
+  },
+  noDetailsContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+  noDetailsIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  noDetailsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  noDetailsText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   emptyContainer: {
     alignItems: 'center',

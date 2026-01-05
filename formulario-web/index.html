@@ -214,14 +214,31 @@
         .error-message {
             padding: 15px;
             border-radius: 8px;
+            margin-top: 20px;
             margin-bottom: 20px;
             display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .success-message {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
+            font-weight: 500;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1.5;
         }
 
         .error-message {
@@ -264,12 +281,6 @@
         </div>
 
         <div class="form-content">
-            <div class="success-message" id="successMessage">
-                ✅ ¡Inscripción exitosa! Te has registrado correctamente. Bienvenido al club.
-            </div>
-
-            <div class="error-message" id="errorMessage"></div>
-
             <form id="inscripcionForm">
                 <!-- DATOS PERSONALES -->
                 <div class="section">
@@ -416,6 +427,13 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Mensajes de feedback -->
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage">
+                    ✅ ¡Jugador creado con éxito!<br>
+                    Te has registrado correctamente en el club. ¡Bienvenido! 🏉
                 </div>
 
                 <button type="submit" class="submit-button" id="submitBtn">

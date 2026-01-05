@@ -10,15 +10,8 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log('✅ Supabase inicializado');
 
-// Referencias DOM
-const form = document.getElementById('inscripcionForm');
-const submitBtn = document.getElementById('submitBtn');
-const loading = document.getElementById('loading');
-const successMessage = document.getElementById('successMessage');
-const errorMessage = document.getElementById('errorMessage');
-const categoriaSelect = document.getElementById('categoria');
-const fumaCheckbox = document.getElementById('fuma');
-const frecuenciaField = document.getElementById('frecuenciaField');
+// Referencias DOM - se obtienen después de que el DOM esté listo
+let form, submitBtn, loading, successMessage, errorMessage, categoriaSelect, fumaCheckbox, frecuenciaField;
 
 // Cargar categorías desde Supabase
 async function cargarCategorias() {
@@ -61,12 +54,14 @@ async function cargarCategorias() {
 }
 
 // Mostrar/ocultar campo de frecuencia de fumar
-fumaCheckbox.addEventListener('change', (e) => {
-    frecuenciaField.style.display = e.target.checked ? 'block' : 'none';
-    if (!e.target.checked) {
-        document.getElementById('fumaFrecuencia').value = '';
-    }
-});
+function setupFumaCheckbox() {
+    fumaCheckbox.addEventListener('change', (e) => {
+        frecuenciaField.style.display = e.target.checked ? 'block' : 'none';
+        if (!e.target.checked) {
+            document.getElementById('fumaFrecuencia').value = '';
+        }
+    });
+}
 
 // Validar RUT chileno
 function validarRUT(rut) {
@@ -77,26 +72,34 @@ function validarRUT(rut) {
 // Mostrar error
 function mostrarError(mensaje) {
     errorMessage.textContent = '❌ ' + mensaje;
+    successMessage.classList.remove('active'); // Ocultar éxito
     errorMessage.classList.add('active');
-    setTimeout(() => {
-        errorMessage.classList.remove('active');
-    }, 5000);
+    // NO se oculta automáticamente, permanece hasta el siguiente envío
 }
 
 // Mostrar éxito
 function mostrarExito() {
+    errorMessage.classList.remove('active'); // Ocultar error
     successMessage.classList.add('active');
     form.style.display = 'none';
     setTimeout(() => {
         window.location.reload();
-    }, 5000);
+    }, 3000); // Reducido a 3 segundos
 }
 
 // Manejar envío del formulario
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+function setupFormSubmit() {
+    console.log('📝 Configurando manejador de submit...');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('🚀 Formulario enviado');
+        
+        // Ocultar mensajes previos al inicio
+        errorMessage.classList.remove('active');
+        successMessage.classList.remove('active');
 
-    const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
+        const nombreCompleto = document.getElementById('nombreCompleto').value.trim();
     const rut = document.getElementById('rut').value.trim();
     const fechaNacimiento = document.getElementById('fechaNacimiento').value;
     const email = document.getElementById('email').value.trim();
@@ -191,11 +194,44 @@ form.addEventListener('submit', async (e) => {
         loading.classList.remove('active');
     }
 });
+}
 
-// Cargar categorías al iniciar
-cargarCategorias();
+// Inicializar cuando el DOM esté listo
+function init() {
+    console.log('🔄 Inicializando aplicación...');
+    
+    // Obtener referencias DOM
+    form = document.getElementById('inscripcionForm');
+    submitBtn = document.getElementById('submitBtn');
+    loading = document.getElementById('loading');
+    successMessage = document.getElementById('successMessage');
+    errorMessage = document.getElementById('errorMessage');
+    categoriaSelect = document.getElementById('categoria');
+    fumaCheckbox = document.getElementById('fuma');
+    frecuenciaField = document.getElementById('frecuenciaField');
+    
+    console.log('✅ Referencias DOM obtenidas');
+    console.log('Form:', form ? 'OK' : 'ERROR');
+    console.log('Submit button:', submitBtn ? 'OK' : 'ERROR');
+    
+    // Configurar event listeners
+    setupFumaCheckbox();
+    setupFormSubmit();
+    
+    // Cargar categorías
+    cargarCategorias();
+    
+    // Configurar fecha máxima
+    document.getElementById('fechaNacimiento').setAttribute('max', new Date().toISOString().split('T')[0]);
+    
+    console.log('✅ Aplicación inicializada');
+}
 
-// Configurar fecha máxima
-document.getElementById('fechaNacimiento').setAttribute('max', new Date().toISOString().split('T')[0]);
+// Esperar a que el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 })(); // Fin de la función autoejecutable

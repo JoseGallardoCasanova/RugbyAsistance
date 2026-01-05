@@ -123,6 +123,8 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleVerDetalles = (jugador: Jugador) => {
+    console.log('📋 Ver detalles de:', jugador.nombre, jugador.rut);
+    console.log('📋 Datos jugador:', JSON.stringify(jugador, null, 2));
     setJugadorDetalles(jugador);
     setModalDetallesVisible(true);
   };
@@ -206,6 +208,8 @@ const JugadoresTab: React.FC = () => {
 
   const renderJugador = ({ item }: { item: Jugador }) => {
     const isDeleting = deletingId === item.rut;
+    
+    console.log('🎨 Renderizando jugador:', item.nombre, 'Categoría:', item.categoria);
 
     return (
       <View style={styles.card}>
