@@ -538,6 +538,22 @@ class SupabaseService {
       activo: data.activo !== false,
       created_at: data.created_at,
       updated_at: data.updated_at,
+      // Campos adicionales agregados
+      fecha_nacimiento: data.fecha_nacimiento,
+      email: data.email,
+      contacto_emergencia: data.contacto_emergencia,
+      tel_emergencia: data.tel_emergencia,
+      sistema_salud: data.sistema_salud,
+      seguro_complementario: data.seguro_complementario,
+      nombre_tutor: data.nombre_tutor,
+      rut_tutor: data.rut_tutor,
+      tel_tutor: data.tel_tutor,
+      fuma_frecuencia: data.fuma_frecuencia,
+      enfermedades: data.enfermedades,
+      alergias: data.alergias,
+      medicamentos: data.medicamentos,
+      lesiones: data.lesiones,
+      actividad: data.actividad,
     };
   }
 
