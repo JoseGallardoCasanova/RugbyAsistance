@@ -17,8 +17,8 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [qrModalVisible, setQrModalVisible] = useState(false);
 
-  // URL del formulario (puedes cambiarla por la URL de tu formulario web o app)
-  const FORMULARIO_URL = 'https://rugby-club.com/inscripcion'; // Cambiar por URL real
+  // URL del formulario web desplegado en Vercel
+  const FORMULARIO_URL = 'https://formulariorugby.vercel.app';
 
   const handleOpenMenu = () => {
     setMenuVisible(true);
