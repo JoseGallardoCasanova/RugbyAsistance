@@ -21,6 +21,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
   const FORMULARIO_URL = 'https://formulariorugby.vercel.app';
 
   const handleOpenMenu = () => {
+    console.log('🔵 [BOTÓN QR] Abriendo menú...');
     setMenuVisible(true);
   };
 
@@ -29,11 +30,13 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
   };
 
   const handleOpenFormulario = () => {
+    console.log('📋 [BOTÓN QR] Abriendo formulario...');
     handleCloseMenu();
     onOpenFormulario();
   };
 
   const handleShowQR = () => {
+    console.log('📱 [BOTÓN QR] Mostrando código QR...');
     handleCloseMenu();
     setQrModalVisible(true);
   };

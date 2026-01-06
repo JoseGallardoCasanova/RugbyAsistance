@@ -225,9 +225,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* Botón flotante - Solo para admin y entrenador */}
       {(user?.role === 'admin' || user?.role === 'entrenador') && (
-        <BotonFlotanteInscripcion
-          onOpenFormulario={() => setFormularioVisible(true)}
-        />
+        <>
+          {console.log('✅ [HOME] Mostrando botón flotante para role:', user?.role)}
+          <BotonFlotanteInscripcion
+            onOpenFormulario={() => {
+              console.log('📋 [HOME] Callback onOpenFormulario ejecutado');
+              setFormularioVisible(true);
+            }}
+          />
+        </>
       )}
 
       {/* Modal con formulario */}
@@ -236,6 +242,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         animationType="slide"
         onRequestClose={() => setFormularioVisible(false)}
       >
+        {console.log('📋 [HOME] Modal formulario visible:', formularioVisible)}
         <FormularioAutoinscripcion
           onSuccess={() => {
             setFormularioVisible(false);
