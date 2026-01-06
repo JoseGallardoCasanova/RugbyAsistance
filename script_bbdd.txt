@@ -1,0 +1,700 @@
+// ============================================
+// GOOGLE APPS SCRIPT - BASE DE DATOS
+// ============================================
+// Este script maneja: USUARIOS, JUGADORES, CATEGORIAS
+// Deployment URL debe ser: https://script.google.com/macros/s/AKfycbxmASfJp4y8APYgLzFo72gTXAE0GKr2YFSOZLxRMnQkPAVbh0dkynbzpTeNUwxnMmy6HQ/exec
+
+// ============================================
+// HANDLER PRINCIPAL
+// ============================================
+
+function doPost(e) {
+  try {
+    Logger.log('📥 Request recibido');
+    
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action;
+    
+    Logger.log('🎯 Acción solicitada: ' + action);
+    Logger.log('📦 Datos: ' + JSON.stringify(data));
+    
+    // Router de acciones
+    if (action === 'verificarCredenciales') {
+      return verificarCredenciales(data);
+    }
+    else if (action === 'obtenerUsuarios') {
+      return obtenerUsuarios();
+    }
+    else if (action === 'crearUsuario') {
+      return crearUsuario(data);
+    }
+    else if (action === 'actualizarUsuario') {
+      return actualizarUsuario(data);
+    }
+    else if (action === 'eliminarUsuario') {
+      return eliminarUsuario(data);
+    }
+    else if (action === 'obtenerJugadores') {
+      return obtenerJugadores();
+    }
+    else if (action === 'crearJugador') {
+      return crearJugador(data);
+    }
+    else if (action === 'actualizarJugador') {
+      return actualizarJugador(data);
+    }
+    else if (action === 'eliminarJugador') {
+      return eliminarJugador(data);
+    }
+    else if (action === 'obtenerCategorias') {
+      return obtenerCategorias();
+    }
+    else if (action === 'crearCategoria') {
+      return crearCategoria(data);
+    }
+    else if (action === 'actualizarCategoria') {
+      return actualizarCategoria(data);
+    }
+    else if (action === 'eliminarCategoria') {
+      return eliminarCategoria(data);
+    }
+    else {
+      Logger.log('❌ Acción no reconocida: ' + action);
+      return respuesta({
+        success: false,
+        error: 'Acción no reconocida: ' + action
+      });
+    }
+    
+  } catch (error) {
+    Logger.log('❌ Error en doPost: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+// Helper para crear respuestas JSON
+function respuesta(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================
+// USUARIOS
+// ============================================
+
+function verificarCredenciales(data) {
+  try {
+    Logger.log('🔐 Verificando credenciales para: ' + data.email);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('USUARIOS');
+    
+    if (!sheet) {
+      Logger.log('❌ Hoja USUARIOS no encontrada');
+      return respuesta({
+        success: false,
+        error: 'Hoja USUARIOS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    
+    // Encontrar índices de columnas
+    var emailCol = headers.indexOf('Email');
+    var passwordCol = headers.indexOf('Password');
+    var activoCol = headers.indexOf('Activo');
+    
+    Logger.log('📊 Columnas: Email=' + emailCol + ', Password=' + passwordCol + ', Activo=' + activoCol);
+    
+    // Buscar usuario
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var email = fila[emailCol];
+      var password = fila[passwordCol];
+      var activo = fila[activoCol];
+      
+      Logger.log('🔍 Revisando usuario: ' + email);
+      
+      if (email === data.email && password === data.password && activo !== false) {
+        Logger.log('✅ Usuario encontrado: ' + email);
+        
+        // Construir objeto usuario
+        var usuario = {};
+        for (var j = 0; j < headers.length; j++) {
+          usuario[headers[j]] = fila[j];
+        }
+        
+        return respuesta({
+          success: true,
+          usuario: usuario
+        });
+      }
+    }
+    
+    Logger.log('❌ Usuario no encontrado o credenciales incorrectas');
+    return respuesta({
+      success: false,
+      error: 'Credenciales incorrectas'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en verificarCredenciales: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function obtenerUsuarios() {
+  try {
+    Logger.log('📥 Obteniendo todos los usuarios');
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('USUARIOS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja USUARIOS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var usuarios = [];
+    
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var usuario = {};
+      
+      for (var j = 0; j < headers.length; j++) {
+        usuario[headers[j]] = fila[j];
+      }
+      
+      usuarios.push(usuario);
+    }
+    
+    Logger.log('✅ Usuarios obtenidos: ' + usuarios.length);
+    
+    return respuesta({
+      success: true,
+      usuarios: usuarios
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en obtenerUsuarios: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function crearUsuario(data) {
+  try {
+    Logger.log('➕ Creando usuario: ' + data.usuario.email);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('USUARIOS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja USUARIOS no encontrada'
+      });
+    }
+    
+    var usuario = data.usuario;
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // Construir fila
+    var fila = [];
+    for (var i = 0; i < headers.length; i++) {
+      fila.push(usuario[headers[i]] || '');
+    }
+    
+    sheet.appendRow(fila);
+    
+    Logger.log('✅ Usuario creado exitosamente');
+    
+    return respuesta({
+      success: true
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en crearUsuario: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function actualizarUsuario(data) {
+  try {
+    Logger.log('✏️ Actualizando usuario ID: ' + data.id);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('USUARIOS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja USUARIOS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var idCol = headers.indexOf('ID');
+    
+    // Buscar usuario
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][idCol] === data.id) {
+        // Actualizar campos
+        for (var campo in data.cambios) {
+          var colIndex = headers.indexOf(campo);
+          if (colIndex >= 0) {
+            sheet.getRange(i + 1, colIndex + 1).setValue(data.cambios[campo]);
+          }
+        }
+        
+        Logger.log('✅ Usuario actualizado');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Usuario no encontrado');
+    return respuesta({
+      success: false,
+      error: 'Usuario no encontrado'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en actualizarUsuario: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function eliminarUsuario(data) {
+  try {
+    Logger.log('🗑️ Eliminando usuario ID: ' + data.id);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('USUARIOS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja USUARIOS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var idCol = headers.indexOf('ID');
+    
+    // Buscar y eliminar
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][idCol] === data.id) {
+        sheet.deleteRow(i + 1);
+        
+        Logger.log('✅ Usuario eliminado');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Usuario no encontrado');
+    return respuesta({
+      success: false,
+      error: 'Usuario no encontrado'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en eliminarUsuario: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+// ============================================
+// JUGADORES
+// ============================================
+
+function obtenerJugadores() {
+  try {
+    Logger.log('📥 Obteniendo todos los jugadores');
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('JUGADORES');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja JUGADORES no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var jugadores = [];
+    
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var jugador = {};
+      
+      for (var j = 0; j < headers.length; j++) {
+        jugador[headers[j]] = fila[j];
+      }
+      
+      jugadores.push(jugador);
+    }
+    
+    Logger.log('✅ Jugadores obtenidos: ' + jugadores.length);
+    
+    return respuesta({
+      success: true,
+      jugadores: jugadores
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en obtenerJugadores: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function crearJugador(data) {
+  try {
+    Logger.log('➕ Creando jugador: ' + data.jugador.nombre);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('JUGADORES');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja JUGADORES no encontrada'
+      });
+    }
+    
+    var jugador = data.jugador;
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    var fila = [];
+    for (var i = 0; i < headers.length; i++) {
+      fila.push(jugador[headers[i]] || '');
+    }
+    
+    sheet.appendRow(fila);
+    
+    Logger.log('✅ Jugador creado exitosamente');
+    
+    return respuesta({
+      success: true
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en crearJugador: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function actualizarJugador(data) {
+  try {
+    Logger.log('✏️ Actualizando jugador RUT: ' + data.rut);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('JUGADORES');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja JUGADORES no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var rutCol = headers.indexOf('RUT');
+    
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][rutCol] === data.rut) {
+        for (var campo in data.cambios) {
+          var colIndex = headers.indexOf(campo);
+          if (colIndex >= 0) {
+            sheet.getRange(i + 1, colIndex + 1).setValue(data.cambios[campo]);
+          }
+        }
+        
+        Logger.log('✅ Jugador actualizado');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Jugador no encontrado');
+    return respuesta({
+      success: false,
+      error: 'Jugador no encontrado'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en actualizarJugador: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function eliminarJugador(data) {
+  try {
+    Logger.log('🗑️ Eliminando jugador RUT: ' + data.rut);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('JUGADORES');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja JUGADORES no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var rutCol = headers.indexOf('RUT');
+    
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][rutCol] === data.rut) {
+        sheet.deleteRow(i + 1);
+        
+        Logger.log('✅ Jugador eliminado');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Jugador no encontrado');
+    return respuesta({
+      success: false,
+      error: 'Jugador no encontrado'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en eliminarJugador: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+// ============================================
+// CATEGORÍAS
+// ============================================
+
+function obtenerCategorias() {
+  try {
+    Logger.log('📥 Obteniendo todas las categorías');
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('CATEGORIAS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja CATEGORIAS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var categorias = [];
+    
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var categoria = {};
+      
+      for (var j = 0; j < headers.length; j++) {
+        categoria[headers[j]] = fila[j];
+      }
+      
+      categorias.push(categoria);
+    }
+    
+    Logger.log('✅ Categorías obtenidas: ' + categorias.length);
+    
+    return respuesta({
+      success: true,
+      categorias: categorias
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en obtenerCategorias: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function crearCategoria(data) {
+  try {
+    Logger.log('➕ Creando categoría: ' + data.categoria.nombre);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('CATEGORIAS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja CATEGORIAS no encontrada'
+      });
+    }
+    
+    var categoria = data.categoria;
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    var fila = [];
+    for (var i = 0; i < headers.length; i++) {
+      fila.push(categoria[headers[i]] || '');
+    }
+    
+    sheet.appendRow(fila);
+    
+    Logger.log('✅ Categoría creada exitosamente');
+    
+    return respuesta({
+      success: true
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en crearCategoria: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function actualizarCategoria(data) {
+  try {
+    Logger.log('✏️ Actualizando categoría número: ' + data.numero);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('CATEGORIAS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja CATEGORIAS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var numeroCol = headers.indexOf('Numero');
+    
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][numeroCol] === data.numero) {
+        for (var campo in data.cambios) {
+          var colIndex = headers.indexOf(campo);
+          if (colIndex >= 0) {
+            sheet.getRange(i + 1, colIndex + 1).setValue(data.cambios[campo]);
+          }
+        }
+        
+        Logger.log('✅ Categoría actualizada');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Categoría no encontrada');
+    return respuesta({
+      success: false,
+      error: 'Categoría no encontrada'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en actualizarCategoria: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+function eliminarCategoria(data) {
+  try {
+    Logger.log('🗑️ Eliminando categoría número: ' + data.numero);
+    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('CATEGORIAS');
+    
+    if (!sheet) {
+      return respuesta({
+        success: false,
+        error: 'Hoja CATEGORIAS no encontrada'
+      });
+    }
+    
+    var datos = sheet.getDataRange().getValues();
+    var headers = datos[0];
+    var numeroCol = headers.indexOf('Numero');
+    
+    for (var i = 1; i < datos.length; i++) {
+      if (datos[i][numeroCol] === data.numero) {
+        sheet.deleteRow(i + 1);
+        
+        Logger.log('✅ Categoría eliminada');
+        
+        return respuesta({
+          success: true
+        });
+      }
+    }
+    
+    Logger.log('❌ Categoría no encontrada');
+    return respuesta({
+      success: false,
+      error: 'Categoría no encontrada'
+    });
+    
+  } catch (error) {
+    Logger.log('❌ Error en eliminarCategoria: ' + error);
+    return respuesta({
+      success: false,
+      error: error.toString()
+    });
+  }
+}

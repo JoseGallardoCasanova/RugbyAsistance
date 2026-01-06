@@ -1,0 +1,476 @@
+// 🏉 RUGBY ATTENDANCE - ASISTENCIAS (PÚBLICO)
+// Google Apps Script para gestión de Asistencias
+// ✅ ACTUALIZADO: Búsqueda DINÁMICA de posición de jugadores
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    
+    Logger.log('📥 Action: ' + action);
+    
+    if (action === 'obtenerAsistencia') return obtenerAsistencia(data);
+    if (action === 'inicializar') return inicializarSheet(data);
+    if (action === 'actualizarCategorias') return actualizarCategoriasEnHojas(data);
+    
+    return guardarAsistencia(data);
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'Rugby Attendance Asistencias API v4.0',
+    features: ['Búsqueda dinámica de jugadores', 'Sincronización categorías']
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ==================== GUARDAR ASISTENCIA (BÚSQUEDA DINÁMICA) ====================
+
+function guardarAsistencia(data) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetName = data.sheetName;
+    let sheet = ss.getSheetByName(sheetName);
+    
+    // Auto-create si no existe
+    if (!sheet && data.autoCreate) {
+      Logger.log('🚀 Auto-creando sheet: ' + sheetName);
+      const resultado = inicializarSheetAuto({
+        sheetName: sheetName,
+        mes: data.mes,
+        año: data.año,
+        jugadores: data.jugadores,
+        categorias: data.categorias || []
+      });
+      
+      if (!resultado.success) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'No se pudo crear el sheet: ' + resultado.error,
+          autoCreated: false
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      sheet = ss.getSheetByName(sheetName);
+    }
+    
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet no encontrado: ' + sheetName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ✅ NUEVO: Procesar updates con búsqueda dinámica
+    if (data.updates && data.updates.length > 0) {
+      const updatesReales = procesarUpdatesConBusqueda(sheet, data.updates);
+      
+      Logger.log('📦 Updates a aplicar: ' + updatesReales.length);
+      
+      updatesReales.forEach(function(update) {
+        const range = sheet.getRange(update.range);
+        range.setValue(update.value);
+        
+        if (update.backgroundColor) range.setBackground(update.backgroundColor);
+        if (update.fontColor) range.setFontColor(update.fontColor);
+        range.setHorizontalAlignment('center');
+      });
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      updatedCells: data.updates ? data.updates.length : 0,
+      autoCreated: false
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('❌ Error al guardar: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ✅ NUEVA FUNCIÓN: Buscar jugadores dinámicamente
+function procesarUpdatesConBusqueda(sheet, updates) {
+  const allData = sheet.getDataRange().getValues();
+  const updatesReales = [];
+  
+  // Agrupar updates por jugador
+  updates.forEach(function(update) {
+    const nombreJugador = update.nombreJugador;
+    const dia = update.dia;
+    const valor = update.value;
+    const backgroundColor = update.backgroundColor;
+    const fontColor = update.fontColor;
+    
+    Logger.log('🔍 Buscando jugador: ' + nombreJugador + ' para día ' + dia);
+    
+    // Buscar el jugador en la hoja
+    var filaJugador = -1;
+    
+    for (var i = 0; i < allData.length; i++) {
+      const cellValue = allData[i][0]; // Columna A (Nombre)
+      
+      if (cellValue && cellValue.toString().trim() === nombreJugador.trim()) {
+        filaJugador = i + 1; // +1 porque arrays empiezan en 0
+        Logger.log('✅ Jugador encontrado en fila: ' + filaJugador);
+        break;
+      }
+    }
+    
+    if (filaJugador === -1) {
+      Logger.log('⚠️ Jugador no encontrado: ' + nombreJugador);
+      return; // Skip este update
+    }
+    
+    // Calcular columna (día)
+    const columna = getColumnaParaDia(dia);
+    const range = columna + filaJugador;
+    
+    Logger.log('📍 Range calculado: ' + range + ' para jugador ' + nombreJugador);
+    
+    updatesReales.push({
+      range: range,
+      value: valor,
+      backgroundColor: backgroundColor,
+      fontColor: fontColor
+    });
+  });
+  
+  return updatesReales;
+}
+
+function getColumnaParaDia(dia) {
+  const columnIndex = dia + 1; // Día 1 = columna B (índice 2)
+  let columnLetter = '';
+  let temp = columnIndex;
+  
+  while (temp > 0) {
+    temp--;
+    columnLetter = String.fromCharCode(65 + (temp % 26)) + columnLetter;
+    temp = Math.floor(temp / 26);
+  }
+  
+  return columnLetter;
+}
+
+// ==================== ACTUALIZAR CATEGORÍAS ====================
+
+function actualizarCategoriasEnHojas(data) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const categorias = data.categorias || [];
+    
+    Logger.log('🔄 Actualizando categorías en todas las hojas...');
+    Logger.log('📋 Categorías recibidas: ' + categorias.length);
+    
+    const todasLasHojas = ss.getSheets();
+    let hojasActualizadas = 0;
+    let errores = [];
+    
+    todasLasHojas.forEach(function(sheet) {
+      const nombreHoja = sheet.getName();
+      
+      if (nombreHoja === 'Configuración' || nombreHoja === 'Datos') {
+        Logger.log('⏭️ Saltando hoja: ' + nombreHoja);
+        return;
+      }
+      
+      try {
+        Logger.log('📝 Actualizando hoja: ' + nombreHoja);
+        
+        const data = sheet.getDataRange().getValues();
+        let actualizaciones = 0;
+        
+        for (var i = 0; i < data.length; i++) {
+          const cellValue = data[i][0];
+          
+          if (cellValue && typeof cellValue === 'string') {
+            const matchCategoria = cellValue.match(/CATEGORÍA\s+(\d+)/i);
+            
+            if (matchCategoria) {
+              const numero = parseInt(matchCategoria[1]);
+              const categoriaNueva = buscarCategoriaPorNumero(numero, categorias);
+              
+              if (categoriaNueva && categoriaNueva.nombre !== cellValue) {
+                sheet.getRange(i + 1, 1).setValue(categoriaNueva.nombre);
+                Logger.log('✅ Actualizado: "' + cellValue + '" → "' + categoriaNueva.nombre + '"');
+                actualizaciones++;
+              }
+            }
+          }
+        }
+        
+        if (actualizaciones > 0) {
+          Logger.log('✅ Hoja "' + nombreHoja + '": ' + actualizaciones + ' headers actualizados');
+          hojasActualizadas++;
+        } else {
+          Logger.log('ℹ️ Hoja "' + nombreHoja + '": Sin cambios');
+        }
+        
+      } catch (error) {
+        Logger.log('❌ Error en hoja "' + nombreHoja + '": ' + error.toString());
+        errores.push({ hoja: nombreHoja, error: error.toString() });
+      }
+    });
+    
+    Logger.log('🎉 Proceso completado. Hojas actualizadas: ' + hojasActualizadas + '/' + todasLasHojas.length);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      hojasActualizadas: hojasActualizadas,
+      totalHojas: todasLasHojas.length,
+      errores: errores
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('❌ Error al actualizar categorías: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function buscarCategoriaPorNumero(numero, categorias) {
+  for (var i = 0; i < categorias.length; i++) {
+    if (categorias[i].numero === numero) {
+      return categorias[i];
+    }
+  }
+  return null;
+}
+
+// ==================== INICIALIZAR SHEET ====================
+
+function getNombreCategoria(numero, categorias) {
+  if (!categorias || categorias.length === 0) {
+    return 'Categoría ' + numero;
+  }
+  
+  for (var i = 0; i < categorias.length; i++) {
+    if (categorias[i].numero === numero) {
+      return categorias[i].nombre;
+    }
+  }
+  
+  return 'Categoría ' + numero;
+}
+
+function inicializarSheetAuto(config) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    let sheet = ss.getSheetByName(config.sheetName);
+    if (sheet) {
+      Logger.log('⚠️ Sheet ya existe: ' + config.sheetName);
+      return { success: true, message: 'Sheet ya existía' };
+    }
+    
+    sheet = ss.insertSheet(config.sheetName);
+    
+    const diasEnMes = new Date(config.año, getMesNumero(config.mes), 0).getDate();
+    const headers = ['Nombre'];
+    for (var i = 1; i <= diasEnMes; i++) headers.push('Día ' + i);
+    
+    var row = 1;
+    
+    sheet.getRange(row, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(row, 1, 1, headers.length).setFontWeight('bold');
+    sheet.getRange(row, 1, 1, headers.length).setBackground('#1a472a');
+    sheet.getRange(row, 1, 1, headers.length).setFontColor('#ffffff');
+    sheet.getRange(row, 1, 1, headers.length).setHorizontalAlignment('center');
+    row++;
+    
+    const categorias = config.categorias || [];
+    
+    const categoriasConJugadores = {};
+    config.jugadores.forEach(function(j) {
+      if (!categoriasConJugadores[j.categoria]) {
+        categoriasConJugadores[j.categoria] = [];
+      }
+      categoriasConJugadores[j.categoria].push(j);
+    });
+    
+    const todasCategorias = categorias.sort(function(a, b) { return a.numero - b.numero; });
+    
+    const categoriasAMostrar = todasCategorias.length > 0 
+      ? todasCategorias 
+      : Object.keys(categoriasConJugadores).map(function(num) { 
+          return { numero: parseInt(num), nombre: 'Categoría ' + num }; 
+        }).sort(function(a, b) { return a.numero - b.numero; });
+    
+    Logger.log('📋 Categorías a mostrar: ' + categoriasAMostrar.length);
+    
+    categoriasAMostrar.forEach(function(categoria) {
+      row++;
+      
+      const nombreCategoria = categoria.nombre || getNombreCategoria(categoria.numero, categorias);
+      sheet.getRange(row, 1).setValue(nombreCategoria);
+      sheet.getRange(row, 1).setFontWeight('bold');
+      sheet.getRange(row, 1).setFontSize(12);
+      sheet.getRange(row, 1).setBackground('#f3f3f3');
+      row++;
+      
+      const jugadoresCategoria = config.jugadores.filter(function(j) { 
+        return j.categoria === categoria.numero && j.activo !== false;
+      });
+      
+      Logger.log('📋 ' + nombreCategoria + ': ' + jugadoresCategoria.length + ' jugadores');
+      
+      if (jugadoresCategoria.length === 0) {
+        sheet.getRange(row, 1).setValue('(Sin jugadores)');
+        sheet.getRange(row, 1).setFontStyle('italic');
+        sheet.getRange(row, 1).setFontColor('#999999');
+        row++;
+      } else {
+        jugadoresCategoria.forEach(function(jugador) {
+          sheet.getRange(row, 1).setValue(jugador.nombre);
+          row++;
+        });
+      }
+    });
+    
+    sheet.setColumnWidth(1, 200);
+    for (var i = 2; i <= diasEnMes + 1; i++) {
+      sheet.setColumnWidth(i, 100);
+    }
+    
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(1);
+    
+    Logger.log('✅ Sheet creado: ' + config.sheetName);
+    
+    return { success: true };
+  } catch (error) {
+    Logger.log('❌ Error al crear sheet: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+function inicializarSheet(data) {
+  const resultado = inicializarSheetAuto({
+    sheetName: data.sheetName,
+    mes: data.mes,
+    año: data.año,
+    jugadores: data.jugadores,
+    categorias: data.categorias || []
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify(resultado))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getMesNumero(mes) {
+  const meses = {
+    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4,
+    'Mayo': 5, 'Junio': 6, 'Julio': 7, 'Agosto': 8,
+    'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
+  };
+  return meses[mes] || 1;
+}
+
+// ==================== OBTENER ASISTENCIAS ====================
+
+function obtenerAsistencia(data) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(data.sheetName);
+    
+    if (!sheet) {
+      Logger.log('⚠️ Sheet no encontrado: ' + data.sheetName);
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Sheet no encontrado'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const categoria = data.categoria;
+    const dia = data.dia;
+    
+    Logger.log('📥 Obteniendo asistencia: ' + data.sheetName + ', Cat: ' + categoria + ', Día: ' + dia);
+    
+    const colIndex = dia + 1;
+    const allData = sheet.getDataRange().getValues();
+    var categoriaStartRow = -1;
+    var categoriaEndRow = -1;
+    
+    for (var i = 0; i < allData.length; i++) {
+      const cellValue = allData[i][0];
+      if (cellValue && (
+        cellValue.toString().toUpperCase().indexOf('CATEGORÍA ' + categoria) === 0 ||
+        cellValue.toString() === 'M-' + categoria ||
+        cellValue.toString().indexOf('Cat') === 0
+      )) {
+        categoriaStartRow = i + 2;
+        break;
+      }
+    }
+    
+    if (categoriaStartRow === -1) {
+      Logger.log('❌ No se encontró la categoría ' + categoria);
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Categoría no encontrada'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    for (var i = categoriaStartRow; i < allData.length; i++) {
+      const cellValue = allData[i][0];
+      if (cellValue && (
+        cellValue.toString().toUpperCase().indexOf('CATEGORÍA') === 0 ||
+        cellValue.toString().indexOf('M-') === 0 ||
+        cellValue.toString().indexOf('Cat') === 0
+      )) {
+        categoriaEndRow = i;
+        break;
+      }
+    }
+    
+    if (categoriaEndRow === -1) {
+      categoriaEndRow = allData.length;
+    }
+    
+    Logger.log('📍 Categoría ' + categoria + ' filas: ' + categoriaStartRow + ' a ' + categoriaEndRow);
+    
+    const asistencias = [];
+    for (var i = categoriaStartRow; i < categoriaEndRow; i++) {
+      const fila = i + 1;
+      const nombre = sheet.getRange(fila, 1).getValue();
+      
+      if (!nombre || nombre === '(Sin jugadores)') continue;
+      
+      const valor = sheet.getRange(fila, colIndex).getValue();
+      const asistio = valor && valor !== '' && valor !== 'AUSENTE';
+      
+      asistencias.push({
+        nombre: nombre,
+        asistio: asistio,
+        valor: valor || ''
+      });
+    }
+    
+    Logger.log('✅ Asistencias obtenidas: ' + asistencias.length);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      asistencias: asistencias
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    Logger.log('❌ Error al obtener asistencia: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}

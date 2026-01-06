@@ -40,6 +40,7 @@
     "babel-preset-expo": "~12.0.0",
     "image-size": "^2.0.2",
     "puppeteer": "^24.34.0",
+    "react-native-dotenv": "^3.4.11",
     "typescript": "~5.3.3"
   },
   "private": true

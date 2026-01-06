@@ -1,9 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// 🔧 CONFIGURACIÓN - Reemplaza con tus credenciales de Supabase
-const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MDM5OTEsImV4cCI6MjA4Mjk3OTk5MX0.Iu5kBp57jbO7dVRhB1V2CzJ724Vz3f0GgEa7HDkl9zQ';
+import ENV from '../config/env';
 
 // Tipos
 export interface Usuario {
@@ -56,7 +53,7 @@ class SupabaseService {
   constructor() {
     console.log('🚀 [SUPABASE] Inicializando servicio...');
     
-    this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    this.supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -179,15 +176,15 @@ class SupabaseService {
     try {
       console.log('🗑️ [SUPABASE] Eliminando usuario ID:', id);
 
-      // Soft delete
+      // Hard delete - elimina permanentemente
       const { error } = await this.supabase
         .from('usuarios')
-        .update({ activo: false, updated_at: new Date().toISOString() })
+        .delete()
         .eq('id', id);
 
       if (error) throw error;
 
-      console.log('✅ [SUPABASE] Usuario eliminado');
+      console.log('✅ [SUPABASE] Usuario eliminado permanentemente');
       return true;
     } catch (error: any) {
       console.error('❌ [SUPABASE] Error al eliminar usuario:', error.message);
@@ -276,15 +273,15 @@ class SupabaseService {
     try {
       console.log('🗑️ [SUPABASE] Eliminando jugador RUT:', rut);
 
-      // Soft delete
+      // Hard delete - elimina permanentemente
       const { error } = await this.supabase
         .from('jugadores')
-        .update({ activo: false, updated_at: new Date().toISOString() })
+        .delete()
         .eq('rut', rut);
 
       if (error) throw error;
 
-      console.log('✅ [SUPABASE] Jugador eliminado');
+      console.log('✅ [SUPABASE] Jugador eliminado permanentemente');
       return true;
     } catch (error: any) {
       console.error('❌ [SUPABASE] Error al eliminar jugador:', error.message);
@@ -370,15 +367,15 @@ class SupabaseService {
     try {
       console.log('🗑️ [SUPABASE] Eliminando categoría número:', numero);
 
-      // Soft delete
+      // Hard delete - elimina permanentemente
       const { error } = await this.supabase
         .from('categorias')
-        .update({ activo: false, updated_at: new Date().toISOString() })
+        .delete()
         .eq('numero', numero);
 
       if (error) throw error;
 
-      console.log('✅ [SUPABASE] Categoría eliminada');
+      console.log('✅ [SUPABASE] Categoría eliminada permanentemente');
       return true;
     } catch (error: any) {
       console.error('❌ [SUPABASE] Error al eliminar categoría:', error.message);

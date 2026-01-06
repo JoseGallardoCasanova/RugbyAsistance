@@ -13,6 +13,12 @@ web-build/
 # Local EAS submit credentials (do not commit)
 credentials/
 
+# Environment variables (NEVER COMMIT)
+.env
+.env.local
+.env.production
+.env.development
+
 # macOS
 .DS_Store
 

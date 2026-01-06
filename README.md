@@ -1,22 +1,46 @@
 # 🏉 Rugby Attendance App
 
-App para marcar asistencia de entrenamientos de rugby con integración a Google Sheets.
+App para marcar asistencia de entrenamientos de rugby con integración a Supabase.
 
 ## 🚀 Características
 
-- ✅ Marcar asistencia de 7 categorías
+- ✅ Marcar asistencia de múltiples categorías
 - 👥 3 roles: Admin, Entrenador, Ayudante
-- 📊 Envío automático a Google Sheets
-- 📸 Perfil personalizable con foto
+- 📊 Exportar asistencias a Excel con filtros de tiempo
+- 📱 Formulario web público para autoinscripción masiva (300+ jugadores)
 - 🔒 Sistema de permisos por rol
-- 📱 APK lista para instalar en Android
+- 💾 Base de datos Supabase PostgreSQL
+- 📋 Gestión completa de jugadores con datos médicos y personales
+- 🏷️ Código QR para registro masivo
 
 ## 📋 Requisitos
 
 - Node.js 18+
 - npm o yarn
 - Expo CLI
-- Cuenta de Google Cloud (para Google Sheets API)
+- Cuenta de Supabase (gratis)
+
+## 🔐 Configuración de Variables de Entorno
+
+**⚠️ IMPORTANTE:** Las credenciales ya NO están hardcodeadas en el código por seguridad.
+
+### Primera vez - Setup inicial:
+
+```bash
+# 1. Copia el archivo de ejemplo
+cp .env.example .env
+
+# 2. Edita .env con tus credenciales de Supabase
+# SUPABASE_URL=https://tu-proyecto.supabase.co
+# SUPABASE_ANON_KEY=tu_clave_anonima_aqui
+
+# 3. Instala dependencias
+npm install
+```
+
+### Documentación completa:
+- 📖 [Guía completa de variables de entorno](docs/ENVIRONMENT_VARIABLES.md)
+- 🌐 [Configuración en Vercel](docs/VERCEL_ENV_SETUP.md)
 
 ## 🛠️ Instalación
 
@@ -232,26 +256,135 @@ export const getCategorias = (): number[] => {
 
 ```
 rugby-attendance/
+├── .env                         # ⚠️ Credenciales (NO COMMITEAR)
+├── .env.example                 # Template de variables de entorno
 ├── src/
+│   ├── config/
+│   │   └── env.ts              # Configuración de variables de entorno
 │   ├── context/
-│   │   └── AuthContext.tsx      # Manejo de autenticación
+│   │   └── AuthContext.tsx     # Manejo de autenticación
 │   ├── data/
-│   │   └── mockData.ts          # Datos de prueba (usuarios, jugadores)
+│   │   └── mockData.ts         # Datos de prueba
 │   ├── navigation/
-│   │   └── AppNavigator.tsx     # Navegación de la app
+│   │   └── AppNavigator.tsx    # Navegación de la app
 │   ├── screens/
-│   │   ├── LoginScreen.tsx      # Pantalla de login
-│   │   ├── HomeScreen.tsx       # Pantalla principal (categorías)
+│   │   ├── LoginScreen.tsx     # Pantalla de login
+│   │   ├── HomeScreen.tsx      # Pantalla principal (categorías)
 │   │   ├── AsistenciaScreen.tsx # Marcar asistencia
-│   │   ├── PerfilScreen.tsx     # Perfil de usuario
-│   │   └── ConfiguracionScreen.tsx # Config de Google Sheets
+│   │   ├── PerfilScreen.tsx    # Perfil de usuario
+│   │   └── admin/
+│   │       ├── AdminScreen.tsx          # Panel administrador
+│   │       ├── JugadoresTab.tsx         # CRUD jugadores
+│   │       ├── CategoriasTab.tsx        # CRUD categorías
+│   │       ├── UsuariosTab.tsx          # CRUD usuarios
+│   │       ├── FormJugador.tsx          # Form con 15+ campos
+│   │       ├── FormCategoria.tsx        # Form categorías
+│   │       ├── FormUsuario.tsx          # Form usuarios
+│   │       ├── ModalDetallesJugador.tsx # Ver info completa jugador
+│   │       ├── ModalExportarAsistencias.tsx # Exportar Excel
+│   │       ├── FormularioAutoinscripcion.tsx # Form autoinscripción in-app
+│   │       └── BotonFlotanteInscripcion.tsx # Botón QR flotante
 │   ├── services/
-│   │   └── GoogleSheetsService.ts # Integración con Google Sheets
+│   │   ├── SupabaseService.ts  # 🔒 Usa variables de entorno
+│   │   ├── DatabaseService.ts  # Legacy (no usado)
+│   │   └── GoogleSheetsService.ts # Legacy (no usado)
 │   └── types/
-│       └── index.ts             # Tipos TypeScript
-├── App.tsx                      # Punto de entrada
-├── app.json                     # Configuración de Expo
-└── package.json                 # Dependencias
+│       ├── index.ts            # Tipos TypeScript
+│       └── env.d.ts            # Types para variables de entorno
+├── formulario-web/             # 🌐 Formulario público web
+│   ├── .env                    # ⚠️ NO COMMITEAR
+│   ├── .env.example            # Template
+│   ├── index.html              # HTML del formulario
+│   ├── app.js                  # 🔒 Credenciales hardcoded (Vercel las inyecta)
+│   └── styles.css              # Estilos del formulario
+├── docs/
+│   ├── privacy-policy.html     # Política de privacidad
+│   ├── ENVIRONMENT_VARIABLES.md # 📖 Guía variables de entorno
+│   └── VERCEL_ENV_SETUP.md     # 🌐 Config Vercel paso a paso
+├── App.tsx                     # Punto de entrada
+├── app.json                    # Configuración de Expo
+├── babel.config.js             # 🔧 Plugin react-native-dotenv configurado
+└── package.json                # Dependencias
+```
+
+## 🔒 Seguridad
+
+### ⚠️ Variables de Entorno
+
+- **NUNCA** comitees archivos `.env`
+- Usa `.env.example` como referencia
+- Lee [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) para más detalles
+
+### 🌐 Formulario Web
+
+- Desplegado en Vercel: https://formulariorugby.vercel.app
+- Configuración de variables: [docs/VERCEL_ENV_SETUP.md](docs/VERCEL_ENV_SETUP.md)
+- Permite autoinscripción masiva de jugadores vía QR
+
+## 📊 Base de Datos
+
+### Supabase PostgreSQL
+
+Tablas principales:
+- **usuarios**: Admin, entrenadores, ayudantes
+- **categorias**: Categorías del club
+- **jugadores**: Jugadores con 15+ campos (médicos, contacto, etc.)
+- **asistencias**: Registro de asistencias por fecha
+
+### RLS Policies
+
+- SELECT público en `categorias`
+- INSERT público en `jugadores` (para formulario web)
+- Resto requiere autenticación
+
+## 🚀 Deployment
+
+### App React Native
+
+```bash
+# Build APK
+eas build --profile production --platform android
+
+# Build iOS
+eas build --profile production --platform ios
+```
+
+### Formulario Web
+
+```bash
+cd formulario-web
+vercel --prod
+```
+
+## 📖 Documentación Adicional
+
+- [Guía de Variables de Entorno](docs/ENVIRONMENT_VARIABLES.md)
+- [Configuración Vercel](docs/VERCEL_ENV_SETUP.md)
+- [Política de Privacidad](docs/privacy-policy.html)
+
+## 🐛 Troubleshooting
+
+### "Module '@env' not found"
+```bash
+npx expo start --clear
+```
+
+### Cambios en .env no se reflejan
+```bash
+# Reinicia Metro con cache limpio
+npx expo start --clear
+```
+
+### Formulario web no conecta
+1. Verifica variables en Vercel
+2. Redeploy el proyecto
+3. Limpia cache del navegador
+
+## 📄 Licencia
+├── App.tsx                     # Punto de entrada
+├── app.json                    # Configuración de Expo
+├── babel.config.js             # 🔧 Plugin react-native-dotenv
+└── package.json                # Dependencias
 ```
 
 ## 🔜 Próximos Pasos (Backend NestJS)

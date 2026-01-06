@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Autoinscripción - Rugby Club</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Cargar variables de entorno primero -->
+    <script>
+        // Variables de entorno inyectadas en build time
+        window.ENV = {
+            SUPABASE_URL: '{{SUPABASE_URL}}',
+            SUPABASE_ANON_KEY: '{{SUPABASE_ANON_KEY}}'
+        };
+    </script>
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏉 Rugby Club</h1>
+            <p>Formulario de Autoinscripción de Jugador</p>
+        </div>
+
+        <form id="formulario-inscripcion">
+            <!-- RUT -->
+            <div class="form-group">
+                <label for="rut">RUT *</label>
+                <input type="text" id="rut" name="rut" required 
+                       placeholder="Ej: 12345678-9"
+                       pattern="[0-9]{7,8}-[0-9kK]"
+                       title="Formato: 12345678-9">
+            </div>
+
+            <!-- Nombre -->
+            <div class="form-group">
+                <label for="nombre">Nombre Completo *</label>
+                <input type="text" id="nombre" name="nombre" required 
+                       placeholder="Nombre y apellidos completos">
+            </div>
+
+            <!-- Categoría -->
+            <div class="form-group">
+                <label for="categoria">Categoría *</label>
+                <select id="categoria" name="categoria" required>
+                    <option value="">Seleccionar categoría...</option>
+                </select>
+            </div>
+
+            <!-- Fecha de Nacimiento -->
+            <div class="form-group">
+                <label for="fecha_nacimiento">Fecha de Nacimiento *</label>
+                <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+            </div>
+
+            <!-- Dirección -->
+            <div class="form-group">
+                <label for="direccion">Dirección</label>
+                <input type="text" id="direccion" name="direccion" 
+                       placeholder="Dirección completa">
+            </div>
+
+            <!-- Ciudad -->
+            <div class="form-group">
+                <label for="ciudad">Ciudad</label>
+                <input type="text" id="ciudad" name="ciudad" 
+                       placeholder="Ciudad de residencia">
+            </div>
+
+            <!-- Teléfono -->
+            <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono" 
+                       placeholder="+56 9 1234 5678">
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" 
+                       placeholder="correo@ejemplo.com">
+            </div>
+
+            <!-- Contacto de Emergencia -->
+            <div class="form-group">
+                <label for="contacto_emergencia">Contacto de Emergencia *</label>
+                <input type="text" id="contacto_emergencia" name="contacto_emergencia" required
+                       placeholder="Nombre y relación">
+            </div>
+
+            <!-- Teléfono de Emergencia -->
+            <div class="form-group">
+                <label for="telefono_emergencia">Teléfono de Emergencia *</label>
+                <input type="tel" id="telefono_emergencia" name="telefono_emergencia" required
+                       placeholder="+56 9 1234 5678">
+            </div>
+
+            <!-- Previsión -->
+            <div class="form-group">
+                <label for="prevision">Previsión de Salud</label>
+                <input type="text" id="prevision" name="prevision" 
+                       placeholder="Fonasa, Isapre, etc.">
+            </div>
+
+            <!-- Grupo Sanguíneo -->
+            <div class="form-group">
+                <label for="grupo_sanguineo">Grupo Sanguíneo</label>
+                <select id="grupo_sanguineo" name="grupo_sanguineo">
+                    <option value="">Seleccionar...</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                </select>
+            </div>
+
+            <!-- Alergias -->
+            <div class="form-group">
+                <label for="alergias">Alergias</label>
+                <textarea id="alergias" name="alergias" rows="2"
+                          placeholder="Alergias conocidas (medicamentos, alimentos, etc.)"></textarea>
+            </div>
+
+            <!-- Enfermedades Crónicas -->
+            <div class="form-group">
+                <label for="enfermedades_cronicas">Enfermedades Crónicas</label>
+                <textarea id="enfermedades_cronicas" name="enfermedades_cronicas" rows="2"
+                          placeholder="Enfermedades crónicas o condiciones médicas"></textarea>
+            </div>
+
+            <!-- Medicamentos -->
+            <div class="form-group">
+                <label for="medicamentos">Medicamentos</label>
+                <textarea id="medicamentos" name="medicamentos" rows="2"
+                          placeholder="Medicamentos que toma regularmente"></textarea>
+            </div>
+
+            <!-- Lesiones Previas -->
+            <div class="form-group">
+                <label for="lesiones_previas">Lesiones Previas</label>
+                <textarea id="lesiones_previas" name="lesiones_previas" rows="2"
+                          placeholder="Lesiones deportivas anteriores relevantes"></textarea>
+            </div>
+
+            <!-- ¿Fuma? -->
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="fuma" name="fuma">
+                    ¿Fuma?
+                </label>
+            </div>
+
+            <!-- Frecuencia Fumador (solo si fuma) -->
+            <div class="form-group" id="frecuencia-fumador-field" style="display: none;">
+                <label for="frecuencia_fumador">Frecuencia</label>
+                <select id="frecuencia_fumador" name="frecuencia_fumador">
+                    <option value="">Seleccionar...</option>
+                    <option value="ocasional">Ocasional</option>
+                    <option value="social">Social (fiestas/eventos)</option>
+                    <option value="diario">Diario</option>
+                </select>
+            </div>
+
+            <!-- Observaciones -->
+            <div class="form-group">
+                <label for="observaciones">Observaciones</label>
+                <textarea id="observaciones" name="observaciones" rows="3"
+                          placeholder="Cualquier información adicional relevante"></textarea>
+            </div>
+
+            <!-- Mensajes -->
+            <div id="success-message" class="message success hidden"></div>
+            <div id="error-message" class="message error hidden"></div>
+
+            <!-- Loading -->
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>Enviando...</p>
+            </div>
+
+            <!-- Botón Submit -->
+            <button type="submit" id="submit-btn">Registrarme</button>
+        </form>
+
+        <div class="footer">
+            <p>* Campos obligatorios</p>
+            <p>Toda la información será tratada de forma confidencial</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
