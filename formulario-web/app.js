@@ -118,7 +118,7 @@ function setupFormSubmit() {
     const medicamentos = document.getElementById('medicamentos').value.trim();
     const lesiones = document.getElementById('lesiones').value.trim();
     const actividad = document.querySelector('input[name="actividad"]:checked')?.value;
-    const autorizoUsoImagen = document.getElementById('autorizo_uso_imagen').checked;
+    const autorizoUsoImagen = document.getElementById('autorizoUsoImagen')?.checked || false;
 
     if (!validarRUT(rut)) {
         mostrarError('El RUT no tiene el formato correcto. Debe ser: 12345678-9');
