@@ -107,22 +107,30 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
     // Crear workbook
     const workbook = XLSX.utils.book_new();
 
-    // Agrupar por categoría
-    categorias.forEach(categoria => {
-      const jugadoresCategoria = jugadores.filter(j => j.categoria === categoria.numero);
+    // Crear UNA sola hoja con todas las categorías
+    const data: any[][] = [];
+
+    // Header principal
+    const header = ['Jugador', 'Categoría', ...fechasUnicas.map(f => formatearFechaCorta(f)), 'Total', '%'];
+    data.push(header);
+
+    // Ordenar categorías por número
+    const categoriasOrdenadas = [...categorias].sort((a, b) => a.numero - b.numero);
+
+    // Procesar cada categoría
+    categoriasOrdenadas.forEach(categoria => {
+      const jugadoresCategoria = jugadores
+        .filter(j => j.categoria === categoria.numero)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
       
       if (jugadoresCategoria.length === 0) return;
 
-      // Crear matriz de datos
-      const data: any[][] = [];
+      // Agregar fila de separación con nombre de categoría
+      data.push([`📋 ${categoria.nombre}`, '', ...fechasUnicas.map(() => ''), '', '']);
 
-      // Header: Jugador | Fecha1 | Fecha2 | ... | Total | %
-      const header = ['Jugador', ...fechasUnicas.map(f => formatearFechaCorta(f)), 'Total', '%'];
-      data.push(header);
-
-      // Filas de jugadores
+      // Filas de jugadores de esta categoría
       jugadoresCategoria.forEach(jugador => {
-        const fila: any[] = [jugador.nombre];
+        const fila: any[] = [jugador.nombre, categoria.nombre];
 
         let totalPresentes = 0;
         let totalRegistros = 0;
@@ -130,7 +138,7 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
         // Para cada fecha, buscar asistencia
         fechasUnicas.forEach(fecha => {
           const asistencia = asistencias.find(
-            a => a.rut_jugador === jugador.rut && a.fecha === fecha
+            a => a.rut_jugador === jugador.rut && a.fecha === fecha && a.categoria === categoria.numero
           );
 
           if (asistencia) {
@@ -154,22 +162,25 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
         data.push(fila);
       });
 
-      // Crear sheet
-      const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-      // Ajustar anchos de columna
-      const columnWidths = [
-        { wch: 25 }, // Jugador
-        ...fechasUnicas.map(() => ({ wch: 12 })), // Fechas
-        { wch: 8 },  // Total
-        { wch: 8 }   // %
-      ];
-      worksheet['!cols'] = columnWidths;
-
-      // Agregar sheet al workbook
-      const sheetName = categoria.nombre.substring(0, 30); // Max 31 chars en Excel
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      // Fila vacía entre categorías para mejor legibilidad
+      data.push(['', '', ...fechasUnicas.map(() => ''), '', '']);
     });
+
+    // Crear sheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Ajustar anchos de columna
+    const columnWidths = [
+      { wch: 25 }, // Jugador
+      { wch: 15 }, // Categoría
+      ...fechasUnicas.map(() => ({ wch: 10 })), // Fechas
+      { wch: 8 },  // Total
+      { wch: 8 }   // %
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    // Agregar sheet al workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Asistencias');
 
     // Convertir a base64
     const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
@@ -246,8 +257,9 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
             <Text style={styles.infoTitulo}>ℹ️ Formato del Excel</Text>
             <Text style={styles.infoTexto}>
               El archivo Excel contendrá:{'\n\n'}
-              • Una pestaña por categoría{'\n'}
-              • Jugadores en filas{'\n'}
+              • Todas las categorías en una sola hoja{'\n'}
+              • Columnas: Jugador | Categoría | Fechas | Total | %{'\n'}
+              • Agrupado por categoría{'\n'}
               • Fechas en columnas{'\n'}
               • ✓ = Presente | ✗ = Ausente | - = Sin registro{'\n'}
               • Total de asistencias y porcentaje

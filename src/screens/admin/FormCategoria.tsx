@@ -90,34 +90,6 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
               maxLength={50}
             />
             <Text style={styles.hint}>El nombre que verán los usuarios</Text>
-
-            {/* Color */}
-            <Text style={styles.label}>Color</Text>
-            <Text style={styles.hint}>Selecciona un color para identificar esta categoría</Text>
-            
-            {/* Vista previa del color */}
-            <View style={styles.colorPreview}>
-              <View style={[styles.colorPreviewCircle, { backgroundColor: color }]} />
-              <Text style={styles.colorPreviewText}>{color}</Text>
-            </View>
-
-            {/* Paleta de colores */}
-            <View style={styles.colorPalette}>
-              {COLORES_PREDEFINIDOS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[
-                    styles.colorOption,
-                    { backgroundColor: c },
-                    color === c && styles.colorOptionSelected,
-                  ]}
-                  onPress={() => setColor(c)}
-                  disabled={guardando}
-                >
-                  {color === c && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
           </ScrollView>
 
           {/* Botones */}

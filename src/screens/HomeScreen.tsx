@@ -212,14 +212,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   onPress={() => handleCategoriaPress(categoria)}
                   disabled={!tieneAcceso}
                 >
-                  <View 
-                    style={[
-                      styles.categoryNumber, 
-                      { backgroundColor: categoria.color || '#1a472a' }
-                    ]}
-                  >
-                    <Text style={styles.categoryNumberText}>#{categoria.numero}</Text>
-                  </View>
                   <Text style={styles.categoryName}>{categoria.nombre}</Text>
                   {!tieneAcceso && (
                     <Text style={styles.categoryLocked}>🔒</Text>
