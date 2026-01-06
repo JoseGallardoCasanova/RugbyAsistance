@@ -13,32 +13,36 @@ interface Props {
   onOpenFormulario: () => void;
 }
 
+type ModalView = 'none' | 'menu' | 'qr';
+
 export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [qrModalVisible, setQrModalVisible] = useState(false);
+  const [currentView, setCurrentView] = useState<ModalView>('none');
 
   // URL del formulario web desplegado en Vercel
   const FORMULARIO_URL = 'https://formulariorugby.vercel.app';
 
   const handleOpenMenu = () => {
     console.log('🔵 [BOTÓN QR] Abriendo menú...');
-    setMenuVisible(true);
+    setCurrentView('menu');
   };
 
-  const handleCloseMenu = () => {
-    setMenuVisible(false);
+  const handleClose = () => {
+    console.log('❌ [BOTÓN QR] Cerrando modal...');
+    setCurrentView('none');
   };
 
   const handleOpenFormulario = () => {
     console.log('📋 [BOTÓN QR] Abriendo formulario...');
-    handleCloseMenu();
-    onOpenFormulario();
+    setCurrentView('none');
+    // Pequeño delay para iOS
+    setTimeout(() => {
+      onOpenFormulario();
+    }, 100);
   };
 
   const handleShowQR = () => {
     console.log('📱 [BOTÓN QR] Mostrando código QR...');
-    handleCloseMenu();
-    setQrModalVisible(true);
+    setCurrentView('qr');
   };
 
   return (
@@ -52,92 +56,84 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
         <Text style={styles.fabIcon}>📝</Text>
       </TouchableOpacity>
 
-      {/* Menú de opciones */}
+      {/* Modal único con diferentes vistas */}
       <Modal
-        visible={menuVisible}
+        visible={currentView !== 'none'}
         transparent
         animationType="fade"
-        onRequestClose={handleCloseMenu}
+        onRequestClose={handleClose}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={handleCloseMenu}
+          onPress={handleClose}
         >
-          <View style={styles.menuContainer}>
-            <Text style={styles.menuTitle}>Inscripción de Jugadores</Text>
-            
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={handleOpenFormulario}
-            >
-              <Text style={styles.menuOptionIcon}>📋</Text>
-              <View style={styles.menuOptionText}>
-                <Text style={styles.menuOptionTitle}>Abrir Formulario</Text>
-                <Text style={styles.menuOptionSubtitle}>
-                  Completa el formulario en la app
-                </Text>
-              </View>
-            </TouchableOpacity>
+          {/* Vista del Menú */}
+          {currentView === 'menu' && (
+            <View style={styles.menuContainer}>
+              <Text style={styles.menuTitle}>Inscripción de Jugadores</Text>
+              
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={handleOpenFormulario}
+              >
+                <Text style={styles.menuOptionIcon}>📋</Text>
+                <View style={styles.menuOptionText}>
+                  <Text style={styles.menuOptionTitle}>Abrir Formulario</Text>
+                  <Text style={styles.menuOptionSubtitle}>
+                    Completa el formulario en la app
+                  </Text>
+                </View>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={handleShowQR}
-            >
-              <Text style={styles.menuOptionIcon}>📱</Text>
-              <View style={styles.menuOptionText}>
-                <Text style={styles.menuOptionTitle}>Mostrar Código QR</Text>
-                <Text style={styles.menuOptionSubtitle}>
-                  Escanea para inscribirte desde tu móvil
-                </Text>
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={handleShowQR}
+              >
+                <Text style={styles.menuOptionIcon}>📱</Text>
+                <View style={styles.menuOptionText}>
+                  <Text style={styles.menuOptionTitle}>Mostrar Código QR</Text>
+                  <Text style={styles.menuOptionSubtitle}>
+                    Escanea para inscribirte desde tu móvil
+                  </Text>
+                </View>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCloseMenu}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Modal con código QR */}
-      <Modal
-        visible={qrModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQrModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setQrModalVisible(false)}
-        >
-          <View style={styles.qrContainer}>
-            <Text style={styles.qrTitle}>📱 Escanea el código QR</Text>
-            <Text style={styles.qrSubtitle}>
-              Apunta tu cámara al código para acceder al formulario de inscripción
-            </Text>
-
-            <View style={styles.qrBox}>
-              <QRCode
-                value={FORMULARIO_URL}
-                size={250}
-                backgroundColor="#fff"
-              />
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
             </View>
+          )}
 
-            <Text style={styles.qrUrl}>{FORMULARIO_URL}</Text>
+          {/* Vista del QR */}
+          {currentView === 'qr' && (
+            <View style={styles.qrContainer}>
+              <Text style={styles.qrTitle}>📱 Escanea el código QR</Text>
+              <Text style={styles.qrSubtitle}>
+                Apunta tu cámara al código para acceder al formulario de inscripción
+              </Text>
 
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setQrModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.qrBox}>
+                <QRCode
+                  value={FORMULARIO_URL}
+                  size={250}
+                  backgroundColor="#fff"
+                />
+              </View>
+
+              <Text style={styles.qrUrl}>{FORMULARIO_URL}</Text>
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+              >
+                <Text style={styles.closeButtonText}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </TouchableOpacity>
       </Modal>
     </>
