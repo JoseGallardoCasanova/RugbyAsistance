@@ -118,6 +118,7 @@ function setupFormSubmit() {
     const medicamentos = document.getElementById('medicamentos').value.trim();
     const lesiones = document.getElementById('lesiones').value.trim();
     const actividad = document.querySelector('input[name="actividad"]:checked')?.value;
+    const autorizoUsoImagen = document.getElementById('autorizo_uso_imagen').checked;
 
     if (!validarRUT(rut)) {
         mostrarError('El RUT no tiene el formato correcto. Debe ser: 12345678-9');
@@ -126,6 +127,11 @@ function setupFormSubmit() {
 
     if (!actividad) {
         mostrarError('Debes seleccionar si estudias, trabajas o ambos');
+        return;
+    }
+    
+    if (!autorizoUsoImagen) {
+        mostrarError('Debes autorizar el uso de imagen para continuar');
         return;
     }
 
@@ -148,7 +154,8 @@ function setupFormSubmit() {
         alergias: alergias || null,
         medicamentos: medicamentos || null,
         lesiones: lesiones || null,
-        actividad
+        actividad,
+        autorizo_uso_imagen: autorizoUsoImagen
     };
 
     submitBtn.disabled = true;

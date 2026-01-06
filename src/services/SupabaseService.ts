@@ -229,6 +229,28 @@ class SupabaseService {
           categoria: jugador.categoria,
           numero: jugador.numero,
           activo: true,
+          // Datos personales
+          fecha_nacimiento: jugador.fecha_nacimiento,
+          email: jugador.email,
+          // Contacto de emergencia
+          contacto_emergencia: jugador.contacto_emergencia,
+          tel_emergencia: jugador.tel_emergencia,
+          // Información de salud
+          sistema_salud: jugador.sistema_salud,
+          seguro_complementario: jugador.seguro_complementario,
+          // Tutor (para menores)
+          nombre_tutor: jugador.nombre_tutor,
+          rut_tutor: jugador.rut_tutor,
+          tel_tutor: jugador.tel_tutor,
+          // Información médica
+          fuma_frecuencia: jugador.fuma_frecuencia,
+          enfermedades: jugador.enfermedades,
+          alergias: jugador.alergias,
+          medicamentos: jugador.medicamentos,
+          lesiones: jugador.lesiones,
+          actividad: jugador.actividad,
+          // Autorización de uso de imagen
+          autorizo_uso_imagen: jugador.autorizo_uso_imagen,
         }]);
 
       if (error) throw error;
@@ -551,6 +573,7 @@ class SupabaseService {
       medicamentos: data.medicamentos,
       lesiones: data.lesiones,
       actividad: data.actividad,
+      autorizo_uso_imagen: data.autorizo_uso_imagen,
     };
   }
 

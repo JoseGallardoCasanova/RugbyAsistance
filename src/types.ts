@@ -52,6 +52,9 @@ export interface Jugador {
   
   // Actividad
   actividad?: 'Estudio' | 'Trabajo' | 'Ambos';
+  
+  // Autorización
+  autorizo_uso_imagen?: boolean;
 }
 
 // ✅ NUEVO: Modelo de Categoría

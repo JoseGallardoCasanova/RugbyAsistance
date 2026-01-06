@@ -5,18 +5,25 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
-  Animated,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
+import SupabaseService from '../services/SupabaseService';
 
 interface Props {
-  onOpenFormulario: () => void;
+  onOpenFormulario?: () => void;
+  isAdmin: boolean;
 }
 
 type ModalView = 'none' | 'menu' | 'qr';
 
-export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
+export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: Props) {
   const [currentView, setCurrentView] = useState<ModalView>('none');
+  const [exportando, setExportando] = useState(false);
 
   // URL del formulario web desplegado en Vercel
   const FORMULARIO_URL = 'https://formulariorugby.vercel.app';
@@ -36,13 +43,81 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
     setCurrentView('none');
     // Pequeño delay para iOS
     setTimeout(() => {
-      onOpenFormulario();
+      onOpenFormulario?.();
     }, 100);
   };
 
   const handleShowQR = () => {
     console.log('📱 [BOTÓN QR] Mostrando código QR...');
     setCurrentView('qr');
+  };
+  
+  const handleExportarJugadores = async () => {
+    console.log('📊 [BOTÓN] Exportando jugadores...');
+    setCurrentView('none');
+    setExportando(true);
+    
+    try {
+      // Obtener todos los jugadores con toda su información
+      const jugadores = await SupabaseService.obtenerJugadores();
+      
+      if (!jugadores || jugadores.length === 0) {
+        Alert.alert('Sin datos', 'No hay jugadores registrados para exportar');
+        return;
+      }
+      
+      // Preparar datos para Excel
+      const datosExcel = jugadores.map(j => ({
+        'RUT': j.rut || '',
+        'Nombre': j.nombre || '',
+        'Categoría': j.categoria || '',
+        'Número': j.numero || '',
+        'Fecha Nacimiento': j.fecha_nacimiento || '',
+        'Email': j.email || '',
+        'Contacto Emergencia': j.contacto_emergencia || '',
+        'Tel. Emergencia': j.tel_emergencia || '',
+        'Sistema Salud': j.sistema_salud || '',
+        'Seguro Complementario': j.seguro_complementario || '',
+        'Nombre Tutor': j.nombre_tutor || '',
+        'RUT Tutor': j.rut_tutor || '',
+        'Tel. Tutor': j.tel_tutor || '',
+        'Fuma': j.fuma_frecuencia || 'No',
+        'Enfermedades': j.enfermedades || '',
+        'Alergias': j.alergias || '',
+        'Medicamentos': j.medicamentos || '',
+        'Lesiones': j.lesiones || '',
+        'Actividad': j.actividad || '',
+        'Autoriza Uso Imagen': j.autorizo_uso_imagen ? 'Sí' : 'No',
+        'Activo': j.activo ? 'Sí' : 'No',
+      }));
+      
+      // Crear workbook
+      const ws = XLSX.utils.json_to_sheet(datosExcel);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Jugadores');
+      
+      // Generar archivo
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      
+      const fecha = new Date().toISOString().split('T')[0];
+      const fileName = `Jugadores_${fecha}.xlsx`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      // Compartir archivo
+      await Sharing.shareAsync(fileUri);
+      
+      Alert.alert('✅ Exportación Exitosa', 'El archivo Excel se ha generado correctamente');
+      
+    } catch (error: any) {
+      console.error('❌ Error al exportar jugadores:', error);
+      Alert.alert('Error', `No se pudo exportar: ${error.message}`);
+    } finally {
+      setExportando(false);
+    }
   };
 
   return (
@@ -71,20 +146,41 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario }: Props) {
           {/* Vista del Menú */}
           {currentView === 'menu' && (
             <View style={styles.menuContainer}>
-              <Text style={styles.menuTitle}>Inscripción de Jugadores</Text>
+              <Text style={styles.menuTitle}>
+                {isAdmin ? 'Opciones de Administrador' : 'Inscripción de Jugadores'}
+              </Text>
               
-              <TouchableOpacity
-                style={styles.menuOption}
-                onPress={handleOpenFormulario}
-              >
-                <Text style={styles.menuOptionIcon}>📋</Text>
-                <View style={styles.menuOptionText}>
-                  <Text style={styles.menuOptionTitle}>Abrir Formulario</Text>
-                  <Text style={styles.menuOptionSubtitle}>
-                    Completa el formulario en la app
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              {isAdmin ? (
+                // Opción de exportar para administradores
+                <TouchableOpacity
+                  style={styles.menuOption}
+                  onPress={handleExportarJugadores}
+                  disabled={exportando}
+                >
+                  <Text style={styles.menuOptionIcon}>📊</Text>
+                  <View style={styles.menuOptionText}>
+                    <Text style={styles.menuOptionTitle}>Exportar Datos de Jugadores</Text>
+                    <Text style={styles.menuOptionSubtitle}>
+                      Descarga un Excel con toda la información
+                    </Text>
+                  </View>
+                  {exportando && <ActivityIndicator color="#1a472a" />}
+                </TouchableOpacity>
+              ) : (
+                // Opción de formulario para entrenadores
+                <TouchableOpacity
+                  style={styles.menuOption}
+                  onPress={handleOpenFormulario}
+                >
+                  <Text style={styles.menuOptionIcon}>📋</Text>
+                  <View style={styles.menuOptionText}>
+                    <Text style={styles.menuOptionTitle}>Abrir Formulario</Text>
+                    <Text style={styles.menuOptionSubtitle}>
+                      Completa el formulario en la app
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.menuOption}

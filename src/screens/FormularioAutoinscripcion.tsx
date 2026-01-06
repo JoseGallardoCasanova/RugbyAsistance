@@ -55,6 +55,9 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   
   // Actividad
   const [actividad, setActividad] = useState<'Estudio' | 'Trabajo' | 'Ambos' | ''>('');
+  
+  // Autorización de uso de imagen
+  const [autorizoUsoImagen, setAutorizoUsoImagen] = useState(false);
 
   useEffect(() => {
     cargarCategorias();
@@ -115,6 +118,11 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
       return false;
     }
     
+    if (!autorizoUsoImagen) {
+      Alert.alert('Error', 'Debes autorizar el uso de imagen para continuar');
+      return false;
+    }
+    
     return true;
   };
 
@@ -146,6 +154,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         medicamentos: medicamentos.trim() || null,
         lesiones: lesiones.trim() || null,
         actividad,
+        autorizo_uso_imagen: autorizoUsoImagen,
       };
 
       const success = await SupabaseService.crearJugador(nuevoJugador);
@@ -449,6 +458,23 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
               <Text style={styles.radioLabel}>Ambos</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* AUTORIZACIÓN DE USO DE IMAGEN */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📸 Autorización de Uso de Imagen</Text>
+          
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setAutorizoUsoImagen(!autorizoUsoImagen)}
+          >
+            <View style={[styles.checkbox, autorizoUsoImagen && styles.checkboxChecked]}>
+              {autorizoUsoImagen && <Text style={styles.checkboxText}>✓</Text>}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              Autorizo el uso de mi imagen para fines deportivos y promocionales del club *
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* BOTÓN ENVIAR */}

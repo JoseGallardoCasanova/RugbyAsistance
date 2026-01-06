@@ -228,6 +228,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <>
           {console.log('✅ [HOME] Mostrando botón flotante para role:', user?.role)}
           <BotonFlotanteInscripcion
+            isAdmin={user?.role === 'admin'}
             onOpenFormulario={() => {
               console.log('📋 [HOME] Callback onOpenFormulario ejecutado');
               setFormularioVisible(true);
