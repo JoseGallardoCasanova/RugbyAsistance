@@ -150,8 +150,8 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
                 {isAdmin ? 'Opciones de Administrador' : 'Inscripción de Jugadores'}
               </Text>
               
-              {isAdmin ? (
-                // Opción de exportar para administradores
+              {isAdmin && (
+                // Opción de exportar solo para administradores
                 <TouchableOpacity
                   style={styles.menuOption}
                   onPress={handleExportarJugadores}
@@ -166,22 +166,9 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
                   </View>
                   {exportando && <ActivityIndicator color="#1a472a" />}
                 </TouchableOpacity>
-              ) : (
-                // Opción de formulario para entrenadores
-                <TouchableOpacity
-                  style={styles.menuOption}
-                  onPress={handleOpenFormulario}
-                >
-                  <Text style={styles.menuOptionIcon}>📋</Text>
-                  <View style={styles.menuOptionText}>
-                    <Text style={styles.menuOptionTitle}>Abrir Formulario</Text>
-                    <Text style={styles.menuOptionSubtitle}>
-                      Completa el formulario en la app
-                    </Text>
-                  </View>
-                </TouchableOpacity>
               )}
 
+              {/* Opción de QR para todos (admin y entrenadores) */}
               <TouchableOpacity
                 style={styles.menuOption}
                 onPress={handleShowQR}

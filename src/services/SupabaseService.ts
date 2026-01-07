@@ -295,15 +295,18 @@ class SupabaseService {
     try {
       console.log('🗑️ [SUPABASE] Eliminando jugador RUT:', rut);
 
-      // Hard delete - elimina permanentemente
+      // Soft delete - marca como inactivo en lugar de eliminar físicamente
       const { error } = await this.supabase
         .from('jugadores')
-        .delete()
+        .update({ 
+          activo: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('rut', rut);
 
       if (error) throw error;
 
-      console.log('✅ [SUPABASE] Jugador eliminado permanentemente');
+      console.log('✅ [SUPABASE] Jugador marcado como inactivo');
       return true;
     } catch (error: any) {
       console.error('❌ [SUPABASE] Error al eliminar jugador:', error.message);
