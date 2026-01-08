@@ -79,16 +79,39 @@ function mostrarError(mensaje) {
 
 // Mostrar éxito
 function mostrarExito() {
-    errorMessage.classList.remove('active'); // Ocultar error
-    loading.classList.remove('active'); // Ocultar loading
-    successMessage.classList.add('active');
+    console.log('🎉 Mostrando mensaje de éxito');
+    
+    // Ocultar elementos
+    errorMessage.classList.remove('active');
+    loading.classList.remove('active');
+    submitBtn.disabled = true;
+    
+    // Ocultar formulario
     form.style.display = 'none';
+    
+    // Mostrar mensaje de éxito
+    successMessage.innerHTML = `
+        <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
+        <h2 style="margin: 0 0 15px 0; font-size: 28px; color: #155724;">¡Inscripción Exitosa!</h2>
+        <p style="margin: 0 0 10px 0; font-size: 18px; line-height: 1.6;">
+            Te has registrado correctamente en el club.<br>
+            <strong>¡Bienvenido! 🏉</strong>
+        </p>
+        <p style="margin-top: 20px; font-size: 14px; opacity: 0.7;">
+            Esta página se recargará en 5 segundos...
+        </p>
+    `;
+    successMessage.classList.add('active');
+    successMessage.style.display = 'block';
     
     // Scroll al top para ver el mensaje
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
+    console.log('✅ Mensaje de éxito mostrado');
+    
     // Recargar después de 5 segundos
     setTimeout(() => {
+        console.log('🔄 Recargando página...');
         window.location.reload();
     }, 5000);
 }
