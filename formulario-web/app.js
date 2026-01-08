@@ -80,11 +80,17 @@ function mostrarError(mensaje) {
 // Mostrar éxito
 function mostrarExito() {
     errorMessage.classList.remove('active'); // Ocultar error
+    loading.classList.remove('active'); // Ocultar loading
     successMessage.classList.add('active');
     form.style.display = 'none';
+    
+    // Scroll al top para ver el mensaje
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Recargar después de 5 segundos
     setTimeout(() => {
         window.location.reload();
-    }, 3000); // Reducido a 3 segundos
+    }, 5000);
 }
 
 // Manejar envío del formulario
@@ -191,6 +197,11 @@ function setupFormSubmit() {
         }
 
         console.log('✅ Jugador inscrito:', data);
+        
+        // Ocultar loading antes de mostrar éxito
+        loading.classList.remove('active');
+        submitBtn.disabled = false;
+        
         mostrarExito();
 
     } catch (error) {
