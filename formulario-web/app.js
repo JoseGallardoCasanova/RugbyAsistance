@@ -162,13 +162,18 @@ function setupFormSubmit() {
     loading.classList.add('active');
 
     try {
-        const { data: existente, error: errorConsulta } = await supabase
+        // Verificar si el RUT ya existe
+        const { data: existentes, error: errorConsulta } = await supabase
             .from('jugadores')
             .select('rut')
-            .eq('rut', rut)
-            .single();
+            .eq('rut', rut);
 
-        if (existente) {
+        if (errorConsulta) {
+            console.error('Error al verificar RUT:', errorConsulta);
+            throw errorConsulta;
+        }
+
+        if (existentes && existentes.length > 0) {
             mostrarError('Este RUT ya está registrado en el sistema.');
             submitBtn.disabled = false;
             loading.classList.remove('active');
