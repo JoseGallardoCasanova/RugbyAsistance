@@ -192,27 +192,53 @@ function setupFormSubmit() {
 
     try {
         // Verificar si el RUT ya existe
-        const { data: existentes, error: errorConsulta } = await supabase
+        // Verificar si ya existe un jugador con este RUT (activo o inactivo)
+        const { data: existente, error: errorConsulta } = await supabase
             .from('jugadores')
-            .select('rut')
-            .eq('rut', rut);
+            .select('rut, activo')
+            .eq('rut', rut)
+            .maybeSingle();
 
         if (errorConsulta) {
             console.error('Error al verificar RUT:', errorConsulta);
             throw errorConsulta;
         }
 
-        if (existentes && existentes.length > 0) {
+        let data, error;
+
+        // Si existe y está inactivo, reactivarlo y actualizar sus datos
+        if (existente && existente.activo === false) {
+            console.log('🔄 Reactivando jugador inactivo:', rut);
+            
+            const resultado = await supabase
+                .from('jugadores')
+                .update({
+                    ...nuevoJugador,
+                    activo: true
+                })
+                .eq('rut', rut)
+                .select();
+            
+            data = resultado.data;
+            error = resultado.error;
+        } 
+        // Si existe y está activo, mostrar error
+        else if (existente && existente.activo === true) {
             mostrarError('Este RUT ya está registrado en el sistema.');
             submitBtn.disabled = false;
             loading.classList.remove('active');
             return;
         }
-
-        const { data, error } = await supabase
-            .from('jugadores')
-            .insert([nuevoJugador])
-            .select();
+        // Si no existe, crear nuevo jugador
+        else {
+            const resultado = await supabase
+                .from('jugadores')
+                .insert([nuevoJugador])
+                .select();
+            
+            data = resultado.data;
+            error = resultado.error;
+        }
 
         if (error) {
             console.error('Error de Supabase:', error);

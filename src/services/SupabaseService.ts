@@ -119,6 +119,44 @@ class SupabaseService {
     try {
       console.log('➕ [SUPABASE] Creando usuario:', usuario.email);
 
+      // Verificar si existe un usuario inactivo con este email
+      const { data: existente, error: errorConsulta } = await this.supabase
+        .from('usuarios')
+        .select('id, email, activo')
+        .eq('email', usuario.email)
+        .single();
+
+      if (errorConsulta && errorConsulta.code !== 'PGRST116') {
+        throw errorConsulta;
+      }
+
+      if (existente) {
+        if (existente.activo) {
+          console.log('❌ [SUPABASE] Ya existe un usuario activo con este email');
+          throw new Error('Ya existe un usuario activo con este email');
+        } else {
+          // Existe pero está inactivo, lo reactivamos y actualizamos
+          console.log('🔄 [SUPABASE] Reactivando usuario inactivo y actualizando datos');
+          const { error: errorUpdate } = await this.supabase
+            .from('usuarios')
+            .update({
+              password: usuario.password,
+              nombre: usuario.nombre,
+              role: usuario.role,
+              categoria_asignada: usuario.categoriaAsignada,
+              categorias_asignadas: usuario.categoriasAsignadas || [],
+              activo: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existente.id);
+
+          if (errorUpdate) throw errorUpdate;
+          console.log('✅ [SUPABASE] Usuario reactivado y actualizado exitosamente');
+          return true;
+        }
+      }
+
+      // No existe, creamos uno nuevo
       const { error } = await this.supabase
         .from('usuarios')
         .insert([{
@@ -221,6 +259,60 @@ class SupabaseService {
     try {
       console.log('➕ [SUPABASE] Creando jugador:', jugador.nombre);
 
+      // Verificar si existe un jugador inactivo con este RUT
+      const { data: existente, error: errorConsulta } = await this.supabase
+        .from('jugadores')
+        .select('rut, activo')
+        .eq('rut', jugador.rut)
+        .single();
+
+      if (errorConsulta && errorConsulta.code !== 'PGRST116') {
+        // Error diferente a "no encontrado"
+        throw errorConsulta;
+      }
+
+      if (existente) {
+        if (existente.activo) {
+          // Ya existe un jugador activo con este RUT
+          console.log('❌ [SUPABASE] Ya existe un jugador activo con este RUT');
+          throw new Error('Ya existe un jugador activo con este RUT');
+        } else {
+          // Existe pero está inactivo, lo reactivamos y actualizamos
+          console.log('🔄 [SUPABASE] Reactivando jugador inactivo y actualizando datos');
+          const { error: errorUpdate } = await this.supabase
+            .from('jugadores')
+            .update({
+              nombre: jugador.nombre,
+              categoria: jugador.categoria,
+              numero: jugador.numero,
+              activo: true,
+              fecha_nacimiento: jugador.fecha_nacimiento,
+              email: jugador.email,
+              contacto_emergencia: jugador.contacto_emergencia,
+              tel_emergencia: jugador.tel_emergencia,
+              sistema_salud: jugador.sistema_salud,
+              seguro_complementario: jugador.seguro_complementario,
+              nombre_tutor: jugador.nombre_tutor,
+              rut_tutor: jugador.rut_tutor,
+              tel_tutor: jugador.tel_tutor,
+              fuma_frecuencia: jugador.fuma_frecuencia,
+              enfermedades: jugador.enfermedades,
+              alergias: jugador.alergias,
+              medicamentos: jugador.medicamentos,
+              lesiones: jugador.lesiones,
+              actividad: jugador.actividad,
+              autorizo_uso_imagen: jugador.autorizo_uso_imagen,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('rut', jugador.rut);
+
+          if (errorUpdate) throw errorUpdate;
+          console.log('✅ [SUPABASE] Jugador reactivado y actualizado exitosamente');
+          return true;
+        }
+      }
+
+      // No existe, creamos uno nuevo
       const { error } = await this.supabase
         .from('jugadores')
         .insert([{
@@ -229,27 +321,21 @@ class SupabaseService {
           categoria: jugador.categoria,
           numero: jugador.numero,
           activo: true,
-          // Datos personales
           fecha_nacimiento: jugador.fecha_nacimiento,
           email: jugador.email,
-          // Contacto de emergencia
           contacto_emergencia: jugador.contacto_emergencia,
           tel_emergencia: jugador.tel_emergencia,
-          // Información de salud
           sistema_salud: jugador.sistema_salud,
           seguro_complementario: jugador.seguro_complementario,
-          // Tutor (para menores)
           nombre_tutor: jugador.nombre_tutor,
           rut_tutor: jugador.rut_tutor,
           tel_tutor: jugador.tel_tutor,
-          // Información médica
           fuma_frecuencia: jugador.fuma_frecuencia,
           enfermedades: jugador.enfermedades,
           alergias: jugador.alergias,
           medicamentos: jugador.medicamentos,
           lesiones: jugador.lesiones,
           actividad: jugador.actividad,
-          // Autorización de uso de imagen
           autorizo_uso_imagen: jugador.autorizo_uso_imagen,
         }]);
 
@@ -342,6 +428,41 @@ class SupabaseService {
     try {
       console.log('➕ [SUPABASE] Creando categoría:', categoria.nombre);
 
+      // Verificar si existe una categoría inactiva con este número
+      const { data: existente, error: errorConsulta } = await this.supabase
+        .from('categorias')
+        .select('numero, activo')
+        .eq('numero', categoria.numero)
+        .single();
+
+      if (errorConsulta && errorConsulta.code !== 'PGRST116') {
+        throw errorConsulta;
+      }
+
+      if (existente) {
+        if (existente.activo) {
+          console.log('❌ [SUPABASE] Ya existe una categoría activa con este número');
+          throw new Error('Ya existe una categoría activa con este número');
+        } else {
+          // Existe pero está inactiva, la reactivamos y actualizamos
+          console.log('🔄 [SUPABASE] Reactivando categoría inactiva y actualizando datos');
+          const { error: errorUpdate } = await this.supabase
+            .from('categorias')
+            .update({
+              nombre: categoria.nombre,
+              color: categoria.color,
+              activo: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('numero', categoria.numero);
+
+          if (errorUpdate) throw errorUpdate;
+          console.log('✅ [SUPABASE] Categoría reactivada y actualizada exitosamente');
+          return true;
+        }
+      }
+
+      // No existe, creamos una nueva
       const { error } = await this.supabase
         .from('categorias')
         .insert([{
