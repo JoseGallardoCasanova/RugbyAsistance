@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
+import { formatearRUT, validarRUT } from '../../utils/rutUtils';
 
 interface FormJugadorProps {
   visible: boolean;
@@ -24,6 +25,7 @@ interface FormJugadorProps {
 const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasPermitidas, onClose, onSave }) => {
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
+  const [rutError, setRutError] = useState('');
   const [categoria, setCategoria] = useState<number>(1);
   const [guardando, setGuardando] = useState(false);
 
@@ -77,6 +79,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
   }, [jugador, visible]);
 
   const handleGuardar = async () => {
+    console.log('💾 [FORM JUGADOR] Guardando jugador...');
     // Validaciones
     if (!nombre.trim()) {
       Alert.alert('Error', 'El nombre es requerido');
@@ -85,6 +88,12 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
 
     if (!rut.trim()) {
       Alert.alert('Error', 'El RUT es requerido');
+      return;
+    }
+
+    // Validar RUT solo si no estamos editando (el RUT no se puede cambiar)
+    if (!jugador && !validarRUT(rut)) {
+      Alert.alert('Error', 'El RUT ingresado no es válido. Por favor verifica el dígito verificador.');
       return;
     }
 
@@ -131,12 +140,36 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
             {/* RUT */}
             <Text style={styles.label}>RUT {!jugador && '*'}</Text>
             <TextInput
-              style={[styles.input, jugador && styles.inputDisabled]}
+              style={[styles.input, jugador && styles.inputDisabled, rutError && styles.inputError]}
               value={rut}
-              onChangeText={setRut}
+              onChangeText={(text) => {
+                console.log('📝 [FORM JUGADOR] RUT ingresado:', text);
+                if (!jugador) {
+                  const formateado = formatearRUT(text);
+                  console.log('📝 [FORM JUGADOR] RUT formateado:', formateado);
+                  setRut(formateado);
+                  setRutError(''); // Limpiar error mientras escribe
+                } else {
+                  setRut(text);
+                }
+              }}
+              onBlur={() => {
+                if (!jugador && rut.trim() && !validarRUT(rut)) {
+                  console.log('📝 [FORM JUGADOR] RUT inválido en blur');
+                  setRutError('RUT inválido');
+                } else {
+                  setRutError('');
+                }
+              }}
               placeholder="12345678-9"
+              maxLength={10}
+              keyboardType="default"
+              autoCapitalize="characters"
               editable={!guardando && !jugador}
             />
+            {rutError && !jugador && (
+              <Text style={styles.errorText}>{rutError}</Text>
+            )}
             {jugador && (
               <Text style={styles.helperText}>El RUT no se puede modificar</Text>
             )}
@@ -345,6 +378,15 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
     fontStyle: 'italic',
+  },
+  inputError: {
+    borderColor: '#d32f2f',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 12,
+    marginTop: 5,
   },
 });
 
