@@ -70,9 +70,12 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
   // Validar RUT en tiempo real
   const validarRUTEnTiempoReal = (rutValue: string) => {
+    console.log('📝 [FORMULARIO] validarRUTEnTiempoReal - RUT:', rutValue);
     if (rutValue.trim() && !validarRUT(rutValue)) {
+      console.log('📝 [FORMULARIO] RUT inválido');
       setRutError('❌ RUT inválido. Verifica el dígito verificador.');
     } else {
+      console.log('📝 [FORMULARIO] RUT válido o vacío');
       setRutError('');
     }
   };
@@ -249,11 +252,16 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             style={[styles.input, rutError && styles.inputError]}
             value={rut}
             onChangeText={(text) => {
+              console.log('📝 [FORMULARIO] RUT texto ingresado:', text);
               const formatted = formatearRUT(text);
+              console.log('📝 [FORMULARIO] RUT formateado:', formatted);
               setRut(formatted);
               setRutError(''); // Limpiar error mientras escribe
             }}
-            onBlur={() => validarRUTEnTiempoReal(rut)}
+            onBlur={() => {
+              console.log('📝 [FORMULARIO] onBlur - validando RUT');
+              validarRUTEnTiempoReal(rut);
+            }}
             placeholder="Ej: 12345678-9"
             placeholderTextColor="#999"
             maxLength={10}

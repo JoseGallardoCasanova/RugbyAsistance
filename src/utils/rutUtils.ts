@@ -15,8 +15,11 @@ export const limpiarRUT = (rut: string): string => {
  * Solo permite números y la letra K
  */
 export const formatearRUT = (rut: string): string => {
+  console.log('🔧 [RUT UTILS] formatearRUT - Input:', rut);
+  
   // Limpiar todo excepto números y K
   let limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+  console.log('🔧 [RUT UTILS] formatearRUT - Limpio:', limpio);
   
   // Limitar longitud máxima (8 dígitos + 1 verificador = 9)
   if (limpio.length > 9) {
@@ -25,9 +28,12 @@ export const formatearRUT = (rut: string): string => {
   
   // Si tiene más de 1 carácter, agregar guión antes del último
   if (limpio.length > 1) {
-    return limpio.slice(0, -1) + '-' + limpio.slice(-1);
+    const resultado = limpio.slice(0, -1) + '-' + limpio.slice(-1);
+    console.log('🔧 [RUT UTILS] formatearRUT - Resultado:', resultado);
+    return resultado;
   }
   
+  console.log('🔧 [RUT UTILS] formatearRUT - Resultado (sin guion):', limpio);
   return limpio;
 };
 

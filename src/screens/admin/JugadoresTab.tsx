@@ -130,6 +130,10 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleBloquear = (jugador: Jugador) => {
+    console.log('🔒 [JUGADORES TAB] handleBloquear llamado para:', jugador.nombre);
+    console.log('🔒 [JUGADORES TAB] Estado actual bloqueado:', jugador.bloqueado);
+    console.log('🔒 [JUGADORES TAB] RUT:', jugador.rut);
+    
     const accion = jugador.bloqueado ? 'desbloquear' : 'bloquear';
     Alert.alert(
       `⚠️ ${jugador.bloqueado ? 'Desbloquear' : 'Bloquear'} Jugador`,
@@ -139,10 +143,17 @@ const JugadoresTab: React.FC = () => {
         {
           text: 'Confirmar',
           onPress: async () => {
+            console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
             setIsDeleting(true);
-            const success = await SupabaseService.bloquearJugador(jugador.rut, !jugador.bloqueado);
+            const nuevoEstado = !jugador.bloqueado;
+            console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
+            
+            const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
+            console.log('🔒 [JUGADORES TAB] Resultado de bloquearJugador:', success);
+            
             if (success) {
               Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
+              console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
               cargarJugadores();
             } else {
               Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
