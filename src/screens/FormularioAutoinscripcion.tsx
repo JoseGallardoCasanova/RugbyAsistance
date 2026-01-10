@@ -60,9 +60,31 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   // Autorización de uso de imagen
   const [autorizoUsoImagen, setAutorizoUsoImagen] = useState<boolean | null>(null);
 
+  // Estados para errores de validación de RUT
+  const [rutError, setRutError] = useState('');
+  const [rutTutorError, setRutTutorError] = useState('');
+
   useEffect(() => {
     cargarCategorias();
   }, []);
+
+  // Validar RUT en tiempo real
+  const validarRUTEnTiempoReal = (rutValue: string) => {
+    if (rutValue.trim() && !validarRUT(rutValue)) {
+      setRutError('❌ RUT inválido. Verifica el dígito verificador.');
+    } else {
+      setRutError('');
+    }
+  };
+
+  // Validar RUT tutor en tiempo real
+  const validarRUTTutorEnTiempoReal = (rutValue: string) => {
+    if (rutValue.trim() && !validarRUT(rutValue)) {
+      setRutTutorError('❌ RUT inválido. Verifica el dígito verificador.');
+    } else {
+      setRutTutorError('');
+    }
+  };
 
   const cargarCategorias = async () => {
     try {
@@ -224,13 +246,18 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
           <Text style={styles.label}>RUT *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, rutError && styles.inputError]}
             value={rut}
-            onChangeText={(text) => setRut(formatearRUT(text))}
+            onChangeText={(text) => {
+              setRut(formatearRUT(text));
+              setRutError(''); // Limpiar error mientras escribe
+            }}
+            onBlur={() => validarRUTEnTiempoReal(rut)}
             placeholder="Ej: 12345678-9"
             placeholderTextColor="#999"
             maxLength={10}
           />
+          {rutError ? <Text style={styles.errorText}>{rutError}</Text> : null}
 
           <Text style={styles.label}>Fecha de nacimiento *</Text>
           <TextInput
@@ -334,13 +361,18 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
           <Text style={styles.label}>RUT del tutor</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, rutTutorError && styles.inputError]}
             value={rutTutor}
-            onChangeText={(text) => setRutTutor(formatearRUT(text))}
+            onChangeText={(text) => {
+              setRutTutor(formatearRUT(text));
+              setRutTutorError(''); // Limpiar error mientras escribe
+            }}
+            onBlur={() => validarRUTTutorEnTiempoReal(rutTutor)}
             placeholder="12345678-9"
             placeholderTextColor="#999"
             maxLength={10}
           />
+          {rutTutorError ? <Text style={styles.errorText}>{rutTutorError}</Text> : null}
 
           <Text style={styles.label}>Teléfono del tutor</Text>
           <TextInput
@@ -571,6 +603,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     color: '#333',
+  },
+  inputError: {
+    borderColor: '#d32f2f',
+    borderWidth: 2,
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
   },
   textArea: {
     minHeight: 80,
