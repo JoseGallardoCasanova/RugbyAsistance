@@ -143,22 +143,30 @@ const JugadoresTab: React.FC = () => {
         {
           text: 'Confirmar',
           onPress: async () => {
-            console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
-            setIsDeleting(true);
-            const nuevoEstado = !jugador.bloqueado;
-            console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
-            
-            const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
-            console.log('🔒 [JUGADORES TAB] Resultado de bloquearJugador:', success);
-            
-            if (success) {
-              Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
-              console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
-              cargarJugadores();
-            } else {
-              Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
+            try {
+              console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
+              setIsDeleting(true);
+              const nuevoEstado = !jugador.bloqueado;
+              console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
+              console.log('🔒 [JUGADORES TAB] Llamando a SupabaseService.bloquearJugador...');
+              
+              const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
+              console.log('🔒 [JUGADORES TAB] Resultado de bloquearJugador:', success);
+              
+              if (success) {
+                Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
+                console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
+                await cargarJugadores();
+                console.log('🔒 [JUGADORES TAB] Jugadores recargados');
+              } else {
+                Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
+              }
+            } catch (error) {
+              console.error('🔒 [JUGADORES TAB] Error al bloquear:', error);
+              Alert.alert('❌ Error', `Error al ${accion} el jugador: ${error}`);
+            } finally {
+              setIsDeleting(false);
             }
-            setIsDeleting(false);
           },
         },
       ]

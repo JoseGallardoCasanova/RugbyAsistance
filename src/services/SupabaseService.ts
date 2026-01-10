@@ -717,18 +717,28 @@ class SupabaseService {
   async bloquearJugador(rut: string, bloqueado: boolean): Promise<boolean> {
     try {
       console.log(`🔒 [SUPABASE] ${bloqueado ? 'Bloqueando' : 'Desbloqueando'} jugador:`, rut);
+      console.log('🔒 [SUPABASE] Verificando supabase client:', !!this.supabase);
       
-      const { error } = await this.supabase
+      console.log('🔒 [SUPABASE] Ejecutando update...');
+      const { data, error } = await this.supabase
         .from('jugadores')
         .update({ bloqueado, updated_at: new Date().toISOString() })
-        .eq('rut', rut);
+        .eq('rut', rut)
+        .select();
 
-      if (error) throw error;
+      console.log('🔒 [SUPABASE] Update ejecutado. Error:', error, 'Data:', data);
+
+      if (error) {
+        console.error('🔒 [SUPABASE] Error en update:', error);
+        throw error;
+      }
 
       console.log(`✅ [SUPABASE] Jugador ${bloqueado ? 'bloqueado' : 'desbloqueado'} exitosamente`);
       return true;
     } catch (error: any) {
-      console.error(`❌ [SUPABASE] Error al ${bloqueado ? 'bloquear' : 'desbloquear'} jugador:`, error.message);
+      console.error(`❌ [SUPABASE] Error al ${bloqueado ? 'bloquear' : 'desbloquear'} jugador:`, error);
+      console.error(`❌ [SUPABASE] Error message:`, error?.message);
+      console.error(`❌ [SUPABASE] Error stack:`, error?.stack);
       return false;
     }
   }
