@@ -134,7 +134,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
               style={[styles.input, jugador && styles.inputDisabled]}
               value={rut}
               onChangeText={setRut}
-              placeholder="123456789"
+              placeholder="12345678-9"
               editable={!guardando && !jugador}
             />
             {jugador && (

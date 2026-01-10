@@ -15,6 +15,11 @@
             limpio = limpio.slice(0, 9);
         }
         
+        // Si tiene más de 1 carácter, agregar guión antes del último
+        if (limpio.length > 1) {
+            return limpio.slice(0, -1) + '-' + limpio.slice(-1);
+        }
+        
         return limpio;
     }
     
@@ -337,22 +342,67 @@ function init() {
     console.log('Form:', form ? 'OK' : 'ERROR');
     console.log('Submit button:', submitBtn ? 'OK' : 'ERROR');
     
-    // Configurar autoformateo de RUT
+    // Configurar autoformateo y validación de RUT
     const rutInput = document.getElementById('rut');
     const rutTutorInput = document.getElementById('rutTutor');
+    const rutError = document.getElementById('rutError');
+    const rutTutorError = document.getElementById('rutTutorError');
     
     if (rutInput) {
+        // Autoformatear mientras escribe
         rutInput.addEventListener('input', function(e) {
             e.target.value = formatearRUT(e.target.value);
+            // Ocultar error mientras escribe
+            if (rutError) {
+                rutError.style.display = 'none';
+            }
         });
-        rutInput.setAttribute('maxLength', '9');
+        
+        // Validar cuando sale del campo
+        rutInput.addEventListener('blur', function(e) {
+            const valor = e.target.value.trim();
+            if (valor && !validarRUT(valor)) {
+                if (rutError) {
+                    rutError.textContent = '❌ RUT inválido. Verifica el dígito verificador.';
+                    rutError.style.display = 'block';
+                }
+                e.target.style.borderColor = '#d32f2f';
+            } else {
+                if (rutError) {
+                    rutError.style.display = 'none';
+                }
+                e.target.style.borderColor = '';
+            }
+        });
     }
     
     if (rutTutorInput) {
+        // Autoformatear mientras escribe
         rutTutorInput.addEventListener('input', function(e) {
             e.target.value = formatearRUT(e.target.value);
+            // Ocultar error mientras escribe
+            if (rutTutorError) {
+                rutTutorError.style.display = 'none';
+            }
         });
-        rutTutorInput.setAttribute('maxLength', '9');
+        
+        // Validar cuando sale del campo (solo si tiene valor, es opcional)
+        rutTutorInput.addEventListener('blur', function(e) {
+            const valor = e.target.value.trim();
+            if (valor && !validarRUT(valor)) {
+                if (rutTutorError) {
+                    rutTutorError.textContent = '❌ RUT inválido. Verifica el dígito verificador.';
+                    rutTutorError.style.display = 'block';
+                }
+                e.target.style.borderColor = '#d32f2f';
+            } else {
+                if (rutTutorError) {
+                    rutTutorError.style.display = 'none';
+                }
+                e.target.style.borderColor = '';
+            }
+        });
+    }
     }
     
     // Configurar event listeners

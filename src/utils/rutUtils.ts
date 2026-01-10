@@ -10,9 +10,9 @@ export const limpiarRUT = (rut: string): string => {
 };
 
 /**
- * Formatea el RUT mientras se escribe
+ * Formatea el RUT mientras se escribe con guión automático
+ * Formato: 12345678-9
  * Solo permite números y la letra K
- * Elimina guiones automáticamente
  */
 export const formatearRUT = (rut: string): string => {
   // Limpiar todo excepto números y K
@@ -21,6 +21,11 @@ export const formatearRUT = (rut: string): string => {
   // Limitar longitud máxima (8 dígitos + 1 verificador = 9)
   if (limpio.length > 9) {
     limpio = limpio.slice(0, 9);
+  }
+  
+  // Si tiene más de 1 carácter, agregar guión antes del último
+  if (limpio.length > 1) {
+    return limpio.slice(0, -1) + '-' + limpio.slice(-1);
   }
   
   return limpio;

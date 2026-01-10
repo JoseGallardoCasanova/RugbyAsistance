@@ -227,9 +227,9 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             style={styles.input}
             value={rut}
             onChangeText={(text) => setRut(formatearRUT(text))}
-            placeholder="Ej: 123456789"
+            placeholder="Ej: 12345678-9"
             placeholderTextColor="#999"
-            maxLength={9}
+            maxLength={10}
           />
 
           <Text style={styles.label}>Fecha de nacimiento *</Text>
@@ -337,9 +337,9 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             style={styles.input}
             value={rutTutor}
             onChangeText={(text) => setRutTutor(formatearRUT(text))}
-            placeholder="123456789"
+            placeholder="12345678-9"
             placeholderTextColor="#999"
-            maxLength={9}
+            maxLength={10}
           />
 
           <Text style={styles.label}>Teléfono del tutor</Text>
