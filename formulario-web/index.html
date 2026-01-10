@@ -446,11 +446,18 @@
                 <div class="section">
                     <div class="section-title">📸 Autorización</div>
                     
-                    <div class="checkbox-field">
-                        <input type="checkbox" id="autorizoUsoImagen" name="autorizoUsoImagen" required>
-                        <label for="autorizoUsoImagen">
-                            Autorizo el uso de mi imagen para fines deportivos y promocionales del club <span class="required">*</span>
-                        </label>
+                    <div class="field">
+                        <label>¿Autorizas el uso de tu imagen para fines deportivos y promocionales del club?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="autorizoUsoImagen" value="true" required>
+                                <span>Sí</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="autorizoUsoImagen" value="false">
+                                <span>No</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 

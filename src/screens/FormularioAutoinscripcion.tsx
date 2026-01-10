@@ -57,7 +57,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   const [actividad, setActividad] = useState<'Estudio' | 'Trabajo' | 'Ambos' | ''>('');
   
   // Autorización de uso de imagen
-  const [autorizoUsoImagen, setAutorizoUsoImagen] = useState(false);
+  const [autorizoUsoImagen, setAutorizoUsoImagen] = useState<boolean | null>(null);
 
   useEffect(() => {
     cargarCategorias();
@@ -118,11 +118,6 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
       return false;
     }
     
-    if (!autorizoUsoImagen) {
-      Alert.alert('Error', 'Debes autorizar el uso de imagen para continuar');
-      return false;
-    }
-    
     return true;
   };
 
@@ -154,7 +149,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         medicamentos: medicamentos.trim() || null,
         lesiones: lesiones.trim() || null,
         actividad,
-        autorizo_uso_imagen: autorizoUsoImagen,
+        autorizo_uso_imagen: autorizoUsoImagen ?? false,
       };
 
       const success = await SupabaseService.crearJugador(nuevoJugador);
@@ -463,18 +458,27 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         {/* AUTORIZACIÓN DE USO DE IMAGEN */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📸 Autorización de Uso de Imagen</Text>
+          <Text style={styles.label}>¿Autorizas el uso de tu imagen para fines deportivos y promocionales del club?</Text>
           
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => setAutorizoUsoImagen(!autorizoUsoImagen)}
-          >
-            <View style={[styles.checkbox, autorizoUsoImagen && styles.checkboxChecked]}>
-              {autorizoUsoImagen && <Text style={styles.checkboxText}>✓</Text>}
-            </View>
-            <Text style={styles.checkboxLabel}>
-              Autorizo el uso de mi imagen para fines deportivos y promocionales del club *
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.radioButtonGroup}>
+            <TouchableOpacity
+              style={[styles.radioButton, autorizoUsoImagen === true && styles.radioButtonSelected]}
+              onPress={() => setAutorizoUsoImagen(true)}
+            >
+              <Text style={[styles.radioButtonText, autorizoUsoImagen === true && styles.radioButtonTextSelected]}>
+                Sí
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.radioButton, autorizoUsoImagen === false && styles.radioButtonSelected]}
+              onPress={() => setAutorizoUsoImagen(false)}
+            >
+              <Text style={[styles.radioButtonText, autorizoUsoImagen === false && styles.radioButtonTextSelected]}>
+                No
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* BOTÓN ENVIAR */}
@@ -600,6 +604,31 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 14,
     color: '#333',
+  },
+  radioButtonGroup: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  radioButton: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#1a472a',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  radioButtonSelected: {
+    backgroundColor: '#1a472a',
+  },
+  radioButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1a472a',
+  },
+  radioButtonTextSelected: {
+    color: '#fff',
   },
   radioGroup: {
     marginTop: 10,
