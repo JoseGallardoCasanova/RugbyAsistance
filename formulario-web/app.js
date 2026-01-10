@@ -403,7 +403,6 @@ function init() {
             }
         });
     }
-    }
     
     // Configurar event listeners
     setupFumaCheckbox();
