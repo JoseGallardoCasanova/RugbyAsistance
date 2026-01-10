@@ -129,14 +129,17 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
             />
 
             {/* RUT */}
-            <Text style={styles.label}>RUT *</Text>
+            <Text style={styles.label}>RUT {!jugador && '*'}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, jugador && styles.inputDisabled]}
               value={rut}
               onChangeText={setRut}
-              placeholder="12345678-9"
-              editable={!guardando}
+              placeholder="123456789"
+              editable={!guardando && !jugador}
             />
+            {jugador && (
+              <Text style={styles.helperText}>El RUT no se puede modificar</Text>
+            )}
 
             {/* Categoría */}
             <Text style={styles.label}>Categoría *</Text>
@@ -332,6 +335,16 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  inputDisabled: {
+    backgroundColor: '#e0e0e0',
+    color: '#666',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+    fontStyle: 'italic',
   },
 });
 

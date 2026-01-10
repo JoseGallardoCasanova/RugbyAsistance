@@ -129,6 +129,31 @@ const JugadoresTab: React.FC = () => {
     setModalDetallesVisible(true);
   };
 
+  const handleBloquear = (jugador: Jugador) => {
+    const accion = jugador.bloqueado ? 'desbloquear' : 'bloquear';
+    Alert.alert(
+      `⚠️ ${jugador.bloqueado ? 'Desbloquear' : 'Bloquear'} Jugador`,
+      `¿Estás seguro de ${accion} a ${jugador.nombre}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            setIsDeleting(true);
+            const success = await SupabaseService.bloquearJugador(jugador.rut, !jugador.bloqueado);
+            if (success) {
+              Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
+              cargarJugadores();
+            } else {
+              Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
+            }
+            setIsDeleting(false);
+          },
+        },
+      ]
+    );
+  };
+
   const handleEliminar = (jugador: Jugador) => {
     Alert.alert(
       '⚠️ Eliminar Jugador',
@@ -229,11 +254,11 @@ const JugadoresTab: React.FC = () => {
           {user?.role === 'admin' && (
             <>
               <TouchableOpacity
-                style={[styles.button, styles.buttonInfo, isDeleting && styles.buttonDisabled]}
-                onPress={() => handleVerDetalles(item)}
+                style={[styles.button, item.bloqueado ? styles.buttonSuccess : styles.buttonWarning, isDeleting && styles.buttonDisabled]}
+                onPress={() => handleBloquear(item)}
                 disabled={isDeleting}
               >
-                <Text style={styles.buttonText}>👁️ Detalles</Text>
+                <Text style={styles.buttonText}>{item.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -532,6 +557,12 @@ const styles = StyleSheet.create({
   },
   buttonDelete: {
     backgroundColor: '#f44336',
+  },
+  buttonWarning: {
+    backgroundColor: '#ff9800',
+  },
+  buttonSuccess: {
+    backgroundColor: '#4caf50',
   },
   buttonDisabled: {
     opacity: 0.6,

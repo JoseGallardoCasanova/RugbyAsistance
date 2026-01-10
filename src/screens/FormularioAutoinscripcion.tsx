@@ -13,6 +13,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
+import { validarRUT, formatearRUT } from '../utils/rutUtils';
 
 interface Props {
   navigation?: any;
@@ -80,6 +81,11 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
     
     if (!rut.trim()) {
       Alert.alert('Error', 'El RUT es obligatorio');
+      return false;
+    }
+    
+    if (!validarRUT(rut)) {
+      Alert.alert('Error', 'El RUT ingresado no es válido. Por favor verifica el dígito verificador.');
       return false;
     }
     
@@ -220,9 +226,10 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
           <TextInput
             style={styles.input}
             value={rut}
-            onChangeText={setRut}
-            placeholder="Ej: 12345678-9"
+            onChangeText={(text) => setRut(formatearRUT(text))}
+            placeholder="Ej: 123456789"
             placeholderTextColor="#999"
+            maxLength={9}
           />
 
           <Text style={styles.label}>Fecha de nacimiento *</Text>
@@ -329,9 +336,10 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
           <TextInput
             style={styles.input}
             value={rutTutor}
-            onChangeText={setRutTutor}
-            placeholder="12345678-9"
+            onChangeText={(text) => setRutTutor(formatearRUT(text))}
+            placeholder="123456789"
             placeholderTextColor="#999"
+            maxLength={9}
           />
 
           <Text style={styles.label}>Teléfono del tutor</Text>

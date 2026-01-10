@@ -302,7 +302,17 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
                 onPress={() => toggleAsistencia(jugador.rut)}
               >
                 <View style={styles.jugadorInfo}>
-                  <Text style={styles.jugadorNombre}>{jugador.nombre}</Text>
+                  <View style={styles.nombreContainer}>
+                    <Text style={styles.jugadorNombre}>{jugador.nombre}</Text>
+                    {jugador.bloqueado && (
+                      <TouchableOpacity
+                        style={styles.bloqueadoIndicador}
+                        onPress={() => Alert.alert('⚠️ Jugador Bloqueado', 'Este jugador se encuentra bloqueado.')}
+                      >
+                        <Text style={styles.bloqueadoIcon}>⚠️</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <Text style={styles.jugadorRut}>RUT: {jugador.rut}</Text>
                 </View>
 
@@ -495,6 +505,11 @@ const styles = StyleSheet.create({
   jugadorInfo: {
     flex: 1,
   },
+  nombreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   jugadorNombre: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -504,6 +519,18 @@ const styles = StyleSheet.create({
   jugadorRut: {
     fontSize: 12,
     color: '#666',
+  },
+  bloqueadoIndicador: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f44336',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bloqueadoIcon: {
+    fontSize: 14,
+    color: '#fff',
   },
   jugadorEstado: {
     marginLeft: 10,

@@ -20,6 +20,7 @@ export interface Jugador {
   nombre: string;
   categoria: number;
   activo: boolean; // Para soft delete
+  bloqueado?: boolean; // Para bloquear jugadores
   creadoEn?: string;
   modificadoEn?: string;
 }

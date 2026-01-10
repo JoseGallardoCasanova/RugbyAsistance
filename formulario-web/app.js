@@ -1,6 +1,67 @@
 (function() {
     'use strict';
     
+    // Funciones de validación y formateo de RUT
+    function limpiarRUT(rut) {
+        return rut.replace(/[.\-\s]/g, '').toUpperCase();
+    }
+    
+    function formatearRUT(rut) {
+        // Limpiar todo excepto números y K
+        let limpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
+        
+        // Limitar longitud máxima (8 dígitos + 1 verificador = 9)
+        if (limpio.length > 9) {
+            limpio = limpio.slice(0, 9);
+        }
+        
+        return limpio;
+    }
+    
+    function validarRUT(rut) {
+        // Limpiar el RUT
+        const rutLimpio = limpiarRUT(rut);
+        
+        // Verificar que tenga al menos 2 caracteres
+        if (rutLimpio.length < 2) {
+            return false;
+        }
+        
+        // Separar cuerpo y dígito verificador
+        const cuerpo = rutLimpio.slice(0, -1);
+        const digitoVerificador = rutLimpio.slice(-1);
+        
+        // Verificar que el cuerpo solo contenga números
+        if (!/^\d+$/.test(cuerpo)) {
+            return false;
+        }
+        
+        // Calcular dígito verificador esperado
+        let suma = 0;
+        let multiplicador = 2;
+        
+        // Recorrer el cuerpo de derecha a izquierda
+        for (let i = cuerpo.length - 1; i >= 0; i--) {
+            suma += parseInt(cuerpo[i]) * multiplicador;
+            multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+        }
+        
+        const resto = suma % 11;
+        const dvEsperado = 11 - resto;
+        
+        let dvCalculado;
+        if (dvEsperado === 11) {
+            dvCalculado = '0';
+        } else if (dvEsperado === 10) {
+            dvCalculado = 'K';
+        } else {
+            dvCalculado = dvEsperado.toString();
+        }
+        
+        // Comparar con el dígito verificador ingresado
+        return digitoVerificador === dvCalculado;
+    }
+    
     // Configuración de Supabase
     const SUPABASE_URL = 'https://ynrotwnxqwjekuivungk.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlucm90d254cXdqZWt1aXZ1bmdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0MDM5OTEsImV4cCI6MjA4Mjk3OTk5MX0.Iu5kBp57jbO7dVRhB1V2CzJ724Vz3f0GgEa7HDkl9zQ';
@@ -61,12 +122,6 @@ function setupFumaCheckbox() {
             document.getElementById('fumaFrecuencia').value = '';
         }
     });
-}
-
-// Validar RUT chileno
-function validarRUT(rut) {
-    const rutRegex = /^\d{7,8}-[\dkK]$/;
-    return rutRegex.test(rut.trim());
 }
 
 // Mostrar error
@@ -281,6 +336,24 @@ function init() {
     console.log('✅ Referencias DOM obtenidas');
     console.log('Form:', form ? 'OK' : 'ERROR');
     console.log('Submit button:', submitBtn ? 'OK' : 'ERROR');
+    
+    // Configurar autoformateo de RUT
+    const rutInput = document.getElementById('rut');
+    const rutTutorInput = document.getElementById('rutTutor');
+    
+    if (rutInput) {
+        rutInput.addEventListener('input', function(e) {
+            e.target.value = formatearRUT(e.target.value);
+        });
+        rutInput.setAttribute('maxLength', '9');
+    }
+    
+    if (rutTutorInput) {
+        rutTutorInput.addEventListener('input', function(e) {
+            e.target.value = formatearRUT(e.target.value);
+        });
+        rutTutorInput.setAttribute('maxLength', '9');
+    }
     
     // Configurar event listeners
     setupFumaCheckbox();

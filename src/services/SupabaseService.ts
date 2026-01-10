@@ -712,6 +712,26 @@ class SupabaseService {
     };
   }
 
+  // Bloquear/Desbloquear jugador
+  async bloquearJugador(rut: string, bloqueado: boolean): Promise<boolean> {
+    try {
+      console.log(`🔒 [SUPABASE] ${bloqueado ? 'Bloqueando' : 'Desbloqueando'} jugador:`, rut);
+      
+      const { error } = await this.supabase
+        .from('jugadores')
+        .update({ bloqueado, updated_at: new Date().toISOString() })
+        .eq('rut', rut);
+
+      if (error) throw error;
+
+      console.log(`✅ [SUPABASE] Jugador ${bloqueado ? 'bloqueado' : 'desbloqueado'} exitosamente`);
+      return true;
+    } catch (error: any) {
+      console.error(`❌ [SUPABASE] Error al ${bloqueado ? 'bloquear' : 'desbloquear'} jugador:`, error.message);
+      return false;
+    }
+  }
+
   // Test de conexión
   async testConexion(): Promise<boolean> {
     try {
