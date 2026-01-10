@@ -145,7 +145,7 @@ const JugadoresTab: React.FC = () => {
           onPress: async () => {
             try {
               console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
-              setIsDeleting(true);
+              setDeletingId(jugador.rut);
               const nuevoEstado = !jugador.bloqueado;
               console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
               console.log('🔒 [JUGADORES TAB] Llamando a SupabaseService.bloquearJugador...');
@@ -165,7 +165,7 @@ const JugadoresTab: React.FC = () => {
               console.error('🔒 [JUGADORES TAB] Error al bloquear:', error);
               Alert.alert('❌ Error', `Error al ${accion} el jugador: ${error}`);
             } finally {
-              setIsDeleting(false);
+              setDeletingId(null);
             }
           },
         },
