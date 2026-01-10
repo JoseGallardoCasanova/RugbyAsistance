@@ -679,6 +679,7 @@ class SupabaseService {
       categoria: data.categoria,
       numero: data.numero,
       activo: data.activo !== false,
+      bloqueado: data.bloqueado || false,
       created_at: data.created_at,
       updated_at: data.updated_at,
       // Campos adicionales agregados

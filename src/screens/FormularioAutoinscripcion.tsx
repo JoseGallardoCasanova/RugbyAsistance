@@ -249,13 +249,16 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             style={[styles.input, rutError && styles.inputError]}
             value={rut}
             onChangeText={(text) => {
-              setRut(formatearRUT(text));
+              const formatted = formatearRUT(text);
+              setRut(formatted);
               setRutError(''); // Limpiar error mientras escribe
             }}
             onBlur={() => validarRUTEnTiempoReal(rut)}
             placeholder="Ej: 12345678-9"
             placeholderTextColor="#999"
             maxLength={10}
+            keyboardType="default"
+            autoCapitalize="characters"
           />
           {rutError ? <Text style={styles.errorText}>{rutError}</Text> : null}
 
@@ -364,13 +367,16 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             style={[styles.input, rutTutorError && styles.inputError]}
             value={rutTutor}
             onChangeText={(text) => {
-              setRutTutor(formatearRUT(text));
+              const formatted = formatearRUT(text);
+              setRutTutor(formatted);
               setRutTutorError(''); // Limpiar error mientras escribe
             }}
             onBlur={() => validarRUTTutorEnTiempoReal(rutTutor)}
             placeholder="12345678-9"
             placeholderTextColor="#999"
             maxLength={10}
+            keyboardType="default"
+            autoCapitalize="characters"
           />
           {rutTutorError ? <Text style={styles.errorText}>{rutTutorError}</Text> : null}
 
