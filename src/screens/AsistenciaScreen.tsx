@@ -307,7 +307,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
                     {jugador.bloqueado && (
                       <TouchableOpacity
                         style={styles.bloqueadoIndicador}
-                        onPress={() => Alert.alert('🚫 Bloqueado', 'Jugador bloqueado')}
+                        onPress={() => Alert.alert('Jugador Bloqueado')}
                       >
                       </TouchableOpacity>
                     )}
@@ -520,9 +520,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   bloqueadoIndicador: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#f44336',
     marginLeft: 8,
   },
