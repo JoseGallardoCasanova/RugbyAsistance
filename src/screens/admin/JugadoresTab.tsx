@@ -156,7 +156,7 @@ const JugadoresTab: React.FC = () => {
               if (success) {
                 Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
                 console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
-                await cargarJugadores();
+                await cargarDatos();
                 console.log('🔒 [JUGADORES TAB] Jugadores recargados');
               } else {
                 Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
