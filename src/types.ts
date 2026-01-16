@@ -14,6 +14,7 @@ export interface User {
   activo: boolean;
   creadoEn?: string;
   modificadoEn?: string;
+  organizacion_id?: string; // Multi-tenant (opcional)
 }
 
 export interface Jugador {
@@ -25,6 +26,7 @@ export interface Jugador {
   activo: boolean;
   creadoEn?: string;
   modificadoEn?: string;
+  organizacion_id?: string; // Multi-tenant (opcional)
   
   // Datos personales
   fecha_nacimiento?: string; // YYYY-MM-DD
