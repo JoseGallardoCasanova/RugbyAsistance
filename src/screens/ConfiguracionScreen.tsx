@@ -6,6 +6,7 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+import { Colors } from '../config/theme';
 
 interface ConfiguracionScreenProps {
   navigation: any;
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
     color: '#1976d2',
   },
   button: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     padding: 18,
     borderRadius: 10,
     alignItems: 'center',

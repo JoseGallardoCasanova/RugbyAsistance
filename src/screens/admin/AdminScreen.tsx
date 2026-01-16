@@ -11,6 +11,7 @@ import JugadoresTab from './JugadoresTab';
 import CategoriasTab from './CategoriasTab';
 import ModalExportarAsistencias from './ModalExportarAsistencias';
 import { useAuth } from '../../context/AuthContext';
+import { Colors } from '../../config/theme';
 
 interface AdminScreenProps {
   navigation: any;
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#1a472a',
+    borderBottomColor: Colors.primary,
   },
   tabText: {
     fontSize: 14,
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   content: {

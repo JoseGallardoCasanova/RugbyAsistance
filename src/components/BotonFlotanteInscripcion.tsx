@@ -164,7 +164,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
                       Descarga un Excel con toda la información
                     </Text>
                   </View>
-                  {exportando && <ActivityIndicator color="#1a472a" />}
+                  {exportando && <ActivityIndicator color=Colors.primary />}
                 </TouchableOpacity>
               )}
 
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a472a',
+    color: Colors.primary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   qrTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a472a',
+    color: Colors.primary,
     marginBottom: 10,
   },
   qrSubtitle: {
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,

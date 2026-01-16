@@ -13,6 +13,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
+import { Colors } from '../config/theme';
 import { validarRUT, formatearRUT } from '../utils/rutUtils';
 
 interface Props {
@@ -560,7 +561,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a472a',
+    color: Colors.primary,
     marginBottom: 15,
   },
   label: {
@@ -652,13 +653,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   checkboxText: {
     color: '#fff',
@@ -677,19 +678,19 @@ const styles = StyleSheet.create({
   radioButton: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   radioButtonSelected: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   radioButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1a472a',
+    color: Colors.primary,
   },
   radioButtonTextSelected: {
     color: '#fff',
@@ -707,26 +708,26 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   radioSelected: {
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   radioLabel: {
     fontSize: 14,
     color: '#333',
   },
   submitButton: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { Colors } from '../config/theme';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
 import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
@@ -138,7 +139,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#1a472a" />
+          <ActivityIndicator size="large" color=Colors.primary />
           <Text style={styles.loadingText}>Cargando categorías...</Text>
         </View>
       </SafeAreaView>
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     padding: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',

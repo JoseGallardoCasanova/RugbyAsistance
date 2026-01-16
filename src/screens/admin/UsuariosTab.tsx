@@ -13,6 +13,7 @@ import {
 import { User, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import FormUsuario from './FormUsuario';
+import { Colors } from '../../config/theme';
 import { useFocusEffect } from '@react-navigation/native';
 
 const UsuariosTab: React.FC = () => {
@@ -239,7 +240,7 @@ const UsuariosTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#1a472a" />
+        <ActivityIndicator size="large" color=Colors.primary />
         <Text style={styles.loadingText}>Cargando usuarios...</Text>
       </View>
     );
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
   },
   categoriaText: {
     fontSize: 14,
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: '500',
     marginTop: 5,
   },
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

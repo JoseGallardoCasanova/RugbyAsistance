@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { Colors } from '../config/theme';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -103,7 +104,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   content: {
     flex: 1,

@@ -14,7 +14,7 @@ import AdminScreen from '../screens/admin/AdminScreen';
 // COMPONENTE INLINE TEMPORAL PARA PROBAR
 const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => (
   <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-    <View style={{ backgroundColor: '#1a472a', padding: 50 }}>
+    <View style={{ backgroundColor: Colors.primary, padding: 50 }}>
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={{ color: '#fff', fontSize: 16 }}>← Volver</Text>
       </TouchableOpacity>

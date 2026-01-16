@@ -236,7 +236,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categoría Asignada *</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color="#1a472a" style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
@@ -270,7 +270,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categorías Asignadas * (selecciona múltiples)</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color="#1a472a" style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   title: {
     fontSize: 20,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roleButtonActive: {
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     backgroundColor: '#e8f5e9',
   },
   roleButtonText: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   roleButtonTextActive: {
-    color: '#1a472a',
+    color: Colors.primary,
   },
   categoriaSelector: {
     gap: 10,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   categoriaOptionActive: {
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     backgroundColor: '#e8f5e9',
   },
   categoriaColor: {
@@ -448,12 +448,12 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   categoriaOptionTextActive: {
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   checkmark: {
     fontSize: 20,
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   footer: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,

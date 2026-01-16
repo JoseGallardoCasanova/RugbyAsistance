@@ -20,7 +20,7 @@ interface FormCategoriaProps {
 }
 
 const COLORES_PREDEFINIDOS = [
-  '#1a472a', '#2d5a3d', '#3f6d50', '#518063',
+  Colors.primary, '#2d5a3d', '#3f6d50', '#518063',
   '#639376', '#75a689', '#87b99c', '#99ccaf',
   '#2196F3', '#1976d2', '#0d47a1', '#03A9F4',
   '#FF6B35', '#f44336', '#e91e63', '#9c27b0',
@@ -29,17 +29,17 @@ const COLORES_PREDEFINIDOS = [
 
 const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClose, onSave }) => {
   const [nombre, setNombre] = useState('');
-  const [color, setColor] = useState('#1a472a');
+  const [color, setColor] = useState(Colors.primary);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (categoria) {
       setNombre(categoria.nombre);
-      setColor(categoria.color || '#1a472a');
+      setColor(categoria.color || Colors.primary);
     } else {
       // Limpiar formulario
       setNombre('');
-      setColor('#1a472a');
+      setColor(Colors.primary);
     }
   }, [categoria, visible]);
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   title: {
     fontSize: 20,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,

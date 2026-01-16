@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
+import { Colors } from '../../config/theme';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
 import { useAuth } from '../../context/AuthContext';
@@ -99,7 +100,7 @@ const JugadoresTab: React.FC = () => {
 
   const getColorCategoria = (numero: number): string => {
     const cat = categorias.find(c => c.numero === numero);
-    return cat?.color || '#1a472a';
+    return cat?.color || Colors.primary;
   };
 
   const handleCrear = () => {
@@ -301,7 +302,7 @@ const JugadoresTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#1a472a" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Cargando jugadores...</Text>
       </View>
     );
@@ -463,19 +464,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     marginRight: 8,
     minWidth: 60,
     minHeight: 34,
   },
   filterButtonActive: {
-    backgroundColor: '#1a472a',
-    borderColor: '#1a472a',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterButtonText: {
     fontSize: 12,
     lineHeight: 16,
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: '600',
     includeFontPadding: false,
   },
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
   },
   categoriaText: {
     fontSize: 14,
-    color: '#1a472a',
+    color: Colors.textPrimary,
     fontWeight: '500',
   },
   cardActions: {
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

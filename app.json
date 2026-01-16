@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Rugby Asistencia",
-    "slug": "rugby-attendance",
+    "name": "SquadPro",
+    "slug": "squadpro",
     "version": "3.2.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -9,14 +9,14 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a472a"
+      "backgroundColor": "#2563eb"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.oldgreen.rugbyasistencia",
+      "bundleIdentifier": "com.squadpro.app",
       "buildNumber": "13",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -25,9 +25,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_Old_Green.png",
-        "backgroundColor": "#1a472a"
+        "backgroundColor": "#2563eb"
       },
-      "package": "com.oldgreen.rugbyasistencia",
+      "package": "com.squadpro.app",
       "kotlinVersion": "1.9.25"
     },
     "plugins": [

@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import SupabaseService from '../services/SupabaseService';
 import { Jugador } from '../types';
+import { Colors } from '../config/theme';
 
 interface AsistenciaScreenProps {
   navigation: any;
@@ -221,7 +222,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#1a472a" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Cargando jugadores...</Text>
         </View>
       </SafeAreaView>
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
@@ -567,7 +568,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   enviarButton: {
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     padding: 18,
     borderRadius: 10,
     alignItems: 'center',

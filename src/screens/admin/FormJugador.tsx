@@ -177,7 +177,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
             {/* Categoría */}
             <Text style={styles.label}>Categoría *</Text>
             {loadingCategorias ? (
-              <ActivityIndicator color="#1a472a" style={{ marginVertical: 10 }} />
+              <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
             ) : categorias.length === 0 ? (
               <View style={styles.noCategoriesContainer}>
                 <Text style={styles.noCategoriesText}>
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
   },
   title: {
     fontSize: 20,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   categoriaOptionActive: {
-    borderColor: '#1a472a',
+    borderColor: Colors.primary,
     backgroundColor: '#e8f5e9',
   },
   categoriaColor: {
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   categoriaOptionTextActive: {
-    color: '#1a472a',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   noCategoriesContainer: {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#1a472a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,
