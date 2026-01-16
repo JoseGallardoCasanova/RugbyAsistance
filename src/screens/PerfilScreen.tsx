@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
   },
   backButton: {
     width: 40,

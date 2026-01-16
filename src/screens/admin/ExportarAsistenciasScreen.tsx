@@ -13,6 +13,7 @@ import {
 // import * as Sharing from 'expo-sharing';
 import SupabaseService from '../../services/SupabaseService';
 import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 type RangoTiempo = '3dias' | '1semana' | '1mes' | '3meses';
 
@@ -30,6 +31,7 @@ const OPCIONES_RANGO: OpcionRango[] = [
 ];
 
 export default function ExportarAsistenciasScreen({ navigation }: any) {
+  const { currentColors, fontSizes } = usePreferences();
   const [rangoSeleccionado, setRangoSeleccionado] = useState<RangoTiempo | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -94,7 +96,7 @@ export default function ExportarAsistenciasScreen({ navigation }: any) {
               <Text style={styles.opcionSubtitulo}>({opcion.dias} días)</Text>
             </View>
             {cargando && rangoSeleccionado === opcion.id ? (
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={'#2563eb' // Colors.primary} />
             ) : (
               <Text style={styles.opcionFlecha}>→</Text>
             )}
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   opcionSeleccionada: {
-    borderColor: Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
     backgroundColor: '#f0f7f4',
   },
   opcionContent: {
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
   opcionTitulo: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#2563eb' // Colors.primary,
     marginBottom: 4,
   },
   opcionSubtitulo: {
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
   },
   opcionFlecha: {
     fontSize: 24,
-    color: Colors.primary,
+    color: '#2563eb' // Colors.primary,
     marginLeft: 10,
   },
   infoCard: {
@@ -201,12 +203,12 @@ const styles = StyleSheet.create({
     padding: 15,
     marginTop: 20,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: '#2563eb' // Colors.primary,
   },
   infoTitulo: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.primary,
+    color: '#2563eb' // Colors.primary,
     marginBottom: 8,
   },
   infoTexto: {

@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AsistenciaScreen from '../screens/AsistenciaScreen';
@@ -12,9 +13,11 @@ import AdminScreen from '../screens/admin/AdminScreen';
 // import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScreen';
 
 // COMPONENTE INLINE TEMPORAL PARA PROBAR
-const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => (
+const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => {
+  const { currentColors } = require('../context/PreferencesContext').usePreferences();
+  return (
   <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-    <View style={{ backgroundColor: Colors.primary, padding: 50 }}>
+    <View style={{ backgroundColor: currentColors.primary, padding: 50 }}>
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={{ color: '#fff', fontSize: 16 }}>← Volver</Text>
       </TouchableOpacity>
@@ -30,7 +33,8 @@ const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => (
       </Text>
     </View>
   </View>
-);
+  );
+};
 
 const Stack = createStackNavigator();
 

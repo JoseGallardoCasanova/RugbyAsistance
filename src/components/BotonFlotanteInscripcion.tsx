@@ -14,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import SupabaseService from '../services/SupabaseService';
 import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
 
 interface Props {
   onOpenFormulario?: () => void;
@@ -23,6 +24,7 @@ interface Props {
 type ModalView = 'none' | 'menu' | 'qr';
 
 export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: Props) {
+  const { currentColors, fontSizes } = usePreferences();
   const [currentView, setCurrentView] = useState<ModalView>('none');
   const [exportando, setExportando] = useState(false);
 
@@ -165,7 +167,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
                       Descarga un Excel con toda la información
                     </Text>
                   </View>
-                  {exportando && <ActivityIndicator color={Colors.primary} />}
+                  {exportando && <ActivityIndicator color={currentColors.primary} />}
                 </TouchableOpacity>
               )}
 
@@ -232,7 +234,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
   qrTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     marginBottom: 10,
   },
   qrSubtitle: {
@@ -339,7 +341,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,

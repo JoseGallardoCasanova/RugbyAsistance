@@ -114,7 +114,7 @@ const CategoriasTab: React.FC = () => {
         success = await SupabaseService.crearCategoria({
           numero: maxNumero + 1,
           nombre: datos.nombre!,
-          color: datos.color || Colors.primary,
+          color: datos.color || '#2563eb' // Colors.primary,
           activo: true,
         });
       }
@@ -143,7 +143,7 @@ const CategoriasTab: React.FC = () => {
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={[styles.colorIndicator, { backgroundColor: item.color || Colors.primary }]} />
+          <View style={[styles.colorIndicator, { backgroundColor: item.color || '#2563eb' // Colors.primary }]} />
           <View style={styles.cardInfo}>
             <View style={styles.numeroContainer}>
               <Text style={styles.numero}>#{item.numero}</Text>
@@ -180,7 +180,7 @@ const CategoriasTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={currentColors.primary} />
+        <ActivityIndicator size="large" color={current'#2563eb' // Colors.primary} />
         <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando categorías...</Text>
       </View>
     );
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

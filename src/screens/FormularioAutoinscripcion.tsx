@@ -14,6 +14,7 @@ import { Picker } from '@react-native-picker/picker';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
 import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
 import { validarRUT, formatearRUT } from '../utils/rutUtils';
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function FormularioAutoinscripcion({ navigation, onSuccess }: Props) {
+  const { currentColors, fontSizes } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   
@@ -561,7 +563,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -600,7 +602,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
     marginBottom: 15,
   },
   label: {
@@ -653,13 +655,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
   },
   checkboxText: {
     color: '#fff',
@@ -678,19 +680,19 @@ const styles = StyleSheet.create({
   radioButton: {
     flex: 1,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   radioButtonSelected: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
   },
   radioButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: '#2563eb' // Colors.primary,
   },
   radioButtonTextSelected: {
     color: '#fff',
@@ -708,26 +710,26 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   radioSelected: {
-    borderColor: Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
   },
   radioLabel: {
     fontSize: 14,
     color: '#333',
   },
   submitButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

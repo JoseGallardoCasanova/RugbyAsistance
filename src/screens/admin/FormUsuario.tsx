@@ -240,7 +240,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categoría Asignada *</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color={currentColors.primary} style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (

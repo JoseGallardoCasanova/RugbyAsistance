@@ -102,7 +102,7 @@ const JugadoresTab: React.FC = () => {
 
   const getColorCategoria = (numero: number): string => {
     const cat = categorias.find(c => c.numero === numero);
-    return cat?.color || currentColors.primary;
+    return cat?.color || current'#2563eb' // Colors.primary;
   };
 
   const handleCrear = () => {
@@ -304,7 +304,7 @@ const JugadoresTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={currentColors.primary} />
+        <ActivityIndicator size="large" color={current'#2563eb' // Colors.primary} />
         <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando jugadores...</Text>
       </View>
     );
@@ -467,19 +467,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
     marginRight: 8,
     minWidth: 60,
     minHeight: 34,
   },
   filterButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
+    borderColor: '#2563eb' // Colors.primary,
   },
   filterButtonText: {
     fontSize: 12,
     lineHeight: 16,
-    color: Colors.primary,
+    color: '#2563eb' // Colors.primary,
     fontWeight: '600',
     includeFontPadding: false,
   },
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb' // Colors.primary,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

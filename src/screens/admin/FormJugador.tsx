@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   categoriaOptionActive: {
-    borderColor: Colors.primary,
+    borderColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     backgroundColor: '#e8f5e9',
   },
   categoriaColor: {
