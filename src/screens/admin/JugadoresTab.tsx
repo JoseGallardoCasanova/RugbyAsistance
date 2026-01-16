@@ -304,8 +304,8 @@ const JugadoresTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Cargando jugadores...</Text>
+        <ActivityIndicator size="large" color={currentColors.primary} />
+        <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando jugadores...</Text>
       </View>
     );
   }
@@ -314,10 +314,10 @@ const JugadoresTab: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={{ fontSize: 40, marginBottom: 12 }}>🏉</Text>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' }}>
+        <Text style={{ fontSize: fontSizes.lg, fontWeight: 'bold', color: currentColors.textPrimary, marginBottom: 8, textAlign: 'center' }}>
           Sin categorías asignadas
         </Text>
-        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', paddingHorizontal: 30 }}>
+        <Text style={{ fontSize: fontSizes.sm, color: currentColors.textSecondary, textAlign: 'center', paddingHorizontal: 30 }}>
           Pide a un administrador que te asigne una o más categorías para poder inscribir jugadores.
         </Text>
       </View>
@@ -325,12 +325,13 @@ const JugadoresTab: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: currentColors.backgroundWhite }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { fontSize: fontSizes.md, color: currentColors.textPrimary }]}
           placeholder="🔍 Buscar jugador..."
+          placeholderTextColor={currentColors.textLight}
           value={busqueda}
           onChangeText={setBusqueda}
         />

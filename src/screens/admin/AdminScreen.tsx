@@ -50,21 +50,21 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   // Seguridad extra: si alguien navega acá sin rol válido
   if (!user || allowedTabs.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+        <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
+            <Text style={[styles.backIcon, { fontSize: fontSizes.xxxl }]}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Panel de Admin</Text>
+          <Text style={[styles.title, { fontSize: fontSizes.xl }]}>Panel de Admin</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.content}>
           <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 16, color: '#333', fontWeight: 'bold', marginBottom: 8 }}>
+            <Text style={{ fontSize: fontSizes.md, color: currentColors.textPrimary, fontWeight: 'bold', marginBottom: 8 }}>
               Sin acceso
             </Text>
-            <Text style={{ fontSize: 14, color: '#666' }}>
+            <Text style={{ fontSize: fontSizes.sm, color: currentColors.textSecondary }}>
               Tu rol no tiene permisos para ver este panel.
             </Text>
           </View>
@@ -74,16 +74,16 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
           style={styles.backButton}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Text style={[styles.backIcon, { fontSize: fontSizes.xxxl }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Panel de Admin</Text>
+        <Text style={[styles.title, { fontSize: fontSizes.xl }]}>Panel de Admin</Text>
         
         {/* Botón Exportar (solo para admins) */}
         {user?.role === 'admin' && (
@@ -98,13 +98,13 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { backgroundColor: currentColors.backgroundWhite, borderBottomColor: currentColors.border }]}>
         {allowedTabs.includes('usuarios') && (
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'usuarios' && styles.tabActive]}
+            style={[styles.tab, activeTab === 'usuarios' && { borderBottomColor: currentColors.primary }]}
             onPress={() => setActiveTab('usuarios')}
           >
-            <Text style={[styles.tabText, activeTab === 'usuarios' && styles.tabTextActive]}>
+            <Text style={[styles.tabText, { fontSize: fontSizes.sm, color: currentColors.textSecondary }, activeTab === 'usuarios' && { color: currentColors.primary, fontWeight: 'bold' }]}>
               👥 Usuarios
             </Text>
           </TouchableOpacity>
@@ -112,10 +112,10 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
 
         {allowedTabs.includes('jugadores') && (
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'jugadores' && styles.tabActive]}
+            style={[styles.tab, activeTab === 'jugadores' && { borderBottomColor: currentColors.primary }]}
             onPress={() => setActiveTab('jugadores')}
           >
-            <Text style={[styles.tabText, activeTab === 'jugadores' && styles.tabTextActive]}>
+            <Text style={[styles.tabText, { fontSize: fontSizes.sm, color: currentColors.textSecondary }, activeTab === 'jugadores' && { color: currentColors.primary, fontWeight: 'bold' }]}>
               🏉 Jugadores
             </Text>
           </TouchableOpacity>
@@ -123,10 +123,10 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
 
         {allowedTabs.includes('categorias') && (
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'categorias' && styles.tabActive]}
+            style={[styles.tab, activeTab === 'categorias' && { borderBottomColor: currentColors.primary }]}
             onPress={() => setActiveTab('categorias')}
           >
-            <Text style={[styles.tabText, activeTab === 'categorias' && styles.tabTextActive]}>
+            <Text style={[styles.tabText, { fontSize: fontSizes.sm, color: currentColors.textSecondary }, activeTab === 'categorias' && { color: currentColors.primary, fontWeight: 'bold' }]}>
               📋 Categorías
             </Text>
           </TouchableOpacity>
@@ -152,24 +152,20 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
   },
   backIcon: {
-    fontSize: 30,
     color: '#fff',
   },
   title: {
-    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -186,9 +182,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   tab: {
     flex: 1,
@@ -197,17 +191,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
   },
-  tabActive: {
-    borderBottomColor: Colors.primary,
-  },
   tabText: {
-    fontSize: 14,
-    color: '#666',
     fontWeight: '500',
-  },
-  tabTextActive: {
-    color: Colors.primary,
-    fontWeight: 'bold',
   },
   content: {
     flex: 1,

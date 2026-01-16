@@ -180,19 +180,20 @@ const CategoriasTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Cargando categorías...</Text>
+        <ActivityIndicator size="large" color={currentColors.primary} />
+        <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando categorías...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: currentColors.backgroundWhite }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { fontSize: fontSizes.md, color: currentColors.textPrimary }]}
           placeholder="🔍 Buscar categoría..."
+          placeholderTextColor={currentColors.textLight}
           value={busqueda}
           onChangeText={setBusqueda}
         />
