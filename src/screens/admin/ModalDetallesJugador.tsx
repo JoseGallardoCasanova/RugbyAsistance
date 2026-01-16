@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     marginBottom: 15,
   },
   field: {

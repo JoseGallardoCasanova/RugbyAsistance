@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   categoriaText: {
     fontSize: 14,
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     fontWeight: '500',
     marginTop: 5,
   },
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

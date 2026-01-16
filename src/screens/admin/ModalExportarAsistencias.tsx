@@ -248,7 +248,7 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
                 <Text style={styles.opcionSubtitulo}>({opcion.dias} días)</Text>
               </View>
               {cargando && rangoSeleccionado === opcion.id ? (
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={currentColors.primary} />
               ) : (
                 <Text style={styles.opcionFlecha}>→</Text>
               )}

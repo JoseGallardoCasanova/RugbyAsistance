@@ -274,7 +274,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categorías Asignadas * (selecciona múltiples)</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color={currentColors.primary} style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
   },
   title: {
     fontSize: 20,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roleButtonActive: {
-    borderColor: Colors.primary,
+    borderColor: '#2563eb', // Se usa currentColors.primary dinámicamente
     backgroundColor: '#e8f5e9',
   },
   roleButtonText: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   roleButtonTextActive: {
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
   },
   categoriaSelector: {
     gap: 10,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   categoriaOptionActive: {
-    borderColor: Colors.primary,
+    borderColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     backgroundColor: '#e8f5e9',
   },
   categoriaColor: {
@@ -452,12 +452,12 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   categoriaOptionTextActive: {
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     fontWeight: 'bold',
   },
   checkmark: {
     fontSize: 20,
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     fontWeight: 'bold',
   },
   footer: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,
