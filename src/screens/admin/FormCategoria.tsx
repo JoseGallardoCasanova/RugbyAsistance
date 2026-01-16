@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Categoria } from '../../types'; // ✅ Ruta corregida
 import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface FormCategoriaProps {
   visible: boolean;
@@ -29,6 +30,7 @@ const COLORES_PREDEFINIDOS = [
 ];
 
 const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClose, onSave }) => {
+  const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState(Colors.primary);
   const [guardando, setGuardando] = useState(false);

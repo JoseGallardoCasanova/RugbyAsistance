@@ -13,7 +13,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import SupabaseService from '../../services/SupabaseService';
-import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface Props {
   visible: boolean;
@@ -36,6 +36,7 @@ const OPCIONES_RANGO: OpcionRango[] = [
 ];
 
 export default function ModalExportarAsistencias({ visible, onClose }: Props) {
+  const { currentColors, fontSizes } = usePreferences();
   const [rangoSeleccionado, setRangoSeleccionado] = useState<RangoTiempo | null>(null);
   const [cargando, setCargando] = useState(false);
 

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { User, UserRole, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
-import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface FormUsuarioProps {
   visible: boolean;
@@ -22,6 +22,7 @@ interface FormUsuarioProps {
 }
 
 const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, onSave }) => {
+  const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -132,36 +133,38 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
-        <View style={styles.modal}>
+        <View style={[styles.modal, { backgroundColor: currentColors.backgroundWhite }]}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>
+          <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
+            <Text style={[styles.title, { fontSize: fontSizes.lg }]}>
               {usuario ? '✏️ Editar Usuario' : '➕ Crear Usuario'}
             </Text>
             <TouchableOpacity onPress={onClose} disabled={guardando}>
-              <Text style={styles.closeButton}>✕</Text>
+              <Text style={[styles.closeButton, { fontSize: fontSizes.xxl }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {/* Form */}
           <ScrollView style={styles.form}>
             {/* Nombre */}
-            <Text style={styles.label}>Nombre *</Text>
+            <Text style={[styles.label, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>Nombre *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: fontSizes.md, color: currentColors.textPrimary, backgroundColor: currentColors.background, borderColor: currentColors.border }]}
               value={nombre}
               onChangeText={setNombre}
               placeholder="Juan Pérez"
+              placeholderTextColor={currentColors.textLight}
               editable={!guardando}
             />
 
             {/* Email */}
-            <Text style={styles.label}>Email *</Text>
+            <Text style={[styles.label, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>Email *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { fontSize: fontSizes.md, color: currentColors.textPrimary, backgroundColor: currentColors.background, borderColor: currentColors.border }]}
               value={email}
               onChangeText={setEmail}
               placeholder="usuario@ejemplo.com"
+              placeholderTextColor={currentColors.textLight}
               keyboardType="email-address"
               autoCapitalize="none"
               editable={!guardando}

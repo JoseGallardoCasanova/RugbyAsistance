@@ -13,7 +13,7 @@ import {
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import { formatearRUT, validarRUT } from '../../utils/rutUtils';
-import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface FormJugadorProps {
   visible: boolean;
@@ -24,6 +24,7 @@ interface FormJugadorProps {
 }
 
 const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasPermitidas, onClose, onSave }) => {
+  const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
   const [rutError, setRutError] = useState('');

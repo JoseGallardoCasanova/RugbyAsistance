@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Jugador } from '../../types';
-import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface Props {
   visible: boolean;
@@ -17,6 +17,7 @@ interface Props {
 }
 
 export default function ModalDetallesJugador({ visible, jugador, onClose }: Props) {
+  const { currentColors, fontSizes } = usePreferences();
   if (!jugador) return null;
 
   // Verificar si hay detalles adicionales
