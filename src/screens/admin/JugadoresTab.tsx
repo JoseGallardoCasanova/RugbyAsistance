@@ -68,9 +68,6 @@ const JugadoresTab: React.FC = () => {
 
       setJugadores(activos);
       setCategorias(categoriasActivas);
-      
-      console.log(`📥 Jugadores cargados: ${activos.length}`);
-      console.log(`📥 Categorías cargadas: ${categoriasActivas.length}`);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -123,17 +120,11 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleVerDetalles = (jugador: Jugador) => {
-    console.log('📋 Ver detalles de:', jugador.nombre, jugador.rut);
-    console.log('📋 Datos jugador:', JSON.stringify(jugador, null, 2));
     setJugadorDetalles(jugador);
     setModalDetallesVisible(true);
   };
 
   const handleBloquear = (jugador: Jugador) => {
-    console.log('🔒 [JUGADORES TAB] handleBloquear llamado para:', jugador.nombre);
-    console.log('🔒 [JUGADORES TAB] Estado actual bloqueado:', jugador.bloqueado);
-    console.log('🔒 [JUGADORES TAB] RUT:', jugador.rut);
-    
     const accion = jugador.bloqueado ? 'desbloquear' : 'bloquear';
     Alert.alert(
       `⚠️ ${jugador.bloqueado ? 'Desbloquear' : 'Bloquear'} Jugador`,
@@ -144,20 +135,14 @@ const JugadoresTab: React.FC = () => {
           text: 'Confirmar',
           onPress: async () => {
             try {
-              console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
               setDeletingId(jugador.rut);
               const nuevoEstado = !jugador.bloqueado;
-              console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
-              console.log('🔒 [JUGADORES TAB] Llamando a SupabaseService.bloquearJugador...');
               
               const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
-              console.log('🔒 [JUGADORES TAB] Resultado de bloquearJugador:', success);
               
               if (success) {
                 Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
-                console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
                 await cargarDatos();
-                console.log('🔒 [JUGADORES TAB] Jugadores recargados');
               } else {
                 Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
               }
@@ -252,8 +237,6 @@ const JugadoresTab: React.FC = () => {
 
   const renderJugador = ({ item }: { item: Jugador }) => {
     const isDeleting = deletingId === item.rut;
-    
-    console.log('🎨 Renderizando jugador:', item.nombre, 'Categoría:', item.categoria);
 
     return (
       <View style={styles.card}>
@@ -366,18 +349,20 @@ const JugadoresTab: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        {categorias.map((cat) => (
-          <TouchableOpacity
-            key={String(cat.numero)}
-            style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
-            onPress={() => setCategoriaFiltro(cat.numero)}
-          >
-            <View style={[styles.filterColorDot, { backgroundColor: cat.color }]} />
-            <Text style={[styles.filterButtonText, categoriaFiltro === cat.numero && styles.filterButtonTextActive]}>
-              {cat.nombre}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {categorias.map((cat) => {
+          const nombreMostrar = cat.nombre ? cat.nombre.substring(0, 5) : `M${cat.numero}`;
+          return (
+            <TouchableOpacity
+              key={String(cat.numero)}
+              style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
+              onPress={() => setCategoriaFiltro(cat.numero)}
+            >
+              <Text style={[styles.filterButtonText, categoriaFiltro === cat.numero && styles.filterButtonTextActive]}>
+                {nombreMostrar}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Lista de jugadores */}
@@ -464,36 +449,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    paddingVertical: 12,
   },
   filterContent: {
-    padding: 15,
-    gap: 10,
+    paddingHorizontal: 15,
+    alignItems: 'center',
   },
   filterButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-    gap: 8,
-    minWidth: 100,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#1a472a',
+    marginRight: 8,
+    minWidth: 60,
+    minHeight: 34,
   },
   filterButtonActive: {
     backgroundColor: '#1a472a',
-  },
-  filterColorDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    borderColor: '#1a472a',
   },
   filterButtonText: {
-    fontSize: 15,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#1a472a',
+    fontWeight: '600',
+    includeFontPadding: false,
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: 'bold',
   },
   list: {
