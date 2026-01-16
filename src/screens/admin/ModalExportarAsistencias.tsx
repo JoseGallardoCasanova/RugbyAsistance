@@ -248,7 +248,7 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
                 <Text style={styles.opcionSubtitulo}>({opcion.dias} días)</Text>
               </View>
               {cargando && rangoSeleccionado === opcion.id ? (
-                <ActivityIndicator color={current'#2563eb' // Colors.primary} />
+                <ActivityIndicator color={currentColors.primary} />
               ) : (
                 <Text style={styles.opcionFlecha}>→</Text>
               )}
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#2563eb' // Colors.primary,
+    backgroundColor: '#2563eb', // Colors.primary
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   opcionSeleccionada: {
-    borderColor: '#2563eb' // Colors.primary,
+    borderColor: '#2563eb', // Colors.primary
     backgroundColor: '#f0f7f4',
   },
   opcionContent: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   opcionTitulo: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2563eb' // Colors.primary,
+    color: '#2563eb', // Colors.primary
     marginBottom: 4,
   },
   opcionSubtitulo: {
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   opcionFlecha: {
     fontSize: 24,
-    color: '#2563eb' // Colors.primary,
+    color: '#2563eb', // Colors.primary
     marginLeft: 10,
   },
   infoCard: {

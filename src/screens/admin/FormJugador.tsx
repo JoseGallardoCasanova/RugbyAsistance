@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   categoriaOptionTextActive: {
-    color: Colors.primary,
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     fontWeight: 'bold',
   },
   noCategoriesContainer: {

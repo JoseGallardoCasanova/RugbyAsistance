@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
+    color: '#2563eb', // Se aplica currentColors.primary dinámicamente
     marginBottom: 15,
   },
   label: {
@@ -655,13 +655,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
+    borderColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   checkboxChecked: {
-    backgroundColor: '#2563eb', // Se aplica current'#2563eb' // Colors.primary dinámicamente
+    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
   },
   checkboxText: {
     color: '#fff',
@@ -680,19 +680,19 @@ const styles = StyleSheet.create({
   radioButton: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#2563eb' // Colors.primary,
+    borderColor: '#2563eb', // Colors.primary
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   radioButtonSelected: {
-    backgroundColor: '#2563eb' // Colors.primary,
+    backgroundColor: '#2563eb', // Colors.primary
   },
   radioButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2563eb' // Colors.primary,
+    color: '#2563eb', // Colors.primary
   },
   radioButtonTextSelected: {
     color: '#fff',
@@ -710,26 +710,26 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#2563eb' // Colors.primary,
+    borderColor: '#2563eb', // Colors.primary
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   radioSelected: {
-    borderColor: '#2563eb' // Colors.primary,
+    borderColor: '#2563eb', // Colors.primary
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2563eb' // Colors.primary,
+    backgroundColor: '#2563eb', // Colors.primary
   },
   radioLabel: {
     fontSize: 14,
     color: '#333',
   },
   submitButton: {
-    backgroundColor: '#2563eb' // Colors.primary,
+    backgroundColor: '#2563eb', // Colors.primary
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
