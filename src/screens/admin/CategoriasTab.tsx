@@ -14,9 +14,11 @@ import { Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import FormCategoria from './FormCategoria';
 import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const CategoriasTab: React.FC = () => {
+  const { currentColors, fontSizes } = usePreferences();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -90,9 +90,9 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
@@ -121,11 +121,11 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
         <View style={styles.infoSection}>
           {/* Nombre */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Nombre</Text>
+            <Text style={[styles.infoLabel, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>Nombre</Text>
             {editando ? (
               <View style={styles.editContainer}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { fontSize: fontSizes.md, color: currentColors.textPrimary }]}
                   value={nombre}
                   onChangeText={setNombre}
                   placeholder="Tu nombre"
@@ -196,7 +196,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
@@ -209,13 +208,11 @@ const styles = StyleSheet.create({
     width: 40,
   },
   backIcon: {
-    fontSize: 30,
     color: '#fff',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
     color: '#fff',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,

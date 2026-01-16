@@ -141,7 +141,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={currentColors.primary} />
-          <Text style={[styles.loadingText, { fontSize: fontSizes.medium, color: currentColors.textSecondary }]}>Cargando categorías...</Text>
+          <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando categorías...</Text>
         </View>
       </SafeAreaView>
     );
@@ -169,8 +169,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
           <View style={styles.headerText}>
-            <Text style={[styles.greeting, { fontSize: fontSizes.large }]}>Hola, {user?.nombre}</Text>
-            <Text style={[styles.subtitle, { fontSize: fontSizes.medium }]}>
+            <Text style={[styles.greeting, { fontSize: fontSizes.lg }]}>Hola, {user?.nombre}</Text>
+            <Text style={[styles.subtitle, { fontSize: fontSizes.md }]}>
               {user?.role === 'admin' && 'Administrador'}
               {user?.role === 'entrenador' && 'Entrenador'}
               {user?.role === 'ayudante' && 'Ayudante'}
@@ -199,13 +199,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* Lista de categorías */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={[styles.sectionTitle, { fontSize: fontSizes.large, color: currentColors.textPrimary }]}>Selecciona una categoría:</Text>
+        <Text style={[styles.sectionTitle, { fontSize: fontSizes.lg, color: currentColors.textPrimary }]}>Selecciona una categoría:</Text>
 
         {categorias.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={[styles.emptyTitle, { fontSize: fontSizes.xlarge, color: currentColors.textPrimary }]}>Sin categorías</Text>
-            <Text style={[styles.emptyText, { fontSize: fontSizes.medium, color: currentColors.textSecondary }]}>
+            <Text style={[styles.emptyTitle, { fontSize: fontSizes.xxl, color: currentColors.textPrimary }]}>Sin categorías</Text>
+            <Text style={[styles.emptyText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>
               No hay categorías configuradas. {'\n'}
               Ve al Panel de Admin para crear categorías.
             </Text>
@@ -226,7 +226,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   onPress={() => handleCategoriaPress(categoria)}
                   disabled={!tieneAcceso}
                 >
-                  <Text style={[styles.categoryName, { fontSize: fontSizes.medium, color: currentColors.textPrimary }]}>{categoria.nombre}</Text>
+                  <Text style={[styles.categoryName, { fontSize: fontSizes.md, color: currentColors.textPrimary }]}>{categoria.nombre}</Text>
                   {!tieneAcceso && (
                     <Text style={styles.categoryLocked}>🔒</Text>
                   )}

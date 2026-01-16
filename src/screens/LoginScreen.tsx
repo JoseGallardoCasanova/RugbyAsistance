@@ -62,15 +62,15 @@ const LoginScreen = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { fontSize: fontSizes.xlarge }]}>OLD GREEN</Text>
-          <Text style={[styles.subtitle, { fontSize: fontSizes.medium }]}>Rugby Club</Text>
-          <Text style={[styles.appName, { fontSize: fontSizes.medium }]}>Sistema de Asistencia</Text>
+          <Text style={[styles.title, { fontSize: fontSizes.xxxl }]}>OLD GREEN</Text>
+          <Text style={[styles.subtitle, { fontSize: fontSizes.lg }]}>Rugby Club</Text>
+          <Text style={[styles.appName, { fontSize: fontSizes.md }]}>Sistema de Asistencia</Text>
         </View>
 
         {/* Formulario */}
         <View style={styles.form}>
           <TextInput
-            style={[styles.input, { fontSize: fontSizes.medium }]}
+            style={[styles.input, { fontSize: fontSizes.md }]}
             placeholder="Usuario"
             placeholderTextColor="#999"
             value={email}
@@ -81,7 +81,7 @@ const LoginScreen = () => {
           {/* ✅ MEJORADO: Input de contraseña con botón show/hide */}
           <View style={styles.passwordContainer}>
             <TextInput
-              style={[styles.passwordInput, { fontSize: fontSizes.medium }]}
+              style={[styles.passwordInput, { fontSize: fontSizes.md }]}
               placeholder="Contraseña"
               placeholderTextColor="#999"
               value={password}
@@ -103,7 +103,7 @@ const LoginScreen = () => {
             onPress={handleLogin}
             disabled={loading}
           >
-            <Text style={[styles.buttonText, { fontSize: fontSizes.large }]}>
+            <Text style={[styles.buttonText, { fontSize: fontSizes.lg }]}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Text>
           </TouchableOpacity>

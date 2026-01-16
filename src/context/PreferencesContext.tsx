@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeName, FontSize, Themes, Colors, DarkColors, getFontSizes } from '../config/theme';
 
@@ -91,12 +91,17 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
     await savePreferences(defaultPreferences);
   };
 
+  // Calcular fontSizes reactivamente cuando cambia fontSize
+  const currentFontSizes = useMemo(() => {
+    return getFontSizes(preferences.fontSize);
+  }, [preferences.fontSize]);
+
   return (
     <PreferencesContext.Provider
       value={{
         preferences,
         currentColors,
-        fontSizes: getFontSizes(preferences.fontSize),
+        fontSizes: currentFontSizes,
         setTheme,
         setFontSize,
         setDarkMode,

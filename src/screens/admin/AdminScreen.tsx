@@ -11,7 +11,7 @@ import JugadoresTab from './JugadoresTab';
 import CategoriasTab from './CategoriasTab';
 import ModalExportarAsistencias from './ModalExportarAsistencias';
 import { useAuth } from '../../context/AuthContext';
-import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 
 interface AdminScreenProps {
   navigation: any;
@@ -22,6 +22,7 @@ type TabType = 'usuarios' | 'jugadores' | 'categorias';
 
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
   const routeInitialTab: TabType | undefined = route?.params?.initialTab;
   const [modalExportarVisible, setModalExportarVisible] = useState(false);
 

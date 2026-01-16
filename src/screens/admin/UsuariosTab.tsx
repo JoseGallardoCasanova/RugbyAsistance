@@ -14,9 +14,11 @@ import { User, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import FormUsuario from './FormUsuario';
 import { Colors } from '../../config/theme';
+import { usePreferences } from '../../context/PreferencesContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const UsuariosTab: React.FC = () => {
+  const { currentColors, fontSizes } = usePreferences();
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]); // ✅ NUEVO
   const [loading, setLoading] = useState(true);
