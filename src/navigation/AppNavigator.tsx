@@ -10,6 +10,8 @@ import AsistenciaScreen from '../screens/AsistenciaScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import AdminScreen from '../screens/admin/AdminScreen';
+import PlansScreen from '../screens/PlansScreen';
+import RegisterOrgScreen from '../screens/RegisterOrgScreen';
 // import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScreen';
 
 // COMPONENTE INLINE TEMPORAL PARA PROBAR
@@ -62,7 +64,11 @@ const AppNavigator = () => {
             <Stack.Screen name="Admin" component={AdminScreen} />
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Plans" component={PlansScreen} />
+            <Stack.Screen name="RegisterOrg" component={RegisterOrgScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

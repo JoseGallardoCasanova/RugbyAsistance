@@ -107,6 +107,25 @@ const LoginScreen = () => {
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Text>
           </TouchableOpacity>
+
+          {/* Separator */}
+          <View style={styles.separator}>
+            <View style={[styles.separatorLine, { backgroundColor: currentColors.border }]} />
+            <Text style={[styles.separatorText, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>
+              o
+            </Text>
+            <View style={[styles.separatorLine, { backgroundColor: currentColors.border }]} />
+          </View>
+
+          {/* New customer button */}
+          <TouchableOpacity
+            style={[styles.newCustomerButton, { borderColor: currentColors.primary }]}
+            onPress={() => navigation.navigate('Plans')}
+          >
+            <Text style={[styles.newCustomerText, { fontSize: fontSizes.md, color: currentColors.primary }]}>
+              🚀 ¿Nuevo cliente? Empieza gratis
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* ...se eliminó la sección de usuarios de prueba... */}
@@ -178,6 +197,28 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontWeight: 'bold',
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    gap: 10,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+  },
+  separatorText: {
+    paddingHorizontal: 10,
+  },
+  newCustomerButton: {
+    borderWidth: 2,
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+  },
+  newCustomerText: {
     fontWeight: 'bold',
   },
   help: {
