@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Jugador } from '../../types';
+import { Colors } from '../../config/theme';
 
 interface Props {
   visible: boolean;

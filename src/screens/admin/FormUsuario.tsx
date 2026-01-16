@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { User, UserRole, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
+import { Colors } from '../../config/theme';
 
 interface FormUsuarioProps {
   visible: boolean;
@@ -236,7 +237,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categoría Asignada *</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
@@ -270,7 +271,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               <>
                 <Text style={styles.label}>Categorías Asignadas * (selecciona múltiples)</Text>
                 {loadingCategorias ? (
-                  <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
+                  <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
                 ) : (
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (

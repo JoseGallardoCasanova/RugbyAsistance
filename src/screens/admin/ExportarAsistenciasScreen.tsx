@@ -12,6 +12,7 @@ import {
 // import { Paths, File } from 'expo-file-system';
 // import * as Sharing from 'expo-sharing';
 import SupabaseService from '../../services/SupabaseService';
+import { Colors } from '../../config/theme';
 
 type RangoTiempo = '3dias' | '1semana' | '1mes' | '3meses';
 
@@ -93,7 +94,7 @@ export default function ExportarAsistenciasScreen({ navigation }: any) {
               <Text style={styles.opcionSubtitulo}>({opcion.dias} días)</Text>
             </View>
             {cargando && rangoSeleccionado === opcion.id ? (
-              <ActivityIndicator color=Colors.primary />
+              <ActivityIndicator color={Colors.primary} />
             ) : (
               <Text style={styles.opcionFlecha}>→</Text>
             )}

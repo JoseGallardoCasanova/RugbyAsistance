@@ -13,6 +13,7 @@ import {
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import { formatearRUT, validarRUT } from '../../utils/rutUtils';
+import { Colors } from '../../config/theme';
 
 interface FormJugadorProps {
   visible: boolean;
@@ -177,7 +178,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
             {/* Categoría */}
             <Text style={styles.label}>Categoría *</Text>
             {loadingCategorias ? (
-              <ActivityIndicator color=Colors.primary style={{ marginVertical: 10 }} />
+              <ActivityIndicator color={Colors.primary} style={{ marginVertical: 10 }} />
             ) : categorias.length === 0 ? (
               <View style={styles.noCategoriesContainer}>
                 <Text style={styles.noCategoriesText}>

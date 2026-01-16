@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -19,6 +19,7 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false); // ✅ NUEVO
   const { login } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,9 +36,22 @@ const LoginScreen = () => {
     }
   };
 
+  const dynamicStyles = {
+    container: {
+      flex: 1,
+      backgroundColor: currentColors.primary,
+    } as const,
+    button: {
+      backgroundColor: currentColors.accent || '#ff6b35',
+      borderRadius: 10,
+      padding: 15,
+      alignItems: 'center' as const,
+    },
+  };
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[dynamicStyles.container, { backgroundColor: currentColors.primary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
@@ -48,15 +62,15 @@ const LoginScreen = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>OLD GREEN</Text>
-          <Text style={styles.subtitle}>Rugby Club</Text>
-          <Text style={styles.appName}>Sistema de Asistencia</Text>
+          <Text style={[styles.title, { fontSize: fontSizes.xlarge }]}>OLD GREEN</Text>
+          <Text style={[styles.subtitle, { fontSize: fontSizes.medium }]}>Rugby Club</Text>
+          <Text style={[styles.appName, { fontSize: fontSizes.medium }]}>Sistema de Asistencia</Text>
         </View>
 
         {/* Formulario */}
         <View style={styles.form}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { fontSize: fontSizes.medium }]}
             placeholder="Usuario"
             placeholderTextColor="#999"
             value={email}
@@ -67,7 +81,7 @@ const LoginScreen = () => {
           {/* ✅ MEJORADO: Input de contraseña con botón show/hide */}
           <View style={styles.passwordContainer}>
             <TextInput
-              style={styles.passwordInput}
+              style={[styles.passwordInput, { fontSize: fontSizes.medium }]}
               placeholder="Contraseña"
               placeholderTextColor="#999"
               value={password}
@@ -85,11 +99,11 @@ const LoginScreen = () => {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[dynamicStyles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>
+            <Text style={[styles.buttonText, { fontSize: fontSizes.large }]}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Text>
           </TouchableOpacity>
@@ -102,10 +116,7 @@ const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-  },
+
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -121,19 +132,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 5,
   },
   subtitle: {
-    fontSize: 24,
     fontWeight: '600',
     color: '#fff',
     marginBottom: 15,
   },
   appName: {
-    fontSize: 16,
     color: '#ddd',
     fontWeight: '500',
   },
@@ -145,7 +153,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
-    fontSize: 16,
   },
   // ✅ NUEVO: Estilos para el contenedor de contraseña
   passwordContainer: {
@@ -159,7 +166,6 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
     padding: 15,
-    fontSize: 16,
   },
   eyeButton: {
     padding: 10,
@@ -167,18 +173,11 @@ const styles = StyleSheet.create({
   eyeIcon: {
     fontSize: 20,
   },
-  button: {
-    backgroundColor: '#ff6b35',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-  },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
     fontWeight: 'bold',
   },
   help: {

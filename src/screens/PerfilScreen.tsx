@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
-import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
 
 interface PerfilScreenProps {
   navigation: any;
@@ -20,6 +20,7 @@ interface PerfilScreenProps {
 
 const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
   const { user, updateUser, logout } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState(user?.nombre || '');
   const [editando, setEditando] = useState(false);
 

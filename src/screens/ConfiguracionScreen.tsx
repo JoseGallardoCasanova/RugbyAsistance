@@ -5,47 +5,136 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
+  Switch,
 } from 'react-native';
-import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
+import { ThemeName, FontSize } from '../config/theme';
 
 interface ConfiguracionScreenProps {
   navigation: any;
 }
 
 const ConfiguracionScreen: React.FC<ConfiguracionScreenProps> = ({ navigation }) => {
+  const { preferences, currentColors, setTheme, setFontSize, setDarkMode } = usePreferences();
+
+  const themes: { name: ThemeName; label: string; color: string }[] = [
+    { name: 'blue', label: 'Azul Profesional', color: '#5B9BD5' },
+    { name: 'green', label: 'Verde Deportivo', color: '#70B77E' },
+    { name: 'orange', label: 'Naranja Energético', color: '#F4A261' },
+    { name: 'purple', label: 'Morado Moderno', color: '#A78BFA' },
+  ];
+
+  const fontSizes: { size: FontSize; label: string }[] = [
+    { size: 'small', label: 'Pequeño' },
+    { size: 'normal', label: 'Normal' },
+    { size: 'large', label: 'Grande' },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Configuración</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.backButton} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.infoBox}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
-          <Text style={styles.infoTitle}>Ya no es necesario configurar</Text>
-          <Text style={styles.infoText}>
-            Esta app ahora usa <Text style={styles.bold}>Supabase</Text> como base de datos.
+      <ScrollView style={styles.content}>
+        {/* Tema de Color */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>Tema de Color</Text>
+          <Text style={[styles.sectionDescription, { color: currentColors.textSecondary }]}>
+            Elige el color principal de la aplicación
           </Text>
-          <Text style={styles.infoText}>
-            Las configuraciones de Google Sheets ya no son necesarias.
-          </Text>
-          <Text style={styles.infoText}>
-            Todo se sincroniza automáticamente. 🚀
-          </Text>
+          <View style={styles.optionsContainer}>
+            {themes.map((theme) => (
+              <TouchableOpacity
+                key={theme.name}
+                style={[
+                  styles.themeOption,
+                  { backgroundColor: currentColors.backgroundWhite, borderColor: currentColors.border },
+                  preferences.theme === theme.name && { borderColor: currentColors.primary, borderWidth: 3 },
+                ]}
+                onPress={() => setTheme(theme.name)}
+              >
+                <View style={[styles.colorCircle, { backgroundColor: theme.color }]} />
+                <Text style={[styles.optionLabel, { color: currentColors.textPrimary }]}>{theme.label}</Text>
+                {preferences.theme === theme.name && (
+                  <Text style={[styles.checkmark, { color: currentColors.primary }]}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.buttonText}>Volver</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Tamaño de Fuente */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentColors.textPrimary }]}>Tamaño de Texto</Text>
+          <Text style={[styles.sectionDescription, { color: currentColors.textSecondary }]}>
+            Ajusta el tamaño del texto en toda la app
+          </Text>
+          <View style={styles.optionsContainer}>
+            {fontSizes.map((font) => (
+              <TouchableOpacity
+                key={font.size}
+                style={[
+                  styles.fontOption,
+                  { backgroundColor: currentColors.backgroundWhite, borderColor: currentColors.border },
+                  preferences.fontSize === font.size && { borderColor: currentColors.primary, borderWidth: 3 },
+                ]}
+                onPress={() => setFontSize(font.size)}
+              >
+                <Text
+                  style={[
+                    styles.fontPreview,
+                    { color: currentColors.textPrimary },
+                    font.size === 'small' && { fontSize: 14 },
+                    font.size === 'normal' && { fontSize: 16 },
+                    font.size === 'large' && { fontSize: 19 },
+                  ]}
+                >
+                  Aa
+                </Text>
+                <Text style={[styles.optionLabel, { color: currentColors.textPrimary }]}>{font.label}</Text>
+                {preferences.fontSize === font.size && (
+                  <Text style={[styles.checkmark, { color: currentColors.primary }]}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Modo Oscuro */}
+        <View style={styles.section}>
+          <View style={styles.darkModeHeader}>
+            <View style={styles.darkModeInfo}>
+              <Text style={[styles.sectionTitle, { color: currentColors.textPrimary, marginBottom: 4 }]}>
+                Modo Oscuro
+              </Text>
+              <Text style={[styles.sectionDescription, { color: currentColors.textSecondary }]}>
+                Reduce el brillo de la pantalla
+              </Text>
+            </View>
+            <Switch
+              value={preferences.darkMode}
+              onValueChange={setDarkMode}
+              trackColor={{ false: currentColors.border, true: currentColors.primaryLight }}
+              thumbColor={preferences.darkMode ? currentColors.primary : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
+        {/* Información */}
+        <View style={[styles.infoSection, { backgroundColor: currentColors.backgroundWhite, borderColor: currentColors.border }]}>
+          <Text style={[styles.infoTitle, { color: currentColors.textPrimary }]}>ℹ️ Sobre las Preferencias</Text>
+          <Text style={[styles.infoText, { color: currentColors.textSecondary }]}>
+            Estas configuraciones se guardan localmente en tu dispositivo y solo afectan cómo ves la aplicación en este teléfono.
+          </Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -53,14 +142,12 @@ const ConfiguracionScreen: React.FC<ConfiguracionScreenProps> = ({ navigation })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
@@ -77,47 +164,79 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
   },
-  infoBox: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 15,
-    padding: 30,
-    marginBottom: 30,
-    alignItems: 'center',
+  section: {
+    marginBottom: 32,
   },
-  infoIcon: {
-    fontSize: 60,
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 24,
-  },
-  bold: {
-    fontWeight: 'bold',
-    color: '#1976d2',
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    padding: 18,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  optionsContainer: {
+    gap: 12,
+  },
+  themeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  colorCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+  },
+  fontOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  fontPreview: {
+    fontWeight: 'bold',
+    marginRight: 12,
+    width: 32,
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  checkmark: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  darkModeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  darkModeInfo: {
+    flex: 1,
+  },
+  infoSection: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    marginBottom: 32,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
 

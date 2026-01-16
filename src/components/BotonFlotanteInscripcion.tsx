@@ -13,6 +13,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import SupabaseService from '../services/SupabaseService';
+import { Colors } from '../config/theme';
 
 interface Props {
   onOpenFormulario?: () => void;
@@ -164,7 +165,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
                       Descarga un Excel con toda la información
                     </Text>
                   </View>
-                  {exportando && <ActivityIndicator color=Colors.primary />}
+                  {exportando && <ActivityIndicator color={Colors.primary} />}
                 </TouchableOpacity>
               )}
 

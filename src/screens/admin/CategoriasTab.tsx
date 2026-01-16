@@ -13,6 +13,7 @@ import {
 import { Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import FormCategoria from './FormCategoria';
+import { Colors } from '../../config/theme';
 import { useFocusEffect } from '@react-navigation/native';
 
 const CategoriasTab: React.FC = () => {
@@ -177,7 +178,7 @@ const CategoriasTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color=Colors.primary />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Cargando categorías...</Text>
       </View>
     );

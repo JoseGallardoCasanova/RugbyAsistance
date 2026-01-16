@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { Colors } from '../config/theme';
+import { usePreferences } from '../context/PreferencesContext';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
 import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
@@ -25,6 +25,7 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [formularioVisible, setFormularioVisible] = useState(false);
@@ -137,19 +138,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color=Colors.primary />
-          <Text style={styles.loadingText}>Cargando categorías...</Text>
+          <ActivityIndicator size="large" color={currentColors.primary} />
+          <Text style={[styles.loadingText, { fontSize: fontSizes.medium, color: currentColors.textSecondary }]}>Cargando categorías...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const dynamicStyles = {
+    header: {
+      backgroundColor: currentColors.primary,
+      padding: 20,
+      paddingTop: 50,
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+    } as const,
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <View style={styles.logoContainer}>
           <Image 
             source={require('../../assets/logo_Old_Green.png')} 
@@ -157,8 +169,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
           <View style={styles.headerText}>
-            <Text style={styles.greeting}>Hola, {user?.nombre}</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.greeting, { fontSize: fontSizes.large }]}>Hola, {user?.nombre}</Text>
+            <Text style={[styles.subtitle, { fontSize: fontSizes.medium }]}>
               {user?.role === 'admin' && 'Administrador'}
               {user?.role === 'entrenador' && 'Entrenador'}
               {user?.role === 'ayudante' && 'Ayudante'}
@@ -187,13 +199,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* Lista de categorías */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.sectionTitle}>Selecciona una categoría:</Text>
+        <Text style={[styles.sectionTitle, { fontSize: fontSizes.large, color: currentColors.textPrimary }]}>Selecciona una categoría:</Text>
 
         {categorias.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>Sin categorías</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { fontSize: fontSizes.xlarge, color: currentColors.textPrimary }]}>Sin categorías</Text>
+            <Text style={[styles.emptyText, { fontSize: fontSizes.medium, color: currentColors.textSecondary }]}>
               No hay categorías configuradas. {'\n'}
               Ve al Panel de Admin para crear categorías.
             </Text>
@@ -208,12 +220,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   key={`categoria-${categoria.numero}`}
                   style={[
                     styles.categoryCard,
+                    { backgroundColor: currentColors.backgroundWhite },
                     !tieneAcceso && styles.categoryCardDisabled,
                   ]}
                   onPress={() => handleCategoriaPress(categoria)}
                   disabled={!tieneAcceso}
                 >
-                  <Text style={styles.categoryName}>{categoria.nombre}</Text>
+                  <Text style={[styles.categoryName, { fontSize: fontSizes.medium, color: currentColors.textPrimary }]}>{categoria.nombre}</Text>
                   {!tieneAcceso && (
                     <Text style={styles.categoryLocked}>🔒</Text>
                   )}
@@ -259,7 +272,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centerContainer: {
     flex: 1,
@@ -268,15 +280,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 16,
     color: '#666',
-  },
-  header: {
-    backgroundColor: Colors.primary,
-    padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   logoContainer: {
     flexDirection: 'row',
@@ -292,12 +296,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
   },
   subtitle: {
-    fontSize: 14,
     color: '#a8d5a8',
     marginTop: 2,
   },
@@ -323,9 +325,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 15,
   },
   categoriesGrid: {
@@ -335,7 +335,6 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: '47%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
@@ -348,23 +347,12 @@ const styles = StyleSheet.create({
   categoryCardDisabled: {
     opacity: 0.5,
   },
-  categoryNumber: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   categoryNumberText: {
-    fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
   },
   categoryName: {
-    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
   },
   categoryLocked: {
@@ -380,14 +368,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 10,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 24,
   },

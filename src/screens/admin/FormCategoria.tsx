@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Categoria } from '../../types'; // ✅ Ruta corregida
+import { Colors } from '../../config/theme';
 
 interface FormCategoriaProps {
   visible: boolean;

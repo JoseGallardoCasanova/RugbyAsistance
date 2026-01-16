@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { usePreferences } from '../context/PreferencesContext';
 import SupabaseService from '../services/SupabaseService';
 import { Jugador } from '../types';
-import { Colors } from '../config/theme';
 
 interface AsistenciaScreenProps {
   navigation: any;
@@ -23,6 +23,7 @@ interface AsistenciaScreenProps {
 const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }) => {
   const { categoria } = route.params;
   const { user } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
   
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,17 +223,34 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={currentColors.primary} />
           <Text style={styles.loadingText}>Cargando jugadores...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const dynamicStyles = {
+    header: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      padding: 20,
+      backgroundColor: currentColors.primary,
+    },
+    sendButton: {
+      backgroundColor: currentColors.primary,
+      padding: 15,
+      alignItems: 'center' as const,
+      margin: 20,
+      borderRadius: 10,
+    },
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
@@ -348,7 +366,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             </View>
           ) : (
             <TouchableOpacity
-              style={[styles.enviarButton, enviando && styles.enviarButtonDisabled]}
+              style={[dynamicStyles.sendButton, enviando && styles.enviarButtonDisabled]}
               onPress={handleEnviar}
               disabled={enviando}
             >
@@ -370,7 +388,6 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centerContainer: {
     flex: 1,
@@ -387,7 +404,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.primary,
   },
   backButton: {
     width: 40,
@@ -568,7 +584,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   enviarButton: {
-    backgroundColor: Colors.primary,
     padding: 18,
     borderRadius: 10,
     alignItems: 'center',

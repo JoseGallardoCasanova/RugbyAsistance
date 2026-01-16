@@ -13,6 +13,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import SupabaseService from '../../services/SupabaseService';
+import { Colors } from '../../config/theme';
 
 interface Props {
   visible: boolean;
@@ -246,7 +247,7 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
                 <Text style={styles.opcionSubtitulo}>({opcion.dias} días)</Text>
               </View>
               {cargando && rangoSeleccionado === opcion.id ? (
-                <ActivityIndicator color=Colors.primary />
+                <ActivityIndicator color={Colors.primary} />
               ) : (
                 <Text style={styles.opcionFlecha}>→</Text>
               )}

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
+import { usePreferences } from '../../context/PreferencesContext';
 import { Colors } from '../../config/theme';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
@@ -21,6 +22,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 const JugadoresTab: React.FC = () => {
   const { user } = useAuth();
+  const { currentColors, fontSizes } = usePreferences();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ const JugadoresTab: React.FC = () => {
 
   const getColorCategoria = (numero: number): string => {
     const cat = categorias.find(c => c.numero === numero);
-    return cat?.color || Colors.primary;
+    return cat?.color || currentColors.primary;
   };
 
   const handleCrear = () => {

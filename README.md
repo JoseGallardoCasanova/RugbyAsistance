@@ -1,17 +1,28 @@
-# 🏉 Rugby Attendance App
+# ⚡ SquadPro - Gestión Profesional de Equipos
 
-App para marcar asistencia de entrenamientos de rugby con integración a Supabase.
+Aplicación multiplataforma para gestionar asistencia, jugadores/miembros y categorías de cualquier equipo deportivo o grupo organizado.
 
-## 🚀 Características
+## 🎯 Características Principales
 
-- ✅ Marcar asistencia de múltiples categorías
-- 👥 3 roles: Admin, Entrenador, Ayudante
-- 📊 Exportar asistencias a Excel con filtros de tiempo
-- 📱 Formulario web público para autoinscripción masiva (300+ jugadores)
-- 🔒 Sistema de permisos por rol
-- 💾 Base de datos Supabase PostgreSQL
-- 📋 Gestión completa de jugadores con datos médicos y personales
-- 🏷️ Código QR para registro masivo
+- ✅ Control de asistencia con múltiples categorías
+- 👥 3 roles: Admin, Entrenador, Ayudante  
+- 📊 Exportación de asistencias a Excel con filtros personalizados
+- 📱 Formulario web público para autoinscripción masiva
+- 🔒 Sistema completo de permisos por rol
+- 💾 Backend robusto con Supabase PostgreSQL
+- 📋 Gestión integral de miembros con datos personalizables
+- 🏷️ Código QR para registro rápido
+- 🎨 UI moderna y neutral adaptable a cualquier organización
+- 💰 Modelo de suscripción: 7 días prueba gratis, luego $4.99/mes
+
+## 🚀 Modelo de Negocio
+
+**SquadPro** está diseñado como SaaS multi-tenant:
+- Descarga gratuita desde App Store / Google Play
+- 7 días de prueba gratuita completa
+- Suscripción mensual: $4.99 USD
+- Cada organización tiene sus propios datos aislados
+- Configuración personalizable (colores, logo, campos)
 
 ## 📋 Requisitos
 

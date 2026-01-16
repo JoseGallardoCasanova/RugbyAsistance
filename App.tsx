@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { PreferencesProvider } from './src/context/PreferencesContext';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import AsistenciaScreen from './src/screens/AsistenciaScreen';
@@ -44,8 +45,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <PreferencesProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </PreferencesProvider>
   );
 }
