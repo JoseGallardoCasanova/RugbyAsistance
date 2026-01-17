@@ -58,7 +58,7 @@ export default function ModalDetallesJugador({ visible, jugador, onClose }: Prop
     >
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.backButton}>← Volver</Text>
           </TouchableOpacity>
@@ -209,7 +209,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,

@@ -198,7 +198,7 @@ const UsuariosTab: React.FC = () => {
 
         <View style={styles.cardActions}>
           <TouchableOpacity
-            style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: currentColors.secondary }, isDeleting && styles.buttonDisabled]}
             onPress={() => handleEditar(item)}
             disabled={isDeleting}
           >
@@ -206,7 +206,7 @@ const UsuariosTab: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.buttonDelete, isDeleting && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: currentColors.error }, isDeleting && styles.buttonDisabled]}
             onPress={() => handleEliminar(item)}
             disabled={isDeleting}
           >
@@ -286,8 +286,8 @@ const UsuariosTab: React.FC = () => {
       />
 
       {/* Botón crear */}
-      <TouchableOpacity style={styles.fab} onPress={handleCrear}>
-        <Text style={styles.fabText}>+ CREAR USUARIO</Text>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: currentColors.primary }]} onPress={handleCrear}>
+        <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
       {/* Modal de formulario */}
@@ -400,12 +400,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 40,
   },
-  buttonEdit: {
-    backgroundColor: '#2196F3',
-  },
-  buttonDelete: {
-    backgroundColor: '#f44336',
-  },
   buttonDisabled: {
     opacity: 0.6,
   },
@@ -438,7 +432,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

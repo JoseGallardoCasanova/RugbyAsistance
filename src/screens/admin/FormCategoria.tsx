@@ -71,12 +71,12 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
       <View style={styles.overlay}>
         <View style={styles.modal}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>
+          <View style={[styles.header, { backgroundColor: currentColors.primary }]}>
+            <Text style={[styles.title, { fontSize: fontSizes.lg }]}>
               {categoria ? '✏️ Editar Categoría' : '➕ Crear Categoría'}
             </Text>
             <TouchableOpacity onPress={onClose} disabled={guardando}>
-              <Text style={styles.closeButton}>✕</Text>
+              <Text style={[styles.closeButton, { fontSize: fontSizes.xxl }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -98,7 +98,7 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
           {/* Botones */}
           <View style={styles.footer}>
             <TouchableOpacity 
-              style={[styles.cancelButton, guardando && styles.buttonDisabled]} 
+              style={[styles.cancelButton, { backgroundColor: currentColors.textSecondary }, guardando && styles.buttonDisabled]} 
               onPress={onClose}
               disabled={guardando}
             >
@@ -106,7 +106,7 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.saveButton, guardando && styles.buttonDisabled]} 
+              style={[styles.saveButton, { backgroundColor: currentColors.primary }, guardando && styles.buttonDisabled]} 
               onPress={handleGuardar}
               disabled={guardando}
             >
@@ -142,7 +142,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
   },
   title: {
     fontSize: 20,
@@ -234,7 +233,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,
@@ -248,7 +246,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#2563eb', // Se aplica currentColors.primary dinámicamente
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 50,

@@ -127,7 +127,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
     <>
       {/* Botón flotante */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: currentColors.primary }]}
         onPress={handleOpenMenu}
         activeOpacity={0.8}
       >
@@ -186,7 +186,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[styles.cancelButton, { backgroundColor: currentColors.textSecondary }]}
                 onPress={handleClose}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -213,7 +213,7 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
               <Text style={styles.qrUrl}>{FORMULARIO_URL}</Text>
 
               <TouchableOpacity
-                style={styles.closeButton}
+                style={[styles.closeButton, { backgroundColor: currentColors.primary }]}
                 onPress={handleClose}
               >
                 <Text style={styles.closeButtonText}>Cerrar</Text>

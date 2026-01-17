@@ -267,7 +267,7 @@ const JugadoresTab: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
+                style={[styles.button, { backgroundColor: currentColors.secondary }, isDeleting && styles.buttonDisabled]}
                 onPress={() => handleEditar(item)}
                 disabled={isDeleting}
               >
@@ -275,7 +275,7 @@ const JugadoresTab: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.buttonDelete, isDeleting && styles.buttonDisabled]}
+                style={[styles.button, { backgroundColor: currentColors.error }, isDeleting && styles.buttonDisabled]}
                 onPress={() => handleEliminar(item)}
                 disabled={isDeleting}
               >
@@ -345,10 +345,18 @@ const JugadoresTab: React.FC = () => {
         contentContainerStyle={styles.filterContent}
       >
         <TouchableOpacity
-          style={[styles.filterButton, categoriaFiltro === null && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            { borderColor: currentColors.primary },
+            categoriaFiltro === null && [styles.filterButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]
+          ]}
           onPress={() => setCategoriaFiltro(null)}
         >
-          <Text style={[styles.filterButtonText, categoriaFiltro === null && styles.filterButtonTextActive]}>
+          <Text style={[
+            styles.filterButtonText,
+            { color: currentColors.primary },
+            categoriaFiltro === null && styles.filterButtonTextActive
+          ]}>
             Todas
           </Text>
         </TouchableOpacity>
@@ -358,10 +366,18 @@ const JugadoresTab: React.FC = () => {
           return (
             <TouchableOpacity
               key={String(cat.numero)}
-              style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
+              style={[
+                styles.filterButton,
+                { borderColor: currentColors.primary },
+                categoriaFiltro === cat.numero && [styles.filterButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]
+              ]}
               onPress={() => setCategoriaFiltro(cat.numero)}
             >
-              <Text style={[styles.filterButtonText, categoriaFiltro === cat.numero && styles.filterButtonTextActive]}>
+              <Text style={[
+                styles.filterButtonText,
+                { color: currentColors.primary },
+                categoriaFiltro === cat.numero && styles.filterButtonTextActive
+              ]}>
                 {nombreMostrar}
               </Text>
             </TouchableOpacity>
@@ -396,10 +412,10 @@ const JugadoresTab: React.FC = () => {
       {/* Botón crear - Solo para admins */}
       {user?.role === 'admin' && (
         <TouchableOpacity
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: currentColors.primary }]}
           onPress={handleCrear}
         >
-          <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
+          <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
       )}
 
@@ -467,19 +483,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
-    borderColor: '#2563eb', // Colors.primary
     marginRight: 8,
     minWidth: 60,
     minHeight: 34,
   },
   filterButtonActive: {
-    backgroundColor: '#2563eb', // Colors.primary
-    borderColor: '#2563eb', // Colors.primary
   },
   filterButtonText: {
     fontSize: 12,
     lineHeight: 16,
-    color: '#2563eb', // Colors.primary
     fontWeight: '600',
     includeFontPadding: false,
   },
@@ -563,12 +575,6 @@ const styles = StyleSheet.create({
   buttonInfo: {
     backgroundColor: '#9C27B0',
   },
-  buttonEdit: {
-    backgroundColor: '#2196F3',
-  },
-  buttonDelete: {
-    backgroundColor: '#f44336',
-  },
   buttonWarning: {
     backgroundColor: '#ff9800',
   },
@@ -607,7 +613,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#2563eb', // Colors.primary
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,
