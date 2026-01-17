@@ -59,15 +59,15 @@ export const Themes = {
 };
 
 export const Colors = {
-  // Colores Primarios (por defecto navyPro)
-  primary: Themes.navyPro.primary,
-  primaryDark: '#051018',
-  primaryLight: '#1B3A57',
+  // Colores Primarios (por defecto earthyWarm)
+  primary: Themes.earthyWarm.primary,
+  primaryDark: '#3a4a3e',
+  primaryLight: '#5a7d5e',
   
   // Colores Secundarios
-  secondary: Themes.navyPro.secondary,
-  secondaryDark: '#0f2840',
-  secondaryLight: '#2a5073',
+  secondary: Themes.earthyWarm.secondary,
+  secondaryDark: '#c56652',
+  secondaryLight: '#e5978a',
   
   // Estados (universales para todos los temas)
   success: '#6EE7B7',           // Verde éxito suave
@@ -79,21 +79,21 @@ export const Colors = {
   info: '#67E8F9',              // Cyan información suave
   
   // Textos (Light Mode)
-  textPrimary: Themes.navyPro.textPrimary,
-  textSecondary: Themes.navyPro.textSecondary,
+  textPrimary: Themes.earthyWarm.textPrimary,
+  textSecondary: Themes.earthyWarm.textSecondary,
   textLight: '#9ca3af',         
   textWhite: '#ffffff',         
   
   // Fondos (Light Mode)
-  background: Themes.navyPro.background,
-  backgroundWhite: Themes.navyPro.backgroundWhite,
+  background: Themes.earthyWarm.background,
+  backgroundWhite: Themes.earthyWarm.backgroundWhite,
   
   // Bordes
-  border: Themes.navyPro.border,
+  border: Themes.earthyWarm.border,
   borderDark: '#d1d5db',        
   
   // Accent
-  accent: Themes.navyPro.accent,
+  accent: Themes.earthyWarm.accent,
   
   // Overlays
   overlay: 'rgba(0, 0, 0, 0.5)',

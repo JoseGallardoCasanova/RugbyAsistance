@@ -19,7 +19,7 @@ interface PreferencesContextType {
 }
 
 const defaultPreferences: Preferences = {
-  theme: 'navyPro',
+  theme: 'earthyWarm',
   fontSize: 'normal',
   darkMode: false,
 };
