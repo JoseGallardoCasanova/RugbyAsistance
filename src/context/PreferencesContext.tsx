@@ -19,7 +19,7 @@ interface PreferencesContextType {
 }
 
 const defaultPreferences: Preferences = {
-  theme: 'blue',
+  theme: 'navyPro',
   fontSize: 'normal',
   darkMode: false,
 };
@@ -64,15 +64,46 @@ export const PreferencesProvider: React.FC<{ children: ReactNode }> = ({ childre
   };
 
   const updateColors = () => {
-    const baseColors = preferences.darkMode ? DarkColors : Colors;
     const themeColors = Themes[preferences.theme];
     
-    setCurrentColors({
-      ...baseColors,
-      primary: themeColors.primary,
-      primaryDark: themeColors.primaryDark,
-      primaryLight: themeColors.primaryLight,
-    });
+    if (preferences.darkMode) {
+      // En dark mode, usamos premiumDark como base
+      setCurrentColors({
+        ...DarkColors,
+        // Mantener los colores específicos del tema seleccionado
+        primary: themeColors.primary,
+        secondary: themeColors.secondary,
+        accent: themeColors.accent,
+      });
+    } else {
+      // En light mode, cada tema tiene su paleta completa
+      setCurrentColors({
+        ...Colors,
+        primary: themeColors.primary,
+        primaryDark: themeColors.primary, // Usamos el mismo para consistencia
+        primaryLight: themeColors.secondary,
+        secondary: themeColors.secondary,
+        accent: themeColors.accent,
+        background: themeColors.background,
+        backgroundWhite: themeColors.backgroundWhite,
+        textPrimary: themeColors.textPrimary,
+        textSecondary: themeColors.textSecondary,
+        border: themeColors.border,
+        // Estados se mantienen universales
+        success: Colors.success,
+        successDark: Colors.successDark,
+        error: Colors.error,
+        errorDark: Colors.errorDark,
+        warning: Colors.warning,
+        warningDark: Colors.warningDark,
+        info: Colors.info,
+        textLight: Colors.textLight,
+        textWhite: Colors.textWhite,
+        borderDark: Colors.borderDark,
+        overlay: Colors.overlay,
+        overlayLight: Colors.overlayLight,
+      });
+    }
   };
 
   const setTheme = async (theme: ThemeName) => {

@@ -1,48 +1,75 @@
 /**
  * SquadPro Theme Configuration
- * Paleta de colores profesional y neutra para cualquier tipo de equipo deportivo
+ * Paletas profesionales curadas para equipos deportivos
  */
 
 // Definición de temas disponibles
-export type ThemeName = 'blue' | 'green' | 'orange' | 'purple';
+export type ThemeName = 'navyPro' | 'tealTransform' | 'earthyWarm' | 'premiumDark';
 export type FontSize = 'small' | 'normal' | 'large';
 
-// Temas de colores (tonos pastel suaves)
+// 🎨 Temas de colores profesionales
 export const Themes = {
-  blue: {
-    primary: '#5B9BD5',           // Azul pastel
-    primaryDark: '#3B7DBD',       
-    primaryLight: '#7BB2E8',      
+  // 1. Navy Professional (DEFECTO) - Confianza y profesionalismo
+  navyPro: {
+    primary: '#0A192F',           // Azul Marino Profundo
+    secondary: '#1B3A57',         // Azul de acción
+    accent: '#C0C0C0',            // Plata Premium
+    background: '#F5F5F7',        // Cloud Dancer
+    backgroundWhite: '#FFFFFF',   // Blanco puro
+    textPrimary: '#2D3436',       // Gris Carbón
+    textSecondary: '#6b7280',     // Gris medio
+    border: '#e5e7eb',            // Borde sutil
   },
-  green: {
-    primary: '#70B77E',           // Verde deportivo suave
-    primaryDark: '#4A9B5F',       
-    primaryLight: '#8BC89A',      
+  
+  // 2. Transformative Teal - Innovación y modernidad (Tendencia 2026)
+  tealTransform: {
+    primary: '#006B6B',           // Transformative Teal
+    secondary: '#3EEDBA',         // Neo-Mint (CTAs dinámicas)
+    accent: '#E0E4E8',            // Misty Silver
+    background: '#FFFFFF',        // Blanco Puro
+    backgroundWhite: '#FAFBFC',   // Blanco con toque gris
+    textPrimary: '#1A1A1B',       // Negro Técnico
+    textSecondary: '#4a5568',     // Gris técnico
+    border: '#E0E4E8',            // Misty Silver
   },
-  orange: {
-    primary: '#F4A261',           // Naranja energético suave
-    primaryDark: '#E38B4F',       
-    primaryLight: '#F7B883',      
+  
+  // 3. Earthy Warm - Estabilidad y calidez ética
+  earthyWarm: {
+    primary: '#4A5D4E',           // Verde Musgo
+    secondary: '#D97E6A',         // Terracota Muted
+    accent: '#7E6351',            // Marrón Nogal
+    background: '#FDF9F3',        // Crema Suave
+    backgroundWhite: '#FFFFFF',   // Blanco puro
+    textPrimary: '#2C2C2C',       // Gris Oscuro
+    textSecondary: '#5a5a5a',     // Gris medio cálido
+    border: '#E8DED0',            // Borde cálido
   },
-  purple: {
-    primary: '#A78BFA',           // Morado moderno suave
-    primaryDark: '#8B5CF6',       
-    primaryLight: '#C4B5FD',      
+  
+  // 4. Premium Dark - Exclusividad y sofisticación
+  premiumDark: {
+    primary: '#D4AF37',           // Oro Metálico
+    secondary: '#B8902C',         // Oro oscuro
+    accent: '#A0A0A0',            // Gris tenue
+    background: '#121212',        // Negro Mate
+    backgroundWhite: '#1E1E1E',   // Gris de capas
+    textPrimary: '#E1E1E1',       // Gris Seda
+    textSecondary: '#A0A0A0',     // Gris tenue
+    border: '#2a2a2a',            // Borde oscuro
   },
 };
 
 export const Colors = {
-  // Colores Primarios (por defecto blue)
-  primary: Themes.blue.primary,
-  primaryDark: Themes.blue.primaryDark,
-  primaryLight: Themes.blue.primaryLight,
+  // Colores Primarios (por defecto navyPro)
+  primary: Themes.navyPro.primary,
+  primaryDark: '#051018',
+  primaryLight: '#1B3A57',
   
   // Colores Secundarios
-  secondary: '#A78BFA',         // Morado para acentos
-  secondaryDark: '#8B5CF6',     
-  secondaryLight: '#C4B5FD',    
+  secondary: Themes.navyPro.secondary,
+  secondaryDark: '#0f2840',
+  secondaryLight: '#2a5073',
   
-  // Estados
+  // Estados (universales para todos los temas)
   success: '#6EE7B7',           // Verde éxito suave
   successDark: '#34D399',       
   error: '#F87171',             // Rojo error suave
@@ -52,35 +79,38 @@ export const Colors = {
   info: '#67E8F9',              // Cyan información suave
   
   // Textos (Light Mode)
-  textPrimary: '#1f2937',       
-  textSecondary: '#6b7280',     
+  textPrimary: Themes.navyPro.textPrimary,
+  textSecondary: Themes.navyPro.textSecondary,
   textLight: '#9ca3af',         
   textWhite: '#ffffff',         
   
   // Fondos (Light Mode)
-  background: '#f9fafb',        
-  backgroundWhite: '#ffffff',   
+  background: Themes.navyPro.background,
+  backgroundWhite: Themes.navyPro.backgroundWhite,
   
   // Bordes
-  border: '#e5e7eb',            
+  border: Themes.navyPro.border,
   borderDark: '#d1d5db',        
+  
+  // Accent
+  accent: Themes.navyPro.accent,
   
   // Overlays
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.3)',
 };
 
-// Colores para Modo Oscuro
+// Colores para Modo Oscuro (basado en premiumDark pero adaptable)
 export const DarkColors = {
-  // Primarios (mismo tono pero ajustados para fondo oscuro)
-  primary: Themes.blue.primary,
-  primaryDark: Themes.blue.primaryDark,
-  primaryLight: Themes.blue.primaryLight,
+  // Primarios (oro para dark mode)
+  primary: '#D4AF37',           // Oro Metálico
+  primaryDark: '#B8902C',
+  primaryLight: '#E5C55A',
   
   // Secundarios
-  secondary: '#A78BFA',
-  secondaryDark: '#8B5CF6',
-  secondaryLight: '#C4B5FD',
+  secondary: '#B8902C',
+  secondaryDark: '#9A7824',
+  secondaryLight: '#D4AF37',
   
   // Estados
   success: '#6EE7B7',
@@ -92,18 +122,21 @@ export const DarkColors = {
   info: '#67E8F9',
   
   // Textos (Dark Mode)
-  textPrimary: '#f9fafb',       
-  textSecondary: '#d1d5db',     
-  textLight: '#9ca3af',         
+  textPrimary: '#E1E1E1',       // Gris Seda
+  textSecondary: '#A0A0A0',     // Gris tenue
+  textLight: '#808080',         
   textWhite: '#ffffff',         
   
   // Fondos (Dark Mode)
-  background: '#111827',        // Gris muy oscuro
-  backgroundWhite: '#1f2937',   // Gris oscuro (cards)
+  background: '#121212',        // Negro Mate
+  backgroundWhite: '#1E1E1E',   // Gris de capas (cards)
   
   // Bordes
-  border: '#374151',            
-  borderDark: '#4b5563',        
+  border: '#2a2a2a',            
+  borderDark: '#3a3a3a',        
+  
+  // Accent
+  accent: '#A0A0A0',            // Gris tenue
   
   // Overlays
   overlay: 'rgba(0, 0, 0, 0.7)',

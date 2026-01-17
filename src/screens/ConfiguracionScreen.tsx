@@ -19,10 +19,10 @@ const ConfiguracionScreen: React.FC<ConfiguracionScreenProps> = ({ navigation })
   const { preferences, currentColors, setTheme, setFontSize, setDarkMode } = usePreferences();
 
   const themes: { name: ThemeName; label: string; color: string }[] = [
-    { name: 'blue', label: 'Azul Profesional', color: '#5B9BD5' },
-    { name: 'green', label: 'Verde Deportivo', color: '#70B77E' },
-    { name: 'orange', label: 'Naranja Energético', color: '#F4A261' },
-    { name: 'purple', label: 'Morado Moderno', color: '#A78BFA' },
+    { name: 'navyPro', label: 'Navy Professional', color: '#0A192F' },
+    { name: 'tealTransform', label: 'Transformative Teal', color: '#006B6B' },
+    { name: 'earthyWarm', label: 'Earthy Warm', color: '#4A5D4E' },
+    { name: 'premiumDark', label: 'Premium Dark', color: '#D4AF37' },
   ];
 
   const fontSizes: { size: FontSize; label: string }[] = [

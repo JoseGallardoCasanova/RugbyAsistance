@@ -9,11 +9,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 
-const LoginScreen = () => {
+interface LoginScreenProps {
+  navigation: any;
+}
+
+const LoginScreen = ({ navigation }: LoginScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,7 +59,7 @@ const LoginScreen = () => {
       style={[dynamicStyles.container, { backgroundColor: currentColors.primary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Logo Old Green */}
         <View style={styles.header}>
           <Image
@@ -110,34 +115,33 @@ const LoginScreen = () => {
 
           {/* Separator */}
           <View style={styles.separator}>
-            <View style={[styles.separatorLine, { backgroundColor: currentColors.border }]} />
-            <Text style={[styles.separatorText, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>
+            <View style={[styles.separatorLine, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
+            <Text style={[styles.separatorText, { fontSize: fontSizes.sm, color: '#fff' }]}>
               o
             </Text>
-            <View style={[styles.separatorLine, { backgroundColor: currentColors.border }]} />
+            <View style={[styles.separatorLine, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
           </View>
 
           {/* New customer button */}
           <TouchableOpacity
-            style={[styles.newCustomerButton, { borderColor: currentColors.primary }]}
+            style={[styles.newCustomerButton, { borderColor: '#fff', backgroundColor: 'transparent' }]}
             onPress={() => navigation.navigate('Plans')}
           >
-            <Text style={[styles.newCustomerText, { fontSize: fontSizes.md, color: currentColors.primary }]}>
+            <Text style={[styles.newCustomerText, { fontSize: fontSizes.md, color: '#fff' }]}>
               🚀 ¿Nuevo cliente? Empieza gratis
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* ...se eliminó la sección de usuarios de prueba... */}
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },

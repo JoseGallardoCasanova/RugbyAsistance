@@ -53,23 +53,20 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
         }}
+        initialRouteName={user ? 'Home' : 'Login'}
       >
-        {user ? (
-          <>
-            <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Asistencia" component={AsistenciaScreen} />
-            <Stack.Screen name="Perfil" component={PerfilScreen} />
-            <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
-            <Stack.Screen name="Admin" component={AdminScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Plans" component={PlansScreen} />
-            <Stack.Screen name="RegisterOrg" component={RegisterOrgScreen} />
-          </>
-        )}
+        {/* Auth screens */}
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Plans" component={PlansScreen} />
+        <Stack.Screen name="RegisterOrg" component={RegisterOrgScreen} />
+        
+        {/* Main screens */}
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Asistencia" component={AsistenciaScreen} />
+        <Stack.Screen name="Perfil" component={PerfilScreen} />
+        <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+        <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />
       </Stack.Navigator>
     </NavigationContainer>
   );
