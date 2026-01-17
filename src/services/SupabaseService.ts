@@ -50,6 +50,11 @@ class SupabaseService {
   private supabase: SupabaseClient;
   private initialized: boolean = false;
 
+  // Getter público para acceder al cliente (usado por OrganizacionService)
+  get client(): SupabaseClient {
+    return this.supabase;
+  }
+
   constructor() {
     console.log('🚀 [SUPABASE] Inicializando servicio...');
     
@@ -92,6 +97,28 @@ class SupabaseService {
     } catch (error: any) {
       console.error('❌ [SUPABASE] Error al verificar credenciales:', error.message);
       return null;
+    }
+  }
+
+  async signUp(email: string, password: string): Promise<{ data: { user: any } | null; error: any }> {
+    try {
+      console.log(`🔐 [SUPABASE] Registrando usuario en Auth: ${email}`);
+
+      const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('❌ [SUPABASE] Error en signUp:', error.message);
+        return { data: null, error };
+      }
+
+      console.log('✅ [SUPABASE] Usuario registrado en Auth:', data.user?.id);
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE] Error en signUp:', error.message);
+      return { data: null, error };
     }
   }
 

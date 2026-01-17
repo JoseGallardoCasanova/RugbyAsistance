@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -42,13 +42,22 @@ const Stack = createStackNavigator();
 
 const AppNavigator = () => {
   const { user, isLoading } = useAuth();
+  const navigationRef = useRef<any>(null);
+
+  // Navegar a Home cuando el usuario hace login
+  useEffect(() => {
+    if (!isLoading && user && navigationRef.current) {
+      console.log('🔄 [NAV] Usuario detectado, navegando a Home...');
+      navigationRef.current.navigate('Home');
+    }
+  }, [user, isLoading]);
 
   if (isLoading) {
     return null; // O podrías mostrar un splash screen
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
