@@ -96,8 +96,8 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
       const { error: userError } = await SupabaseService.client
         .from('usuarios')
         .insert({
-          id: authData.user.id,
           email: formData.adminEmail,
+          password: formData.adminPassword,
           nombre: formData.adminNombre.trim(),
           role: 'admin',
           activo: true,
