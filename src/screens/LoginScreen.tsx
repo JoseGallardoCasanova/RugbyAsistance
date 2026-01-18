@@ -60,16 +60,16 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Logo Old Green */}
+        {/* Logo SquadPro */}
         <View style={styles.header}>
           <Image
-            source={require('../../assets/logo_Old_Green.png')}
+            source={require('../../assets/logo1.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { fontSize: fontSizes.xxxl }]}>OLD GREEN</Text>
-          <Text style={[styles.subtitle, { fontSize: fontSizes.lg }]}>Rugby Club</Text>
-          <Text style={[styles.appName, { fontSize: fontSizes.md }]}>Sistema de Asistencia</Text>
+          <Text style={[styles.title, { fontSize: fontSizes.xxxl }]}>SQUADPRO</Text>
+          <Text style={[styles.subtitle, { fontSize: fontSizes.lg }]}>Team Management</Text>
+          <Text style={[styles.appName, { fontSize: fontSizes.md }]}>Sistema de Gestión Deportiva</Text>
         </View>
 
         {/* Formulario */}

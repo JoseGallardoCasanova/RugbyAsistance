@@ -5,7 +5,7 @@
     "version": "3.2.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "./assets/logo_Old_Green.png",
+    "icon": "./assets/logo1.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_Old_Green.png",
+        "foregroundImage": "./assets/logo1.png",
         "backgroundColor": "#2563eb"
       },
       "package": "com.squadpro.app",

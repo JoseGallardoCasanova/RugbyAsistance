@@ -164,7 +164,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <View style={dynamicStyles.header}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../../assets/logo_Old_Green.png')} 
+            source={require('../../assets/logo1.png')} 
             style={styles.logo}
             resizeMode="contain"
           />
