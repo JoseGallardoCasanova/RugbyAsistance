@@ -99,8 +99,8 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
           id: authData.user.id,
           email: formData.adminEmail,
           nombre: formData.adminNombre.trim(),
-          rol: 'admin',
-          estado: 'active',
+          role: 'admin',
+          activo: true,
           organizacion_id: organizacion.id,
         });
 
@@ -116,7 +116,7 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
               // Navegar a Home (el AuthContext detectará el nuevo usuario)
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'Main' }],
+                routes: [{ name: 'Home' }],
               });
             },
           },
