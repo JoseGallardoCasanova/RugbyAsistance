@@ -14,8 +14,7 @@ class OrganizacionService {
    */
   async isMultiTenantEnabled(): Promise<boolean> {
     try {
-      const supabase = SupabaseService.getClient();
-      const { data, error } = await supabase
+      const { data, error } = await SupabaseService.client
         .from('organizaciones')
         .select('id')
         .limit(1);
@@ -41,7 +40,6 @@ class OrganizacionService {
     plan?: PlanType;
   }): Promise<{ organizacion: Organizacion; suscripcion: Suscripcion } | null> {
     try {
-      const supabase = SupabaseService.getClient();
       const plan = datos.plan || 'free';
       const planConfig = PLANES[plan];
 
@@ -49,7 +47,7 @@ class OrganizacionService {
       const slug = this.generarSlug(datos.nombre);
 
       // 1. Crear organización
-      const { data: org, error: orgError } = await supabase
+      const { data: org, error: orgError } = await SupabaseService.client
         .from('organizaciones')
         .insert({
           nombre: datos.nombre,
@@ -71,7 +69,7 @@ class OrganizacionService {
       console.log('✅ Organización creada:', org.nombre);
 
       // 2. Crear suscripción
-      const { data: sub, error: subError } = await supabase
+      const { data: sub, error: subError } = await SupabaseService.client
         .from('suscripciones')
         .insert({
           organizacion_id: org.id,
@@ -109,10 +107,8 @@ class OrganizacionService {
    */
   async obtenerOrganizacionUsuario(userId: string): Promise<Organizacion | null> {
     try {
-      const supabase = SupabaseService.getClient();
-      
       // Obtener usuario con su organizacion_id
-      const { data: user, error: userError } = await supabase
+      const { data: user, error: userError } = await SupabaseService.client
         .from('usuarios')
         .select('organizacion_id')
         .eq('id', userId)
@@ -123,7 +119,7 @@ class OrganizacionService {
       }
 
       // Obtener organización
-      const { data: org, error: orgError } = await supabase
+      const { data: org, error: orgError } = await SupabaseService.client
         .from('organizaciones')
         .select('*')
         .eq('id', user.organizacion_id)
@@ -145,9 +141,7 @@ class OrganizacionService {
    */
   async obtenerSuscripcion(organizacionId: string): Promise<Suscripcion | null> {
     try {
-      const supabase = SupabaseService.getClient();
-      
-      const { data, error } = await supabase
+      const { data, error } = await SupabaseService.client
         .from('suscripciones')
         .select('*')
         .eq('organizacion_id', organizacionId)
@@ -176,10 +170,8 @@ class OrganizacionService {
     categorias: { actual: number; maximo: number; alcanzado: boolean };
   }> {
     try {
-      const supabase = SupabaseService.getClient();
-
       // Obtener organización para límites
-      const { data: org } = await supabase
+      const { data: org } = await SupabaseService.client
         .from('organizaciones')
         .select('max_usuarios, max_jugadores, max_categorias')
         .eq('id', organizacionId)
@@ -190,19 +182,19 @@ class OrganizacionService {
       }
 
       // Contar usuarios
-      const { count: usuariosCount } = await supabase
+      const { count: usuariosCount } = await SupabaseService.client
         .from('usuarios')
         .select('*', { count: 'exact', head: true })
         .eq('organizacion_id', organizacionId);
 
       // Contar jugadores
-      const { count: jugadoresCount } = await supabase
+      const { count: jugadoresCount } = await SupabaseService.client
         .from('jugadores')
         .select('*', { count: 'exact', head: true })
         .eq('organizacion_id', organizacionId);
 
       // Contar categorías
-      const { count: categoriasCount } = await supabase
+      const { count: categoriasCount } = await SupabaseService.client
         .from('categorias')
         .select('*', { count: 'exact', head: true })
         .eq('organizacion_id', organizacionId);

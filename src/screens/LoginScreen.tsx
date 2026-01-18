@@ -63,11 +63,11 @@ const LoginScreen = ({ navigation }: LoginScreenProps) => {
         {/* Logo SquadPro */}
         <View style={styles.header}>
           <Image
-            source={require('../../assets/logo1.png')}
+            source={require('../../assets/logo2.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { fontSize: fontSizes.xxxl }]}>SQUADPRO</Text>
+          {/* <Text style={[styles.title, { fontSize: fontSizes.xxxl }]}>SQUADPRO</Text> */}
           <Text style={[styles.subtitle, { fontSize: fontSizes.lg }]}>Team Management</Text>
           <Text style={[styles.appName, { fontSize: fontSizes.md }]}>Sistema de Gestión Deportiva</Text>
         </View>
@@ -150,9 +150,9 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   logo: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+    width: 180,
+    height: 180,
+    marginBottom: 5,
   },
   title: {
     fontWeight: 'bold',
