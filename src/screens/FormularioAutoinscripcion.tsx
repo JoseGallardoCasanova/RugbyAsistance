@@ -14,6 +14,7 @@ import { Picker } from '@react-native-picker/picker';
 import SupabaseService from '../services/SupabaseService';
 import { Categoria } from '../types';
 import { Colors } from '../config/theme';
+import { useAuth } from '../context/AuthContext';
 import { usePreferences } from '../context/PreferencesContext';
 import { validarRUT, formatearRUT } from '../utils/rutUtils';
 
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function FormularioAutoinscripcion({ navigation, onSuccess }: Props) {
+  const { user } = useAuth();
   const { currentColors, fontSizes } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -94,7 +96,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
   const cargarCategorias = async () => {
     try {
-      const cats = await SupabaseService.obtenerCategorias();
+      const cats = await SupabaseService.obtenerCategorias(user?.organizacion_id);
       setCategorias(cats.filter(c => c.activo));
     } catch (error) {
       console.error('Error al cargar categorías:', error);
@@ -186,7 +188,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         autorizo_uso_imagen: autorizoUsoImagen ?? false,
       };
 
-      const success = await SupabaseService.crearJugador(nuevoJugador);
+      const success = await SupabaseService.crearJugador(nuevoJugador, user?.organizacion_id);
 
       if (success) {
         Alert.alert(

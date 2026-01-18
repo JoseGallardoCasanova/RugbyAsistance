@@ -33,72 +33,74 @@ class OrganizacionService {
 
   /**
    * Crea una nueva organización con su suscripción
+   * NOTA: Ahora usa plan_id en vez de plan (varchar)
    */
   async crearOrganizacion(datos: {
     nombre: string;
     email_admin: string;
     plan?: PlanType;
-  }): Promise<{ organizacion: Organizacion; suscripcion: Suscripcion } | null> {
+  }): Promise<Organizacion | null> {
     try {
       const plan = datos.plan || 'free';
-      const planConfig = PLANES[plan];
+      
+      // Mapear plan string a plan_id
+      const planIdMap: Record<PlanType, number> = {
+        'free': 1,
+        'pro': 2,
+        'enterprise': 3,
+      };
+      
+      const planId = planIdMap[plan];
 
       // Generar slug único
       const slug = this.generarSlug(datos.nombre);
 
-      // 1. Crear organización
+      // 1. Crear organización con plan_id
       const { data: org, error: orgError } = await SupabaseService.client
         .from('organizaciones')
         .insert({
           nombre: datos.nombre,
           slug: slug,
-          plan: plan,
+          plan_id: planId,
           estado: 'active',
-          max_usuarios: planConfig.max_usuarios,
-          max_jugadores: planConfig.max_jugadores,
-          max_categorias: planConfig.max_categorias,
         })
         .select()
         .single();
 
       if (orgError || !org) {
         console.error('❌ Error creando organización:', orgError);
-        return null;
+        throw new Error(orgError?.message || 'Error creando organización');
       }
 
       console.log('✅ Organización creada:', org.nombre);
 
-      // 2. Crear suscripción
-      const { data: sub, error: subError } = await SupabaseService.client
+      // 2. Crear registro en suscripciones como historial
+      const planConfig = PLANES[plan];
+      const { error: subError } = await SupabaseService.client
         .from('suscripciones')
         .insert({
           organizacion_id: org.id,
-          plan: plan,
+          plan_nuevo_id: planId,
           estado: plan === 'free' ? 'active' : 'trialing',
           precio_mensual: planConfig.precio_mensual,
-          moneda: 'USD',
           fecha_inicio: new Date().toISOString(),
           // Para planes pagos, dar 14 días de trial
           fecha_fin: plan !== 'free' 
             ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
             : null,
-        })
-        .select()
-        .single();
+        });
 
-      if (subError || !sub) {
-        console.error('❌ Error creando suscripción:', subError);
-        // Revertir creación de org
-        await supabase.from('organizaciones').delete().eq('id', org.id);
-        return null;
+      if (subError) {
+        console.error('⚠️ Error creando registro de suscripción:', subError);
+        // No es crítico, la org ya está creada
+      } else {
+        console.log('✅ Registro de suscripción creado');
       }
 
-      console.log('✅ Suscripción creada:', sub.plan);
-
-      return { organizacion: org, suscripcion: sub };
-    } catch (error) {
+      return org;
+    } catch (error: any) {
       console.error('❌ Error en crearOrganizacion:', error);
-      return null;
+      throw error;
     }
   }
 
@@ -163,6 +165,7 @@ class OrganizacionService {
 
   /**
    * Verifica si una organización ha alcanzado sus límites
+   * NOTA: Ahora obtiene límites desde tabla planes via plan_id
    */
   async verificarLimites(organizacionId: string): Promise<{
     usuarios: { actual: number; maximo: number; alcanzado: boolean };
@@ -170,50 +173,62 @@ class OrganizacionService {
     categorias: { actual: number; maximo: number; alcanzado: boolean };
   }> {
     try {
-      // Obtener organización para límites
+      // Obtener organización con su plan
       const { data: org } = await SupabaseService.client
         .from('organizaciones')
-        .select('max_usuarios, max_jugadores, max_categorias')
+        .select(`
+          plan_id,
+          planes (
+            max_usuarios,
+            max_jugadores,
+            max_categorias
+          )
+        `)
         .eq('id', organizacionId)
         .single();
 
-      if (!org) {
-        throw new Error('Organización no encontrada');
+      if (!org || !org.planes) {
+        throw new Error('Organización o plan no encontrado');
       }
 
-      // Contar usuarios
+      const limites = org.planes;
+
+      // Contar usuarios activos
       const { count: usuariosCount } = await SupabaseService.client
         .from('usuarios')
         .select('*', { count: 'exact', head: true })
-        .eq('organizacion_id', organizacionId);
+        .eq('organizacion_id', organizacionId)
+        .eq('activo', true);
 
-      // Contar jugadores
+      // Contar jugadores activos
       const { count: jugadoresCount } = await SupabaseService.client
         .from('jugadores')
         .select('*', { count: 'exact', head: true })
-        .eq('organizacion_id', organizacionId);
+        .eq('organizacion_id', organizacionId)
+        .eq('activo', true);
 
-      // Contar categorías
+      // Contar categorías activas
       const { count: categoriasCount } = await SupabaseService.client
         .from('categorias')
         .select('*', { count: 'exact', head: true })
-        .eq('organizacion_id', organizacionId);
+        .eq('organizacion_id', organizacionId)
+        .eq('activo', true);
 
       return {
         usuarios: {
           actual: usuariosCount || 0,
-          maximo: org.max_usuarios,
-          alcanzado: (usuariosCount || 0) >= org.max_usuarios,
+          maximo: limites.max_usuarios,
+          alcanzado: (usuariosCount || 0) >= limites.max_usuarios,
         },
         jugadores: {
           actual: jugadoresCount || 0,
-          maximo: org.max_jugadores,
-          alcanzado: (jugadoresCount || 0) >= org.max_jugadores,
+          maximo: limites.max_jugadores,
+          alcanzado: (jugadoresCount || 0) >= limites.max_jugadores,
         },
         categorias: {
           actual: categoriasCount || 0,
-          maximo: org.max_categorias,
-          alcanzado: (categoriasCount || 0) >= org.max_categorias,
+          maximo: limites.max_categorias,
+          alcanzado: (categoriasCount || 0) >= limites.max_categorias,
         },
       };
     } catch (error) {

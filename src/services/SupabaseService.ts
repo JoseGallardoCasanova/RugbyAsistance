@@ -122,15 +122,21 @@ class SupabaseService {
     }
   }
 
-  async obtenerUsuarios(): Promise<Usuario[]> {
+  async obtenerUsuarios(organizacion_id?: string | null): Promise<Usuario[]> {
     try {
-      console.log('📥 [SUPABASE] Obteniendo usuarios...');
+      console.log('📥 [SUPABASE] Obteniendo usuarios...', organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('usuarios')
         .select('*')
-        .eq('activo', true)
-        .order('id', { ascending: true });
+        .eq('activo', true);
+
+      // Filtrar por organizacion_id si está presente (multi-tenant mode)
+      if (organizacion_id) {
+        query = query.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data, error } = await query.order('id', { ascending: true });
 
       if (error) throw error;
 
@@ -142,9 +148,9 @@ class SupabaseService {
     }
   }
 
-  async crearUsuario(usuario: Omit<Usuario, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> {
+  async crearUsuario(usuario: Omit<Usuario, 'id' | 'created_at' | 'updated_at'>, organizacion_id?: string | null): Promise<boolean> {
     try {
-      console.log('➕ [SUPABASE] Creando usuario:', usuario.email);
+      console.log('➕ [SUPABASE] Creando usuario:', usuario.email, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
       // Verificar si existe un usuario inactivo con este email
       const { data: existente, error: errorConsulta } = await this.supabase
@@ -164,17 +170,24 @@ class SupabaseService {
         } else {
           // Existe pero está inactivo, lo reactivamos y actualizamos
           console.log('🔄 [SUPABASE] Reactivando usuario inactivo y actualizando datos');
+          const updateData: any = {
+            password: usuario.password,
+            nombre: usuario.nombre,
+            role: usuario.role,
+            categoria_asignada: usuario.categoriaAsignada,
+            categorias_asignadas: usuario.categoriasAsignadas || [],
+            activo: true,
+            updated_at: new Date().toISOString(),
+          };
+
+          // Agregar organizacion_id si está presente
+          if (organizacion_id) {
+            updateData.organizacion_id = organizacion_id;
+          }
+
           const { error: errorUpdate } = await this.supabase
             .from('usuarios')
-            .update({
-              password: usuario.password,
-              nombre: usuario.nombre,
-              role: usuario.role,
-              categoria_asignada: usuario.categoriaAsignada,
-              categorias_asignadas: usuario.categoriasAsignadas || [],
-              activo: true,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', existente.id);
 
           if (errorUpdate) throw errorUpdate;
@@ -184,17 +197,24 @@ class SupabaseService {
       }
 
       // No existe, creamos uno nuevo
+      const insertData: any = {
+        email: usuario.email,
+        password: usuario.password,
+        nombre: usuario.nombre,
+        role: usuario.role,
+        categoria_asignada: usuario.categoriaAsignada,
+        categorias_asignadas: usuario.categoriasAsignadas || [],
+        activo: true,
+      };
+
+      // Agregar organizacion_id si está presente
+      if (organizacion_id) {
+        insertData.organizacion_id = organizacion_id;
+      }
+
       const { error } = await this.supabase
         .from('usuarios')
-        .insert([{
-          email: usuario.email,
-          password: usuario.password,
-          nombre: usuario.nombre,
-          role: usuario.role,
-          categoria_asignada: usuario.categoriaAsignada,
-          categorias_asignadas: usuario.categoriasAsignadas || [],
-          activo: true,
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
@@ -261,14 +281,21 @@ class SupabaseService {
   // JUGADORES
   // ============================================
 
-  async obtenerJugadores(): Promise<Jugador[]> {
+  async obtenerJugadores(organizacion_id?: string | null): Promise<Jugador[]> {
     try {
-      console.log('📥 [SUPABASE] Obteniendo jugadores...');
+      console.log('📥 [SUPABASE] Obteniendo jugadores...', organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('jugadores')
         .select('*')
-        .eq('activo', true)
+        .eq('activo', true);
+
+      // Filtrar por organizacion_id si está presente (multi-tenant mode)
+      if (organizacion_id) {
+        query = query.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data, error } = await query
         .order('categoria', { ascending: true })
         .order('nombre', { ascending: true });
 
@@ -282,9 +309,9 @@ class SupabaseService {
     }
   }
 
-  async crearJugador(jugador: Omit<Jugador, 'created_at' | 'updated_at'>): Promise<boolean> {
+  async crearJugador(jugador: Omit<Jugador, 'created_at' | 'updated_at'>, organizacion_id?: string | null): Promise<boolean> {
     try {
-      console.log('➕ [SUPABASE] Creando jugador:', jugador.nombre);
+      console.log('➕ [SUPABASE] Creando jugador:', jugador.nombre, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
       // Verificar si existe un jugador inactivo con este RUT
       const { data: existente, error: errorConsulta } = await this.supabase
@@ -306,31 +333,38 @@ class SupabaseService {
         } else {
           // Existe pero está inactivo, lo reactivamos y actualizamos
           console.log('🔄 [SUPABASE] Reactivando jugador inactivo y actualizando datos');
+          const updateData: any = {
+            nombre: jugador.nombre,
+            categoria: jugador.categoria,
+            numero: jugador.numero,
+            activo: true,
+            fecha_nacimiento: jugador.fecha_nacimiento,
+            email: jugador.email,
+            contacto_emergencia: jugador.contacto_emergencia,
+            tel_emergencia: jugador.tel_emergencia,
+            sistema_salud: jugador.sistema_salud,
+            seguro_complementario: jugador.seguro_complementario,
+            nombre_tutor: jugador.nombre_tutor,
+            rut_tutor: jugador.rut_tutor,
+            tel_tutor: jugador.tel_tutor,
+            fuma_frecuencia: jugador.fuma_frecuencia,
+            enfermedades: jugador.enfermedades,
+            alergias: jugador.alergias,
+            medicamentos: jugador.medicamentos,
+            lesiones: jugador.lesiones,
+            actividad: jugador.actividad,
+            autorizo_uso_imagen: jugador.autorizo_uso_imagen,
+            updated_at: new Date().toISOString(),
+          };
+
+          // Agregar organizacion_id si está presente
+          if (organizacion_id) {
+            updateData.organizacion_id = organizacion_id;
+          }
+
           const { error: errorUpdate } = await this.supabase
             .from('jugadores')
-            .update({
-              nombre: jugador.nombre,
-              categoria: jugador.categoria,
-              numero: jugador.numero,
-              activo: true,
-              fecha_nacimiento: jugador.fecha_nacimiento,
-              email: jugador.email,
-              contacto_emergencia: jugador.contacto_emergencia,
-              tel_emergencia: jugador.tel_emergencia,
-              sistema_salud: jugador.sistema_salud,
-              seguro_complementario: jugador.seguro_complementario,
-              nombre_tutor: jugador.nombre_tutor,
-              rut_tutor: jugador.rut_tutor,
-              tel_tutor: jugador.tel_tutor,
-              fuma_frecuencia: jugador.fuma_frecuencia,
-              enfermedades: jugador.enfermedades,
-              alergias: jugador.alergias,
-              medicamentos: jugador.medicamentos,
-              lesiones: jugador.lesiones,
-              actividad: jugador.actividad,
-              autorizo_uso_imagen: jugador.autorizo_uso_imagen,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('rut', jugador.rut);
 
           if (errorUpdate) throw errorUpdate;
@@ -340,31 +374,38 @@ class SupabaseService {
       }
 
       // No existe, creamos uno nuevo
+      const insertData: any = {
+        rut: jugador.rut,
+        nombre: jugador.nombre,
+        categoria: jugador.categoria,
+        numero: jugador.numero,
+        activo: true,
+        fecha_nacimiento: jugador.fecha_nacimiento,
+        email: jugador.email,
+        contacto_emergencia: jugador.contacto_emergencia,
+        tel_emergencia: jugador.tel_emergencia,
+        sistema_salud: jugador.sistema_salud,
+        seguro_complementario: jugador.seguro_complementario,
+        nombre_tutor: jugador.nombre_tutor,
+        rut_tutor: jugador.rut_tutor,
+        tel_tutor: jugador.tel_tutor,
+        fuma_frecuencia: jugador.fuma_frecuencia,
+        enfermedades: jugador.enfermedades,
+        alergias: jugador.alergias,
+        medicamentos: jugador.medicamentos,
+        lesiones: jugador.lesiones,
+        actividad: jugador.actividad,
+        autorizo_uso_imagen: jugador.autorizo_uso_imagen,
+      };
+
+      // Agregar organizacion_id si está presente
+      if (organizacion_id) {
+        insertData.organizacion_id = organizacion_id;
+      }
+
       const { error } = await this.supabase
         .from('jugadores')
-        .insert([{
-          rut: jugador.rut,
-          nombre: jugador.nombre,
-          categoria: jugador.categoria,
-          numero: jugador.numero,
-          activo: true,
-          fecha_nacimiento: jugador.fecha_nacimiento,
-          email: jugador.email,
-          contacto_emergencia: jugador.contacto_emergencia,
-          tel_emergencia: jugador.tel_emergencia,
-          sistema_salud: jugador.sistema_salud,
-          seguro_complementario: jugador.seguro_complementario,
-          nombre_tutor: jugador.nombre_tutor,
-          rut_tutor: jugador.rut_tutor,
-          tel_tutor: jugador.tel_tutor,
-          fuma_frecuencia: jugador.fuma_frecuencia,
-          enfermedades: jugador.enfermedades,
-          alergias: jugador.alergias,
-          medicamentos: jugador.medicamentos,
-          lesiones: jugador.lesiones,
-          actividad: jugador.actividad,
-          autorizo_uso_imagen: jugador.autorizo_uso_imagen,
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
@@ -431,15 +472,21 @@ class SupabaseService {
   // CATEGORÍAS
   // ============================================
 
-  async obtenerCategorias(): Promise<Categoria[]> {
+  async obtenerCategorias(organizacion_id?: string | null): Promise<Categoria[]> {
     try {
-      console.log('📥 [SUPABASE] Obteniendo categorías...');
+      console.log('📥 [SUPABASE] Obteniendo categorías...', organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('categorias')
         .select('*')
-        .eq('activo', true)
-        .order('numero', { ascending: true });
+        .eq('activo', true);
+
+      // Filtrar por organizacion_id si está presente (multi-tenant mode)
+      if (organizacion_id) {
+        query = query.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data, error } = await query.order('numero', { ascending: true });
 
       if (error) throw error;
 
@@ -451,9 +498,9 @@ class SupabaseService {
     }
   }
 
-  async crearCategoria(categoria: Omit<Categoria, 'created_at' | 'updated_at'>): Promise<boolean> {
+  async crearCategoria(categoria: Omit<Categoria, 'created_at' | 'updated_at'>, organizacion_id?: string | null): Promise<boolean> {
     try {
-      console.log('➕ [SUPABASE] Creando categoría:', categoria.nombre);
+      console.log('➕ [SUPABASE] Creando categoría:', categoria.nombre, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
       // Verificar si existe una categoría inactiva con este número
       const { data: existente, error: errorConsulta } = await this.supabase
@@ -473,14 +520,21 @@ class SupabaseService {
         } else {
           // Existe pero está inactiva, la reactivamos y actualizamos
           console.log('🔄 [SUPABASE] Reactivando categoría inactiva y actualizando datos');
+          const updateData: any = {
+            nombre: categoria.nombre,
+            color: categoria.color,
+            activo: true,
+            updated_at: new Date().toISOString(),
+          };
+
+          // Agregar organizacion_id si está presente
+          if (organizacion_id) {
+            updateData.organizacion_id = organizacion_id;
+          }
+
           const { error: errorUpdate } = await this.supabase
             .from('categorias')
-            .update({
-              nombre: categoria.nombre,
-              color: categoria.color,
-              activo: true,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('numero', categoria.numero);
 
           if (errorUpdate) throw errorUpdate;
@@ -490,14 +544,21 @@ class SupabaseService {
       }
 
       // No existe, creamos una nueva
+      const insertData: any = {
+        numero: categoria.numero,
+        nombre: categoria.nombre,
+        color: categoria.color,
+        activo: true,
+      };
+
+      // Agregar organizacion_id si está presente
+      if (organizacion_id) {
+        insertData.organizacion_id = organizacion_id;
+      }
+
       const { error } = await this.supabase
         .from('categorias')
-        .insert([{
-          numero: categoria.numero,
-          nombre: categoria.nombre,
-          color: categoria.color,
-          activo: true,
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
@@ -560,19 +621,28 @@ class SupabaseService {
   // ASISTENCIAS
   // ============================================
 
-  async guardarAsistencia(asistencias: Asistencia[]): Promise<boolean> {
+  async guardarAsistencia(asistencias: Asistencia[], organizacion_id?: string | null): Promise<boolean> {
     try {
-      console.log(`📤 [SUPABASE] Guardando ${asistencias.length} asistencias...`);
+      console.log(`📤 [SUPABASE] Guardando ${asistencias.length} asistencias...`, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
       // Usar upsert para actualizar asistencias del mismo día
       // pero mantener el historial de días diferentes
-      const registros = asistencias.map(a => ({
-        categoria: a.categoria,
-        fecha: a.fecha,
-        rut_jugador: a.rut_jugador,
-        asistio: a.asistio,
-        marcado_por: a.marcado_por,
-      }));
+      const registros = asistencias.map(a => {
+        const registro: any = {
+          categoria: a.categoria,
+          fecha: a.fecha,
+          rut_jugador: a.rut_jugador,
+          asistio: a.asistio,
+          marcado_por: a.marcado_por,
+        };
+
+        // Agregar organizacion_id si está presente
+        if (organizacion_id) {
+          registro.organizacion_id = organizacion_id;
+        }
+
+        return registro;
+      });
 
       // onConflict: si existe una asistencia con (categoria, fecha, rut_jugador),
       // actualizar el valor de 'asistio'. Si no existe, insertar nuevo registro.
@@ -593,15 +663,22 @@ class SupabaseService {
     }
   }
 
-  async obtenerAsistenciaDelDia(categoria: number, fecha: string): Promise<{ [rut: string]: boolean } | null> {
+  async obtenerAsistenciaDelDia(categoria: number, fecha: string, organizacion_id?: string | null): Promise<{ [rut: string]: boolean } | null> {
     try {
-      console.log(`📥 [SUPABASE] Obteniendo asistencia del día ${fecha}, categoría ${categoria}`);
+      console.log(`📥 [SUPABASE] Obteniendo asistencia del día ${fecha}, categoría ${categoria}`, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from('asistencias')
         .select('*')
         .eq('categoria', categoria)
         .eq('fecha', fecha);
+
+      // Filtrar por organizacion_id si está presente (multi-tenant mode)
+      if (organizacion_id) {
+        query = query.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -629,40 +706,62 @@ class SupabaseService {
 
   async obtenerAsistenciasPorRango(
     fechaInicio: string,
-    fechaFin: string
+    fechaFin: string,
+    organizacion_id?: string | null
   ): Promise<{
     jugadores: Jugador[];
     categorias: Categoria[];
     asistencias: any[];
   } | null> {
     try {
-      console.log(`📊 [SUPABASE] Obteniendo reporte de asistencias desde ${fechaInicio} hasta ${fechaFin}`);
+      console.log(`📊 [SUPABASE] Obteniendo reporte de asistencias desde ${fechaInicio} hasta ${fechaFin}`, organizacion_id ? `org: ${organizacion_id}` : 'legacy mode');
 
       // Obtener asistencias del rango
-      const { data: asistenciasData, error: asistenciasError } = await this.supabase
+      let queryAsistencias = this.supabase
         .from('asistencias')
         .select('*')
         .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin)
+        .lte('fecha', fechaFin);
+
+      // Filtrar por organizacion_id si está presente
+      if (organizacion_id) {
+        queryAsistencias = queryAsistencias.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data: asistenciasData, error: asistenciasError } = await queryAsistencias
         .order('categoria', { ascending: true })
         .order('fecha', { ascending: true });
 
       if (asistenciasError) throw asistenciasError;
 
       // Obtener todas las categorías
-      const { data: categoriasData, error: categoriasError } = await this.supabase
+      let queryCategorias = this.supabase
         .from('categorias')
         .select('*')
-        .eq('activo', true)
+        .eq('activo', true);
+
+      // Filtrar por organizacion_id si está presente
+      if (organizacion_id) {
+        queryCategorias = queryCategorias.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data: categoriasData, error: categoriasError } = await queryCategorias
         .order('numero', { ascending: true });
 
       if (categoriasError) throw categoriasError;
 
       // Obtener todos los jugadores
-      const { data: jugadoresData, error: jugadoresError } = await this.supabase
+      let queryJugadores = this.supabase
         .from('jugadores')
         .select('*')
-        .eq('activo', true)
+        .eq('activo', true);
+
+      // Filtrar por organizacion_id si está presente
+      if (organizacion_id) {
+        queryJugadores = queryJugadores.eq('organizacion_id', organizacion_id);
+      }
+
+      const { data: jugadoresData, error: jugadoresError } = await queryJugadores
         .order('categoria', { ascending: true })
         .order('nombre', { ascending: true });
 

@@ -15,9 +15,11 @@ import SupabaseService from '../../services/SupabaseService';
 import FormCategoria from './FormCategoria';
 import { Colors } from '../../config/theme';
 import { usePreferences } from '../../context/PreferencesContext';
+import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const CategoriasTab: React.FC = () => {
+  const { user } = useAuth();
   const { currentColors, fontSizes } = usePreferences();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ const CategoriasTab: React.FC = () => {
   const cargarCategorias = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await SupabaseService.obtenerCategorias();
+      const data = await SupabaseService.obtenerCategorias(user?.organizacion_id);
       const ordenadas = data
         .filter(c => c.activo !== false)
         .sort((a, b) => a.numero - b.numero);
@@ -116,7 +118,7 @@ const CategoriasTab: React.FC = () => {
           nombre: datos.nombre!,
           color: datos.color || '#2563eb', // Colors.primary
           activo: true,
-        });
+        }, user?.organizacion_id);
       }
 
       if (success) {

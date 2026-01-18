@@ -13,6 +13,7 @@ import {
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
 import { formatearRUT, validarRUT } from '../../utils/rutUtils';
+import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 
 interface FormJugadorProps {
@@ -24,6 +25,7 @@ interface FormJugadorProps {
 }
 
 const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasPermitidas, onClose, onSave }) => {
+  const { user } = useAuth();
   const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
@@ -46,7 +48,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
   const cargarCategorias = async () => {
     try {
       setLoadingCategorias(true);
-      const cats = await SupabaseService.obtenerCategorias();
+      const cats = await SupabaseService.obtenerCategorias(user?.organizacion_id);
       let activas = cats
         .filter(c => c.activo !== false)
         .sort((a, b) => a.numero - b.numero);

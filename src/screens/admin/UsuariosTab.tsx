@@ -15,9 +15,11 @@ import SupabaseService from '../../services/SupabaseService';
 import FormUsuario from './FormUsuario';
 import { Colors } from '../../config/theme';
 import { usePreferences } from '../../context/PreferencesContext';
+import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const UsuariosTab: React.FC = () => {
+  const { user } = useAuth();
   const { currentColors, fontSizes } = usePreferences();
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]); // ✅ NUEVO
@@ -33,8 +35,8 @@ const UsuariosTab: React.FC = () => {
       setLoading(true);
       // ✅ Cargar tanto usuarios como categorías
       const [usuariosData, categoriasData] = await Promise.all([
-        SupabaseService.obtenerUsuarios(),
-        SupabaseService.obtenerCategorias(),
+        SupabaseService.obtenerUsuarios(user?.organizacion_id),
+        SupabaseService.obtenerCategorias(user?.organizacion_id),
       ]);
       
       const activos = usuariosData.filter(u => u.activo !== false);
@@ -146,7 +148,7 @@ const UsuariosTab: React.FC = () => {
           categoriaAsignada: datos.categoriaAsignada,
           categoriasAsignadas: datos.categoriasAsignadas,
           activo: true,
-        });
+        }, user?.organizacion_id);
       }
 
       if (success) {

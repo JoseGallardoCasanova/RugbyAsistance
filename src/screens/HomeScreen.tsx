@@ -45,7 +45,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const cargarCategorias = async () => {
     try {
       setLoading(true);
-      const data = await SupabaseService.obtenerCategorias();
+      const data = await SupabaseService.obtenerCategorias(user?.organizacion_id);
       
       // Filtrar activas y ordenar por número
       const activas = data
@@ -164,7 +164,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <View style={dynamicStyles.header}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../../assets/logo1.png')} 
+            source={require('../../assets/logo2.png')} 
             style={styles.logo}
             resizeMode="contain"
           />

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { User, UserRole, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
+import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 
 interface FormUsuarioProps {
@@ -22,6 +23,7 @@ interface FormUsuarioProps {
 }
 
 const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, onSave }) => {
+  const { user } = useAuth();
   const { currentColors, fontSizes } = usePreferences();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -45,7 +47,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   const cargarCategorias = async () => {
     try {
       setLoadingCategorias(true);
-      const cats = await SupabaseService.obtenerCategorias();
+      const cats = await SupabaseService.obtenerCategorias(user?.organizacion_id);
       const activas = cats.filter(c => c.activo !== false).sort((a, b) => a.numero - b.numero);
       setCategorias(activas);
     } catch (error) {

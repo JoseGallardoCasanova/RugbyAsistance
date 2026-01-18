@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { usePreferences } from '../context/PreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import { PlanType, PLANES } from '../types/index';
 import OrganizacionService from '../services/OrganizacionService';
 import SupabaseService from '../services/SupabaseService';
@@ -26,6 +27,7 @@ interface RegisterOrgScreenProps {
 
 export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScreenProps) {
   const { currentColors, fontSizes } = usePreferences();
+  const { setUser } = useAuth();
   const { plan } = route.params;
   const planInfo = PLANES[plan];
 
@@ -33,13 +35,36 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
   const [formData, setFormData] = useState({
     organizacionNombre: '',
     adminNombre: '',
+    adminNombreUsuario: '',
     adminEmail: '',
     adminPassword: '',
     confirmPassword: '',
   });
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      
+      // Auto-generar nombre de usuario cuando cambia el nombre
+      if (field === 'adminNombre' && value.trim()) {
+        const partes = value.trim().split(' ');
+        let username = '';
+        
+        if (partes.length >= 2) {
+          // Primeras 2 letras del nombre + apellido completo
+          const nombre = partes[0];
+          const apellido = partes.slice(1).join('');
+          username = (nombre.substring(0, 2) + apellido).toLowerCase().replace(/\s+/g, '');
+        } else if (partes.length === 1) {
+          // Solo nombre, usar completo
+          username = partes[0].toLowerCase();
+        }
+        
+        newData.adminNombreUsuario = username;
+      }
+      
+      return newData;
+    });
   };
 
   const validateForm = (): boolean => {
@@ -93,18 +118,36 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
       });
 
       // 3. Crear usuario en tabla usuarios con organizacion_id
-      const { error: userError } = await SupabaseService.client
+      const { data: userData, error: userError } = await SupabaseService.client
         .from('usuarios')
         .insert({
           email: formData.adminEmail,
           password: formData.adminPassword,
           nombre: formData.adminNombre.trim(),
+          nombre_usuario: formData.adminNombreUsuario.trim(),
           role: 'admin',
           activo: true,
           organizacion_id: organizacion.id,
-        });
+        })
+        .select()
+        .single();
 
       if (userError) throw new Error(userError.message);
+      if (!userData) throw new Error('No se pudo obtener el usuario creado');
+
+      // 4. Login automático - establecer usuario en AuthContext
+      const nuevoUsuario = {
+        id: userData.id,
+        email: userData.email,
+        nombre: userData.nombre,
+        nombre_usuario: userData.nombre_usuario,
+        role: userData.role,
+        activo: userData.activo,
+        organizacion_id: userData.organizacion_id,
+      };
+
+      // Importar useAuth para acceder al contexto
+      // Ya está disponible en el componente
 
       Alert.alert(
         '🎉 ¡Bienvenido a SquadPro!',
@@ -112,8 +155,11 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
         [
           {
             text: 'Continuar',
-            onPress: () => {
-              // Navegar a Home (el AuthContext detectará el nuevo usuario)
+            onPress: async () => {
+              // Login automático
+              await setUser(nuevoUsuario as any);
+              
+              // Navegar a Home
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Home' }],
@@ -192,6 +238,25 @@ export default function RegisterOrgScreen({ navigation, route }: RegisterOrgScre
             onChangeText={(value) => handleChange('adminNombre', value)}
             editable={!loading}
           />
+
+          <Text style={[styles.label, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>
+            Nombre de usuario *
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { fontSize: fontSizes.md, color: currentColors.textPrimary, backgroundColor: currentColors.backgroundWhite, borderColor: currentColors.border },
+            ]}
+            placeholder="Se genera automáticamente"
+            placeholderTextColor={currentColors.textSecondary}
+            value={formData.adminNombreUsuario}
+            onChangeText={(value) => handleChange('adminNombreUsuario', value)}
+            autoCapitalize="none"
+            editable={!loading}
+          />
+          <Text style={[styles.hint, { fontSize: fontSizes.xs, color: currentColors.textSecondary }]}>
+            ✨ Se genera automáticamente, pero puedes editarlo
+          </Text>
 
           <Text style={[styles.label, { fontSize: fontSizes.sm, color: currentColors.textSecondary }]}>
             Email *
@@ -336,6 +401,12 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 8,
     marginTop: 12,
+  },
+  hint: {
+    marginTop: 4,
+    marginBottom: 8,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
   input: {
     borderWidth: 1,

@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  setUser: (user: User | null) => Promise<void>;
   isLoading: boolean;
   usandoBD: boolean;
 }
@@ -135,8 +136,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(updatedUser);
   };
 
+  const setUserManual = async (newUser: User | null) => {
+    console.log('👤 [AUTH] Estableciendo usuario manualmente:', newUser?.nombre);
+    if (newUser) {
+      await AsyncStorage.setItem('currentUser', JSON.stringify(newUser));
+    } else {
+      await AsyncStorage.removeItem('currentUser');
+    }
+    setUser(newUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading, usandoBD }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, setUser: setUserManual, isLoading, usandoBD }}>
       {children}
     </AuthContext.Provider>
   );

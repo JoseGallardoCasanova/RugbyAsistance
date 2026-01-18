@@ -47,8 +47,8 @@ const JugadoresTab: React.FC = () => {
     try {
       setLoading(true);
       const [jugadoresData, categoriasData] = await Promise.all([
-        SupabaseService.obtenerJugadores(),
-        SupabaseService.obtenerCategorias(),
+        SupabaseService.obtenerJugadores(user?.organizacion_id),
+        SupabaseService.obtenerCategorias(user?.organizacion_id),
       ]);
       
       let activos = jugadoresData.filter(j => j.activo !== false);
@@ -216,7 +216,7 @@ const JugadoresTab: React.FC = () => {
           rut: datos.rut!,
           categoria: datos.categoria!,
           activo: true,
-        });
+        }, user?.organizacion_id);
       }
 
       if (success) {

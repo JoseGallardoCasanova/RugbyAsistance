@@ -54,7 +54,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       const fecha = getFechaLocalHoy();
       console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoria}`);
       
-      const data = await SupabaseService.obtenerAsistenciaDelDia(categoria, fecha);
+      const data = await SupabaseService.obtenerAsistenciaDelDia(categoria, fecha, user?.organizacion_id);
       
       if (data && Object.keys(data).length > 0) {
         setAsistencia(data);
@@ -76,7 +76,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const cargarJugadores = async () => {
     try {
       setLoading(true);
-      const todosJugadores = await SupabaseService.obtenerJugadores();
+      const todosJugadores = await SupabaseService.obtenerJugadores(user?.organizacion_id);
       
       // Filtrar por categoría
       const jugadoresCategoria = todosJugadores.filter(j => 
@@ -171,7 +171,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             console.log('📤 Enviando asistencia a Supabase:', registros.length, 'registros');
 
             // Enviar a Supabase
-            const success = await SupabaseService.guardarAsistencia(registros);
+            const success = await SupabaseService.guardarAsistencia(registros, user?.organizacion_id);
 
             setEnviando(false);
 
