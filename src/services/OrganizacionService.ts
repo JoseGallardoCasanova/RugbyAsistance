@@ -33,7 +33,7 @@ class OrganizacionService {
 
   /**
    * Crea una nueva organización con su suscripción
-   * NOTA: Ahora usa plan_id en vez de plan (varchar)
+   * NOTA: Usa plan_id para referencia a tabla planes
    */
   async crearOrganizacion(datos: {
     nombre: string;
@@ -80,7 +80,8 @@ class OrganizacionService {
         .from('suscripciones')
         .insert({
           organizacion_id: org.id,
-          plan_nuevo_id: planId,
+          plan: plan, // Para compatibilidad con estructura antigua
+          plan_nuevo_id: planId, // Nueva estructura
           estado: plan === 'free' ? 'active' : 'trialing',
           precio_mensual: planConfig.precio_mensual,
           fecha_inicio: new Date().toISOString(),
@@ -165,7 +166,7 @@ class OrganizacionService {
 
   /**
    * Verifica si una organización ha alcanzado sus límites
-   * NOTA: Ahora obtiene límites desde tabla planes via plan_id
+   * NOTA: Obtiene límites desde tabla planes via plan_id
    */
   async verificarLimites(organizacionId: string): Promise<{
     usuarios: { actual: number; maximo: number; alcanzado: boolean };

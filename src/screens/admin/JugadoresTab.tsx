@@ -13,8 +13,6 @@ import {
 } from 'react-native';
 import { Jugador, Categoria } from '../../types';
 import SupabaseService from '../../services/SupabaseService';
-import { usePreferences } from '../../context/PreferencesContext';
-import { Colors } from '../../config/theme';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
 import { useAuth } from '../../context/AuthContext';
@@ -22,7 +20,6 @@ import { useFocusEffect } from '@react-navigation/native';
 
 const JugadoresTab: React.FC = () => {
   const { user } = useAuth();
-  const { currentColors, fontSizes } = usePreferences();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,8 +44,8 @@ const JugadoresTab: React.FC = () => {
     try {
       setLoading(true);
       const [jugadoresData, categoriasData] = await Promise.all([
-        SupabaseService.obtenerJugadores(user?.organizacion_id),
-        SupabaseService.obtenerCategorias(user?.organizacion_id),
+        SupabaseService.obtenerJugadores(),
+        SupabaseService.obtenerCategorias(),
       ]);
       
       let activos = jugadoresData.filter(j => j.activo !== false);
@@ -71,6 +68,9 @@ const JugadoresTab: React.FC = () => {
 
       setJugadores(activos);
       setCategorias(categoriasActivas);
+      
+      console.log(`📥 Jugadores cargados: ${activos.length}`);
+      console.log(`📥 Categorías cargadas: ${categoriasActivas.length}`);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -102,7 +102,7 @@ const JugadoresTab: React.FC = () => {
 
   const getColorCategoria = (numero: number): string => {
     const cat = categorias.find(c => c.numero === numero);
-    return cat?.color || currentColors.primary;
+    return cat?.color || '#1a472a';
   };
 
   const handleCrear = () => {
@@ -123,11 +123,17 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleVerDetalles = (jugador: Jugador) => {
+    console.log('📋 Ver detalles de:', jugador.nombre, jugador.rut);
+    console.log('📋 Datos jugador:', JSON.stringify(jugador, null, 2));
     setJugadorDetalles(jugador);
     setModalDetallesVisible(true);
   };
 
   const handleBloquear = (jugador: Jugador) => {
+    console.log('🔒 [JUGADORES TAB] handleBloquear llamado para:', jugador.nombre);
+    console.log('🔒 [JUGADORES TAB] Estado actual bloqueado:', jugador.bloqueado);
+    console.log('🔒 [JUGADORES TAB] RUT:', jugador.rut);
+    
     const accion = jugador.bloqueado ? 'desbloquear' : 'bloquear';
     Alert.alert(
       `⚠️ ${jugador.bloqueado ? 'Desbloquear' : 'Bloquear'} Jugador`,
@@ -138,14 +144,20 @@ const JugadoresTab: React.FC = () => {
           text: 'Confirmar',
           onPress: async () => {
             try {
+              console.log('🔒 [JUGADORES TAB] Confirmado, ejecutando bloqueo...');
               setDeletingId(jugador.rut);
               const nuevoEstado = !jugador.bloqueado;
+              console.log('🔒 [JUGADORES TAB] Nuevo estado a establecer:', nuevoEstado);
+              console.log('🔒 [JUGADORES TAB] Llamando a SupabaseService.bloquearJugador...');
               
               const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
+              console.log('🔒 [JUGADORES TAB] Resultado de bloquearJugador:', success);
               
               if (success) {
                 Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
+                console.log('🔒 [JUGADORES TAB] Recargando jugadores...');
                 await cargarDatos();
+                console.log('🔒 [JUGADORES TAB] Jugadores recargados');
               } else {
                 Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
               }
@@ -216,7 +228,7 @@ const JugadoresTab: React.FC = () => {
           rut: datos.rut!,
           categoria: datos.categoria!,
           activo: true,
-        }, user?.organizacion_id);
+        });
       }
 
       if (success) {
@@ -240,6 +252,8 @@ const JugadoresTab: React.FC = () => {
 
   const renderJugador = ({ item }: { item: Jugador }) => {
     const isDeleting = deletingId === item.rut;
+    
+    console.log('🎨 Renderizando jugador:', item.nombre, 'Categoría:', item.categoria);
 
     return (
       <View style={styles.card}>
@@ -267,7 +281,7 @@ const JugadoresTab: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: currentColors.secondary }, isDeleting && styles.buttonDisabled]}
+                style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
                 onPress={() => handleEditar(item)}
                 disabled={isDeleting}
               >
@@ -275,7 +289,7 @@ const JugadoresTab: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: currentColors.error }, isDeleting && styles.buttonDisabled]}
+                style={[styles.button, styles.buttonDelete, isDeleting && styles.buttonDisabled]}
                 onPress={() => handleEliminar(item)}
                 disabled={isDeleting}
               >
@@ -304,8 +318,8 @@ const JugadoresTab: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={currentColors.primary} />
-        <Text style={[styles.loadingText, { fontSize: fontSizes.md, color: currentColors.textSecondary }]}>Cargando jugadores...</Text>
+        <ActivityIndicator size="large" color="#1a472a" />
+        <Text style={styles.loadingText}>Cargando jugadores...</Text>
       </View>
     );
   }
@@ -314,10 +328,10 @@ const JugadoresTab: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={{ fontSize: 40, marginBottom: 12 }}>🏉</Text>
-        <Text style={{ fontSize: fontSizes.lg, fontWeight: 'bold', color: currentColors.textPrimary, marginBottom: 8, textAlign: 'center' }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 8, textAlign: 'center' }}>
           Sin categorías asignadas
         </Text>
-        <Text style={{ fontSize: fontSizes.sm, color: currentColors.textSecondary, textAlign: 'center', paddingHorizontal: 30 }}>
+        <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', paddingHorizontal: 30 }}>
           Pide a un administrador que te asigne una o más categorías para poder inscribir jugadores.
         </Text>
       </View>
@@ -325,13 +339,12 @@ const JugadoresTab: React.FC = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: currentColors.background }]}>
+    <View style={styles.container}>
       {/* Barra de búsqueda */}
-      <View style={[styles.searchContainer, { backgroundColor: currentColors.backgroundWhite }]}>
+      <View style={styles.searchContainer}>
         <TextInput
-          style={[styles.searchInput, { fontSize: fontSizes.md, color: currentColors.textPrimary }]}
+          style={styles.searchInput}
           placeholder="🔍 Buscar jugador..."
-          placeholderTextColor={currentColors.textLight}
           value={busqueda}
           onChangeText={setBusqueda}
         />
@@ -345,40 +358,30 @@ const JugadoresTab: React.FC = () => {
         contentContainerStyle={styles.filterContent}
       >
         <TouchableOpacity
-          style={[
-            styles.filterButton,
-            { borderColor: currentColors.primary },
-            categoriaFiltro === null && [styles.filterButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]
-          ]}
-          onPress={() => setCategoriaFiltro(null)}
+          style={[styles.filterButton, categoriaFiltro === null && styles.filterButtonActive]}
+          onPress={() => {
+            console.log('\ud83d\udfe2 Filtro: Todas');
+            setCategoriaFiltro(null);
+          }}
         >
-          <Text style={[
-            styles.filterButtonText,
-            { color: currentColors.primary },
-            categoriaFiltro === null && styles.filterButtonTextActive
-          ]}>
+          <Text style={[styles.filterButtonText, categoriaFiltro === null && styles.filterButtonTextActive]}>
             Todas
           </Text>
         </TouchableOpacity>
 
         {categorias.map((cat) => {
-          const nombreMostrar = cat.nombre ? cat.nombre.substring(0, 5) : `M${cat.numero}`;
+          console.log('\ud83d\udd35 Renderizando categor\u00eda:', cat.nombre, 'Numero:', cat.numero);
           return (
             <TouchableOpacity
               key={String(cat.numero)}
-              style={[
-                styles.filterButton,
-                { borderColor: currentColors.primary },
-                categoriaFiltro === cat.numero && [styles.filterButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]
-              ]}
-              onPress={() => setCategoriaFiltro(cat.numero)}
+              style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
+              onPress={() => {
+                console.log('\ud83d\udfe2 Filtro seleccionado:', cat.nombre);
+                setCategoriaFiltro(cat.numero);
+              }}
             >
-              <Text style={[
-                styles.filterButtonText,
-                { color: currentColors.primary },
-                categoriaFiltro === cat.numero && styles.filterButtonTextActive
-              ]}>
-                {nombreMostrar}
+              <Text style={[styles.filterButtonText, categoriaFiltro === cat.numero && styles.filterButtonTextActive]}>
+                {cat.nombre}
               </Text>
             </TouchableOpacity>
           );
@@ -412,10 +415,10 @@ const JugadoresTab: React.FC = () => {
       {/* Botón crear - Solo para admins */}
       {user?.role === 'admin' && (
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: currentColors.primary }]}
+          style={styles.fab}
           onPress={handleCrear}
         >
-          <Text style={styles.fabText}>+</Text>
+          <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
         </TouchableOpacity>
       )}
 
@@ -469,34 +472,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingVertical: 12,
   },
   filterContent: {
-    paddingHorizontal: 15,
-    alignItems: 'center',
+    padding: 15,
+    gap: 10,
   },
   filterButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 18,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    marginRight: 8,
-    minWidth: 60,
-    minHeight: 34,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+    backgroundColor: '#e8e8e8',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginRight: 10,
   },
   filterButtonActive: {
+    backgroundColor: '#1a472a',
+    borderColor: '#1a472a',
   },
   filterButtonText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '600',
-    includeFontPadding: false,
+    fontSize: 15,
+    color: '#1a472a',
+    fontWeight: '700',
   },
   filterButtonTextActive: {
-    color: '#ffffff',
+    color: '#fff',
     fontWeight: 'bold',
   },
   list: {
@@ -542,7 +544,7 @@ const styles = StyleSheet.create({
   },
   categoriaText: {
     fontSize: 14,
-    color: '#2563eb', // Se aplica currentColors.textPrimary dinámicamente
+    color: '#1a472a',
     fontWeight: '500',
   },
   cardActions: {
@@ -574,6 +576,12 @@ const styles = StyleSheet.create({
   },
   buttonInfo: {
     backgroundColor: '#9C27B0',
+  },
+  buttonEdit: {
+    backgroundColor: '#2196F3',
+  },
+  buttonDelete: {
+    backgroundColor: '#f44336',
   },
   buttonWarning: {
     backgroundColor: '#ff9800',
@@ -613,6 +621,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
+    backgroundColor: '#1a472a',
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,
