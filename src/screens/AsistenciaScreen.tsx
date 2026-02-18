@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
-import SupabaseService from '../services/SupabaseService';
-import { Jugador } from '../types';
+import { useAuth } from '../context/AuthContextV2';
+import { useClub } from '../context/ClubContext';
+import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import { Jugador, Asistencia } from '../types/v2';
 
 interface AsistenciaScreenProps {
   navigation: any;
@@ -20,8 +21,9 @@ interface AsistenciaScreenProps {
 }
 
 const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }) => {
-  const { categoria } = route.params;
+  const { categoria, categoriaNombre } = route.params; // categoria es UUID ahora
   const { user } = useAuth();
+  const { club } = useClub();
   
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,18 +49,31 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
     return `${año}-${mes}-${dia}`;
   };
 
-  const cargarAsistenciaDelDia = async () => {
+  const cargarAsistenciaDelDia = async (jugadoresActuales: Jugador[]) => {
+    if (!club) return;
+    
     try {
       const fecha = getFechaLocalHoy();
-      console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoria}`);
+      console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoriaNombre}`);
       
-      const data = await SupabaseService.obtenerAsistenciaDelDia(categoria, fecha);
+      // Obtener asistencias del día desde Supabase V2
+      const asistenciasData = await SupabaseServiceV2.getAsistenciasPorFecha(club.id, categoria, fecha);
       
-      if (data && Object.keys(data).length > 0) {
-        setAsistencia(data);
-        setYaEnviado(true); // Marcar que ya hay asistencia enviada
-        console.log(`✅ [ASISTENCIA] Asistencia cargada: ${Object.keys(data).length} jugadores marcados`);
-        console.log('📋 [ASISTENCIA] Datos:', data);
+      if (asistenciasData && asistenciasData.length > 0) {
+        // Mapear asistencias a formato { rut: boolean }
+        const asistenciaMap: { [rut: string]: boolean } = {};
+        asistenciasData.forEach(a => {
+          // Buscar el jugador por ID para obtener su RUT
+          const jugador = jugadoresActuales.find(j => j.id === a.jugadorId);
+          if (jugador) {
+            asistenciaMap[jugador.rut] = a.asistio;
+          }
+        });
+        
+        setAsistencia(asistenciaMap);
+        setYaEnviado(true);
+        console.log(`✅ [ASISTENCIA] Asistencia cargada: ${Object.keys(asistenciaMap).length} jugadores marcados`);
+        console.log(`📋 [ASISTENCIA] Mapeados:`, asistenciaMap);
       } else {
         console.log('ℹ️ [ASISTENCIA] No hay asistencia guardada para hoy, iniciando en blanco');
         setAsistencia({});
@@ -72,20 +87,22 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   };
 
   const cargarJugadores = async () => {
+    if (!club) {
+      console.warn('⚠️ [ASISTENCIA] No hay club cargado');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const todosJugadores = await SupabaseService.obtenerJugadores();
-      
-      // Filtrar por categoría
-      const jugadoresCategoria = todosJugadores.filter(j => 
-        j.categoria === categoria && j.activo !== false
-      );
+      // Obtener jugadores de la categoría (V2 usa UUID)
+      const jugadoresCategoria = await SupabaseServiceV2.getJugadoresByCategoria(categoria);
       
       setJugadores(jugadoresCategoria);
-      console.log(`📥 Jugadores de categoría ${categoria}:`, jugadoresCategoria.length);
+      console.log(`📥 Jugadores de categoría ${categoriaNombre}:`, jugadoresCategoria.length);
       
-      // ✅ Cargar asistencia DESPUÉS de tener los jugadores
-      await cargarAsistenciaDelDia();
+      // ✅ Cargar asistencia DESPUÉS de tener los jugadores (pasar como parámetro para evitar problemas de estado)
+      await cargarAsistenciaDelDia(jugadoresCategoria);
     } catch (error) {
       console.error('Error al cargar jugadores:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -143,7 +160,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
 
     Alert.alert(
       'Confirmar envío',
-      `¿Enviar asistencia de Categoría ${categoria}?\n\n` +
+      `¿Enviar asistencia de ${categoriaNombre}?\n\n` +
       `Jugadores marcados: ${totalMarcados}/${jugadores.length}`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -157,19 +174,22 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
             console.log('📅 Fecha local:', fecha);
             console.log('🕐 Hora local completa:', new Date().toLocaleString('es-CL'));
             
-            // Preparar registros de asistencia para Supabase
-            const registros = jugadores.map(j => ({
-              categoria,
+            // Preparar registros de asistencia para V2
+            const registros: Omit<Asistencia, 'id' | 'createdAt'>[] = jugadores.map(j => ({
+              clubId: club!.id,
+              categoriaId: categoria,
+              jugadorId: j.id,
               fecha,
-              rut_jugador: j.rut,
               asistio: asistencia[j.rut] || false,
-              marcado_por: user.nombre,
+              marcadoPor: user!.id, // UUID del usuario en V2
+              marcadoEn: new Date().toISOString(),
+              notas: undefined,
             }));
 
-            console.log('📤 Enviando asistencia a Supabase:', registros.length, 'registros');
+            console.log('📤 Enviando asistencia:', registros.length, 'registros');
 
-            // Enviar a Supabase
-            const success = await SupabaseService.guardarAsistencia(registros);
+            // Enviar a Supabase V2
+            const success = await SupabaseServiceV2.guardarAsistencias(registros);
 
             setEnviando(false);
 
@@ -217,7 +237,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Categoría {categoria}</Text>
+          <Text style={styles.title}>Categoría {categoriaNombre}</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContainer}>
@@ -235,7 +255,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Categoría {categoria}</Text>
+        <Text style={styles.title}>Categoría {categoriaNombre}</Text>
         <View style={{ width: 40 }} />
       </View>
 

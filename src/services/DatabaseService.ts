@@ -1,3 +1,12 @@
+// ============================================
+// ⚠️ DEPRECATED - NO USAR
+// ============================================
+// Este archivo usa Google Sheets como base de datos
+// Solo lo usa GoogleSheetsService (deprecated)
+// USAR: SupabaseServiceV2.ts en su lugar
+// Deprecated: 2026-02-15
+// ============================================
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

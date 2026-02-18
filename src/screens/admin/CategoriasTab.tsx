@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Categoria } from '../../types';
-import SupabaseService from '../../services/SupabaseService';
+import { Categoria } from '../../types/v2';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormCategoria from './FormCategoria';
 import { useFocusEffect } from '@react-navigation/native';
+import { useClub } from '../../context/ClubContext';
 
 const CategoriasTab: React.FC = () => {
+  const { club } = useClub();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,12 +27,12 @@ const CategoriasTab: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const cargarCategorias = useCallback(async () => {
+    if (!club) return;
+    
     try {
       setLoading(true);
-      const data = await SupabaseService.obtenerCategorias();
-      const ordenadas = data
-        .filter(c => c.activo !== false)
-        .sort((a, b) => a.numero - b.numero);
+      const data = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      const ordenadas = data.sort((a, b) => a.orden - b.orden);
       setCategorias(ordenadas);
       console.log(`📥 Categorías cargadas: ${data.length}`);
     } catch (error) {
@@ -39,7 +41,7 @@ const CategoriasTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [club]);
 
   useEffect(() => {
     cargarCategorias();
@@ -78,8 +80,8 @@ const CategoriasTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(String(categoria.numero));
-              const success = await SupabaseService.eliminarCategoria(categoria.numero);
+              setDeletingId(categoria.id);
+              const success = await SupabaseServiceV2.eliminarCategoria(categoria.id);
               if (success) {
                 console.log('✅ [CATEGORIAS] Categoría eliminada');
                 cargarCategorias();
@@ -98,25 +100,38 @@ const CategoriasTab: React.FC = () => {
   };
 
   const handleGuardar = async (datos: Partial<Categoria>) => {
+    if (!club) {
+      Alert.alert('❌ Error', 'No se pudo obtener el club');
+      return;
+    }
+
     try {
-      let success = false;
+      let result = null;
 
       if (categoriaEditar) {
-        success = await SupabaseService.actualizarCategoria(categoriaEditar.numero, datos);
+        // Editar categoría existente
+        result = await SupabaseServiceV2.actualizarCategoria(categoriaEditar.id, datos);
       } else {
-        const maxNumero = categorias.length > 0 
-          ? Math.max(...categorias.map(c => c.numero))
-          : 0;
+        // Crear nueva categoría
+        // Si el usuario no ingresó un orden, calcular el siguiente
+        const orden = datos.orden !== undefined 
+          ? datos.orden 
+          : (categorias.length > 0 ? Math.max(...categorias.map(c => c.orden)) + 1 : 1);
         
-        success = await SupabaseService.crearCategoria({
-          numero: maxNumero + 1,
+        const nuevaCategoria: Omit<Categoria, 'id' | 'createdAt' | 'updatedAt'> = {
+          clubId: club.id,
           nombre: datos.nombre!,
+          descripcion: datos.descripcion,
           color: datos.color || '#1a472a',
-          activo: true,
-        });
+          icono: datos.icono,
+          diasEntrenamiento: datos.diasEntrenamiento || [],
+          horarios: datos.horarios,
+          orden: orden,
+        };
+        result = await SupabaseServiceV2.crearCategoria(nuevaCategoria);
       }
 
-      if (success) {
+      if (result) {
         console.log('✅ [CATEGORIAS] Categoría guardada');
         setModalVisible(false);
         cargarCategorias();
@@ -124,18 +139,18 @@ const CategoriasTab: React.FC = () => {
         Alert.alert('❌ Error', 'No se pudo guardar la categoría');
       }
     } catch (error) {
-      console.error('Error al guardar:', error);
-      Alert.alert('❌ Error', 'Error al guardar categoría');
+      console.error('Error al guardar categoría:', error);
+      Alert.alert('❌ Error', 'Error al guardar la categoría');
     }
   };
 
   const categoriasFiltradas = categorias.filter(c =>
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    c.numero.toString().includes(busqueda)
+    c.orden.toString().includes(busqueda)
   );
 
   const renderCategoria = ({ item }: { item: Categoria }) => {
-    const isDeleting = deletingId === String(item.numero);
+    const isDeleting = deletingId === item.id;
 
     return (
       <View style={styles.card}>
@@ -143,7 +158,7 @@ const CategoriasTab: React.FC = () => {
           <View style={[styles.colorIndicator, { backgroundColor: item.color || '#1a472a' }]} />
           <View style={styles.cardInfo}>
             <View style={styles.numeroContainer}>
-              <Text style={styles.numero}>#{item.numero}</Text>
+              <Text style={styles.numero}>#{item.orden}</Text>
             </View>
             <Text style={styles.cardName}>{item.nombre}</Text>
           </View>
@@ -198,7 +213,7 @@ const CategoriasTab: React.FC = () => {
       {/* Lista de categorías */}
       <FlatList
         data={categoriasFiltradas}
-        keyExtractor={(item) => String(item.numero)}
+        keyExtractor={(item) => item.id}
         renderItem={renderCategoria}
         contentContainerStyle={styles.list}
         ListEmptyComponent={

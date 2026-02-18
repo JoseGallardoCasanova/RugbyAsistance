@@ -12,9 +12,10 @@ import {
   Modal,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from '../context/AuthContext';
-import SupabaseService from '../services/SupabaseService';
-import { Categoria } from '../types';
+import { useAuth } from '../context/AuthContextV2';
+import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import { useClub } from '../context/ClubContext';
+import { Categoria } from '../types/v2';
 import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
 import FormularioAutoinscripcion from './FormularioAutoinscripcion';
 
@@ -23,35 +24,47 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, reloadUser } = useAuth();
+  const { club } = useClub();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [formularioVisible, setFormularioVisible] = useState(false);
+  const [userDisplayName, setUserDisplayName] = useState(user?.nombre || '');
 
   useEffect(() => {
     cargarCategorias();
   }, []);
 
-  // ✅ Auto-recargar categorías al volver a esta pantalla
+  // Sincronizar nombre del usuario cuando cambie
+  useEffect(() => {
+    setUserDisplayName(user?.nombre || '');
+  }, [user?.nombre]);
+
+  // ✅ Auto-recargar categorías y usuario al volver a esta pantalla
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🔄 [HOME] Pantalla enfocada, recargando categorías...');
+      console.log('🔄 [HOME] Pantalla enfocada, recargando datos...');
+      reloadUser(); // Recargar usuario desde Supabase
       cargarCategorias();
     }, [])
   );
 
   const cargarCategorias = async () => {
+    if (!club) {
+      console.warn('⚠️ [HOME] No hay club cargado');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const data = await SupabaseService.obtenerCategorias();
+      const data = await SupabaseServiceV2.getCategoriasByClub(club.id);
       
-      // Filtrar activas y ordenar por número
-      const activas = data
-        .filter(c => c.activo !== false)
-        .sort((a, b) => a.numero - b.numero);
+      // Ordenar por número
+      const ordenadas = data.sort((a, b) => (a.numero || 0) - (b.numero || 0));
       
-      setCategorias(activas);
-      console.log(`📥 Categorías cargadas: ${activas.length}`);
+      setCategorias(ordenadas);
+      console.log(`📥 Categorías cargadas: ${ordenadas.length}`);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
       Alert.alert('Error', 'No se pudieron cargar las categorías');
@@ -61,39 +74,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleCategoriaPress = (categoria: Categoria) => {
-    // Verificar permisos
-    if (user?.role === 'ayudante') {
-      // Ayudante solo puede ver SU categoría
-      if (user.categoriaAsignada !== categoria.numero) {
-        Alert.alert(
-          'Sin acceso',
-          `Solo puedes marcar asistencia de tu categoría asignada (${getCategoriaName(user.categoriaAsignada)})`
-        );
-        return;
-      }
-    } else if (user?.role === 'entrenador') {
-      // Entrenador solo puede ver SUS categorías
-      if (!user.categoriasAsignadas?.includes(categoria.numero)) {
-        Alert.alert(
-          'Sin acceso',
-          `Solo puedes marcar asistencia de tus categorías asignadas`
-        );
-        return;
-      }
+    // TODO V2: Actualizar verificación de permisos para usar UUIDs
+    // Por ahora, solo verificar que el usuario tenga acceso (ya se verifica arriba)
+    if (!puedeVerCategoria(categoria)) {
+      Alert.alert(
+        'Sin acceso',
+        `No tienes permisos para ver esta categoría`
+      );
+      return;
     }
 
-    // Navegar a marcar asistencia
-    navigation.navigate('Asistencia', { categoria: categoria.numero });
+    // Navegar a marcar asistencia (pasar todo el objeto)
+    navigation.navigate('Asistencia', { 
+      categoria: categoria.id,
+      categoriaNombre: categoria.nombre 
+    });
   };
 
-  const getCategoriaName = (numero?: number) => {
-    if (!numero) return 'N/A';
-    const cat = categorias.find(c => c.numero === numero);
-    return cat ? cat.nombre : `Categoría ${numero}`;
+  const getCategoriaName = (categoriaId?: string) => {
+    if (!categoriaId) return 'N/A';
+    const cat = categorias.find(c => c.id === categoriaId);
+    return cat ? cat.nombre : `Categoría`;
   };
 
   const handleAdminPress = () => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'admin_club') {
       navigation.navigate('Admin');
       return;
     }
@@ -107,11 +112,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleConfigPress = () => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'admin_club') {
       navigation.navigate('Configuracion');
     } else {
       Alert.alert('Sin permisos', 'Solo los administradores pueden configurar');
     }
+  };
+
+  const handlePerfilPress = () => {
+    navigation.navigate('Perfil');
   };
 
   const handleLogout = () => {
@@ -126,11 +135,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const puedeVerCategoria = (categoria: Categoria): boolean => {
-    if (user?.role === 'admin') return true;
-    if (user?.role === 'ayudante') return user.categoriaAsignada === categoria.numero;
+    // TODO V2: Actualizar lógica de permisos para usar categorias_asignadas (UUID[])
+    // Por ahora, admin_club y admin tienen acceso total
+    if (user?.role === 'admin' || user?.role === 'admin_club') return true;
+    
+    // Para entrenadores, verificar si tienen la categoría asignada (por UUID)
     if (user?.role === 'entrenador') {
-      return user.categoriasAsignadas?.includes(categoria.numero) || false;
+      // categoriasAsignadas es un array de UUIDs en V2
+      return user.categoriasAsignadas?.includes(categoria.id) || false;
     }
+    
     return false;
   };
 
@@ -156,28 +170,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
           <View style={styles.headerText}>
-            <Text style={styles.greeting}>Hola, {user?.nombre}</Text>
+            <Text style={styles.greeting}>Hola, {userDisplayName}</Text>
             <Text style={styles.subtitle}>
-              {user?.role === 'admin' && 'Administrador'}
-              {user?.role === 'entrenador' && 'Entrenador'}
+              {user?.role === 'admin' && 'Administrador'}              {user?.role === 'admin_club' && 'Administrador del Club'}              {user?.role === 'entrenador' && 'Entrenador'}
               {user?.role === 'ayudante' && 'Ayudante'}
             </Text>
           </View>
         </View>
         
         <View style={styles.headerButtons}>
-          {(user?.role === 'admin' || user?.role === 'entrenador') && (
+          {(user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
             <>
               <TouchableOpacity onPress={handleAdminPress} style={styles.iconButton}>
                 <Text style={styles.iconButtonText}>⚙️</Text>
               </TouchableOpacity>
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'admin_club') && (
                 <TouchableOpacity onPress={handleConfigPress} style={styles.iconButton}>
                   <Text style={styles.iconButtonText}>🔧</Text>
                 </TouchableOpacity>
               )}
             </>
           )}
+          <TouchableOpacity onPress={handlePerfilPress} style={styles.iconButton}>
+            <Text style={styles.iconButtonText}>👤</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
             <Text style={styles.iconButtonText}>🚪</Text>
           </TouchableOpacity>
@@ -204,7 +220,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
               return (
                 <TouchableOpacity
-                  key={`categoria-${categoria.numero}`}
+                  key={`categoria-${categoria.id}`}
                   style={[
                     styles.categoryCard,
                     !tieneAcceso && styles.categoryCardDisabled,
@@ -223,12 +239,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         )}
       </ScrollView>
 
-      {/* Botón flotante - Solo para admin y entrenador */}
-      {(user?.role === 'admin' || user?.role === 'entrenador') && (
+      {/* Botón flotante - Solo para admin, admin_club y entrenador */}
+      {(user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
         <>
           {console.log('✅ [HOME] Mostrando botón flotante para role:', user?.role)}
           <BotonFlotanteInscripcion
-            isAdmin={user?.role === 'admin'}
+            isAdmin={user?.role === 'admin' || user?.role === 'admin_club'}
             onOpenFormulario={() => {
               console.log('📋 [HOME] Callback onOpenFormulario ejecutado');
               setFormularioVisible(true);

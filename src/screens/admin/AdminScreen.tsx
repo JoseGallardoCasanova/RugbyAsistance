@@ -10,7 +10,8 @@ import UsuariosTab from './UsuariosTab';
 import JugadoresTab from './JugadoresTab';
 import CategoriasTab from './CategoriasTab';
 import ModalExportarAsistencias from './ModalExportarAsistencias';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContextV2';
+import { useClub } from '../../context/ClubContext';
 
 interface AdminScreenProps {
   navigation: any;
@@ -21,11 +22,12 @@ type TabType = 'usuarios' | 'jugadores' | 'categorias';
 
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { club } = useClub();
   const routeInitialTab: TabType | undefined = route?.params?.initialTab;
   const [modalExportarVisible, setModalExportarVisible] = useState(false);
 
   const allowedTabs = useMemo<TabType[]>(() => {
-    if (user?.role === 'admin') return ['usuarios', 'jugadores', 'categorias'];
+    if (user?.role === 'admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias'];
     if (user?.role === 'entrenador') return ['jugadores'];
     return [];
   }, [user?.role]);

@@ -11,9 +11,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import SupabaseService from '../services/SupabaseService';
-import { Categoria } from '../types';
+import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import { Categoria } from '../types/v2';
 import { validarRUT, formatearRUT } from '../utils/rutUtils';
+import { useClub } from '../context/ClubContext';
 
 interface Props {
   navigation?: any;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function FormularioAutoinscripcion({ navigation, onSuccess }: Props) {
+  const { club } = useClub();
   const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   
@@ -34,8 +36,8 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   const [contactoEmergencia, setContactoEmergencia] = useState('');
   const [telEmergencia, setTelEmergencia] = useState('');
   
-  // Categoría
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | null>(null);
+  // Categoría (UUID en V2)
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null);
   
   // Salud
   const [sistemaSalud, setSistemaSalud] = useState('');
@@ -90,9 +92,14 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   };
 
   const cargarCategorias = async () => {
+    if (!club) {
+      console.warn('⚠️ [FORMULARIO] No hay club cargado');
+      return;
+    }
+
     try {
-      const cats = await SupabaseService.obtenerCategorias();
-      setCategorias(cats.filter(c => c.activo));
+      const cats = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      setCategorias(cats);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
     }
@@ -155,35 +162,41 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   const handleEnviar = async () => {
     if (!validarFormulario()) return;
 
+    if (!club) {
+      Alert.alert('Error', 'No se pudo obtener el club');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const nuevoJugador = {
+        clubId: club.id,
         rut: rut.trim(),
         nombre: nombreCompleto.trim(),
-        categoria: categoriaSeleccionada!,
-        activo: true,
+        categoriaId: categoriaSeleccionada!,
         
-        // Datos adicionales
-        fecha_nacimiento: fechaNacimiento,
+        // Datos adicionales (camelCase para V2)
+        fechaNacimiento: fechaNacimiento,
         email: email.trim(),
-        contacto_emergencia: contactoEmergencia.trim(),
-        tel_emergencia: telEmergencia.trim(),
-        sistema_salud: sistemaSalud.trim(),
-        seguro_complementario: seguroComplementario.trim() || null,
-        nombre_tutor: nombreTutor.trim() || null,
-        rut_tutor: rutTutor.trim() || null,
-        tel_tutor: telTutor.trim() || null,
-        fuma_frecuencia: fuma ? fumaFrecuencia.trim() : null,
-        enfermedades: enfermedades.trim() || null,
-        alergias: alergias.trim() || null,
-        medicamentos: medicamentos.trim() || null,
-        lesiones: lesiones.trim() || null,
+        contactoEmergencia: contactoEmergencia.trim(),
+        telEmergencia: telEmergencia.trim(),
+        sistemaSalud: sistemaSalud.trim(),
+        seguroComplementario: seguroComplementario.trim() || undefined,
+        nombreTutor: nombreTutor.trim() || undefined,
+        rutTutor: rutTutor.trim() || undefined,
+        telTutor: telTutor.trim() || undefined,
+        fuma: fuma,
+        fumaFrecuencia: fuma ? fumaFrecuencia.trim() : undefined,
+        enfermedades: enfermedades.trim() || undefined,
+        alergias: alergias.trim() || undefined,
+        medicamentos: medicamentos.trim() || undefined,
+        lesiones: lesiones.trim() || undefined,
         actividad,
-        autorizo_uso_imagen: autorizoUsoImagen ?? false,
+        autorizoUsoImagen: autorizoUsoImagen ?? false,
       };
 
-      const success = await SupabaseService.crearJugador(nuevoJugador);
+      const success = await SupabaseServiceV2.crearJugador(nuevoJugador);
 
       if (success) {
         Alert.alert(
@@ -323,12 +336,12 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={categoriaSeleccionada}
-              onValueChange={(value: number | null) => setCategoriaSeleccionada(value)}
+              onValueChange={(value: string | null) => setCategoriaSeleccionada(value)}
               style={styles.picker}
             >
               <Picker.Item label="Selecciona una categoría..." value={null} />
               {categorias.map((cat) => (
-                <Picker.Item key={cat.numero} label={cat.nombre} value={cat.numero} />
+                <Picker.Item key={cat.id} label={cat.nombre} value={cat.id} />
               ))}
             </Picker>
           </View>

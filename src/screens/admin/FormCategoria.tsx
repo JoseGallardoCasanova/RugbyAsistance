@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Categoria } from '../../types'; // ✅ Ruta corregida
+import { Categoria } from '../../types/v2';
 
 interface FormCategoriaProps {
   visible: boolean;
@@ -29,16 +29,19 @@ const COLORES_PREDEFINIDOS = [
 
 const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClose, onSave }) => {
   const [nombre, setNombre] = useState('');
+  const [orden, setOrden] = useState('');
   const [color, setColor] = useState('#1a472a');
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (categoria) {
       setNombre(categoria.nombre);
+      setOrden(categoria.orden?.toString() || '');
       setColor(categoria.color || '#1a472a');
     } else {
       // Limpiar formulario
       setNombre('');
+      setOrden('');
       setColor('#1a472a');
     }
   }, [categoria, visible]);
@@ -53,6 +56,7 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
     const datos: Partial<Categoria> = {
       nombre: nombre.trim(),
       color: color,
+      orden: orden.trim() ? parseInt(orden) : undefined,
     };
 
     setGuardando(true);
@@ -90,6 +94,19 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
               maxLength={50}
             />
             <Text style={styles.hint}>El nombre que verán los usuarios</Text>
+
+            {/* Orden */}
+            <Text style={styles.label}>Orden (opcional)</Text>
+            <TextInput
+              style={styles.input}
+              value={orden}
+              onChangeText={setOrden}
+              placeholder="Ej: 1, 2, 3..."
+              keyboardType="numeric"
+              editable={!guardando}
+              maxLength={3}
+            />
+            <Text style={styles.hint}>Número para ordenar las categorías</Text>
           </ScrollView>
 
           {/* Botones */}

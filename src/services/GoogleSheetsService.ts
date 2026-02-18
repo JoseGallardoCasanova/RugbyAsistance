@@ -1,5 +1,14 @@
 import axios from 'axios';
 import { AsistenciaCategoria } from '../types';
+// ============================================
+// ⚠️ DEPRECATED - NO USAR
+// ============================================
+// Este archivo sincroniza con Google Sheets
+// Ya no se usa en la app
+// USAR: SupabaseServiceV2.ts en su lugar
+// Deprecated: 2026-02-15
+// ============================================
+
 import DatabaseService from './DatabaseService';
 
 // ✅ CONFIGURACIÓN HARDCODEADA - DOS URLs DIFERENTES

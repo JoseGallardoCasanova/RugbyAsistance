@@ -1,3 +1,11 @@
+// ============================================
+// ⚠️ DEPRECATED - NO USAR
+// ============================================
+// Este archivo es la versión Single-Tenant (V1)
+// USAR: SupabaseServiceV2.ts en su lugar
+// Migrado: 2026-02-15
+// ============================================
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ENV from '../config/env';

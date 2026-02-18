@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContextV2';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AsistenciaScreen from '../screens/AsistenciaScreen';
@@ -50,12 +50,12 @@ const AppNavigator = () => {
       >
         {user ? (
           <>
-            <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Asistencia" component={AsistenciaScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />
-            <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />
+            <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
+            <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

@@ -12,7 +12,8 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
-import SupabaseService from '../../services/SupabaseService';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
+import { useClub } from '../../context/ClubContext';
 
 interface Props {
   visible: boolean;
@@ -35,6 +36,7 @@ const OPCIONES_RANGO: OpcionRango[] = [
 ];
 
 export default function ModalExportarAsistencias({ visible, onClose }: Props) {
+  const { clubActual } = useClub();
   const [rangoSeleccionado, setRangoSeleccionado] = useState<RangoTiempo | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -58,17 +60,18 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
     setRangoSeleccionado(rango.id);
 
     try {
-      const { inicio, fin } = calcularFechas(rango.dias);
-      console.log(`📊 Generando reporte desde ${inicio} hasta ${fin}`);
-
-      const datos = await SupabaseService.obtenerAsistenciasPorRango(inicio, fin);
-
-      if (!datos) {
-        Alert.alert('Error', 'No se pudieron obtener los datos de asistencia');
+      if (!clubActual?.id) {
+        Alert.alert('Error', 'No se pudo identificar el club');
         return;
       }
 
-      const { asistencias, jugadores, categorias } = datos;
+      const { inicio, fin } = calcularFechas(rango.dias);
+      console.log(`📊 [V2] Generando reporte desde ${inicio} hasta ${fin}`);
+
+      // Obtener datos por separado en V2
+      const asistencias = await SupabaseServiceV2.getAsistenciasPorRango(clubActual.id, inicio, fin);
+      const jugadores = await SupabaseServiceV2.getJugadoresByClub(clubActual.id);
+      const categorias = await SupabaseServiceV2.getCategoriasByClub(clubActual.id);
 
       if (asistencias.length === 0) {
         Alert.alert(
@@ -114,13 +117,13 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
     const header = ['Jugador', 'Categoría', ...fechasUnicas.map(f => formatearFechaCorta(f)), 'Total', '%'];
     data.push(header);
 
-    // Ordenar categorías por número
-    const categoriasOrdenadas = [...categorias].sort((a, b) => a.numero - b.numero);
+    // Ordenar categorías por orden (V2 usa 'orden' en lugar de 'numero')
+    const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden);
 
     // Procesar cada categoría
     categoriasOrdenadas.forEach(categoria => {
       const jugadoresCategoria = jugadores
-        .filter(j => j.categoria === categoria.numero)
+        .filter(j => j.categoriaId === categoria.id)
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
       
       if (jugadoresCategoria.length === 0) return;
@@ -135,10 +138,10 @@ export default function ModalExportarAsistencias({ visible, onClose }: Props) {
         let totalPresentes = 0;
         let totalRegistros = 0;
 
-        // Para cada fecha, buscar asistencia
+        // Para cada fecha, buscar asistencia (V2 usa jugadorId en lugar de rut_jugador)
         fechasUnicas.forEach(fecha => {
           const asistencia = asistencias.find(
-            a => a.rut_jugador === jugador.rut && a.fecha === fecha && a.categoria === categoria.numero
+            a => a.jugadorId === jugador.id && a.fecha === fecha
           );
 
           if (asistencia) {

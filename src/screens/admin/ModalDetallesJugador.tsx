@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { Jugador } from '../../types';
+import { Jugador } from '../../types/v2';
 
 interface Props {
   visible: boolean;
@@ -20,16 +20,16 @@ export default function ModalDetallesJugador({ visible, jugador, onClose }: Prop
 
   // Verificar si hay detalles adicionales
   const tieneDetallesAdicionales = 
-    jugador.fecha_nacimiento ||
+    jugador.fechaNacimiento ||
     jugador.email ||
-    jugador.contacto_emergencia ||
-    jugador.tel_emergencia ||
-    jugador.sistema_salud ||
-    jugador.seguro_complementario ||
-    jugador.nombre_tutor ||
-    jugador.rut_tutor ||
-    jugador.tel_tutor ||
-    jugador.fuma_frecuencia ||
+    jugador.contactoEmergencia ||
+    jugador.telEmergencia ||
+    jugador.sistemaSalud ||
+    jugador.seguroComplementario ||
+    jugador.nombreTutor ||
+    jugador.rutTutor ||
+    jugador.telTutor ||
+    jugador.fumaFrecuencia ||
     jugador.enfermedades ||
     jugador.alergias ||
     jugador.medicamentos ||
@@ -76,48 +76,48 @@ export default function ModalDetallesJugador({ visible, jugador, onClose }: Prop
               <Text style={styles.fieldValue}>{jugador.rut}</Text>
             </View>
             {renderField('Número', jugador.numero?.toString())}
-            {renderField('Fecha de Nacimiento', jugador.fecha_nacimiento)}
+            {renderField('Fecha de Nacimiento', jugador.fechaNacimiento)}
             {renderField('Email', jugador.email)}
           </View>
 
           {/* Contacto de emergencia */}
-          {(jugador.contacto_emergencia || jugador.tel_emergencia) && (
+          {(jugador.contactoEmergencia || jugador.telEmergencia) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🚨 Contacto de Emergencia</Text>
-              {renderField('Nombre', jugador.contacto_emergencia)}
-              {renderField('Teléfono', jugador.tel_emergencia)}
+              {renderField('Nombre', jugador.contactoEmergencia)}
+              {renderField('Teléfono', jugador.telEmergencia)}
             </View>
           )}
 
           {/* Sistema de salud */}
-          {(jugador.sistema_salud || jugador.seguro_complementario) && (
+          {(jugador.sistemaSalud || jugador.seguroComplementario) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>🏥 Sistema de Salud</Text>
-              {renderField('Sistema de Salud', jugador.sistema_salud)}
-              {renderField('Seguro Complementario', jugador.seguro_complementario)}
+              {renderField('Sistema de Salud', jugador.sistemaSalud)}
+              {renderField('Seguro Complementario', jugador.seguroComplementario)}
             </View>
           )}
 
           {/* Tutor */}
-          {(jugador.nombre_tutor || jugador.rut_tutor || jugador.tel_tutor) && (
+          {(jugador.nombreTutor || jugador.rutTutor || jugador.telTutor) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 Datos del Tutor</Text>
-              {renderField('Nombre', jugador.nombre_tutor)}
-              {renderField('RUT', jugador.rut_tutor)}
-              {renderField('Teléfono', jugador.tel_tutor)}
+              {renderField('Nombre', jugador.nombreTutor)}
+              {renderField('RUT', jugador.rutTutor)}
+              {renderField('Teléfono', jugador.telTutor)}
             </View>
           )}
 
           {/* Información médica */}
-          {(jugador.fuma_frecuencia || jugador.enfermedades || jugador.alergias || 
+          {(jugador.fumaFrecuencia || jugador.enfermedades || jugador.alergias || 
             jugador.medicamentos || jugador.lesiones) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>⚕️ Información Médica</Text>
               
-              {jugador.fuma_frecuencia && (
+              {jugador.fumaFrecuencia && (
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Fuma</Text>
-                  <Text style={styles.fieldValue}>Sí - {jugador.fuma_frecuencia}</Text>
+                  <Text style={styles.fieldValue}>Sí - {jugador.fumaFrecuencia}</Text>
                 </View>
               )}
               
@@ -168,8 +168,8 @@ export default function ModalDetallesJugador({ visible, jugador, onClose }: Prop
           )}
 
           {/* Mensaje si no hay datos adicionales */}
-          {!jugador.fecha_nacimiento && !jugador.email && !jugador.contacto_emergencia && 
-           !jugador.sistema_salud && !jugador.nombre_tutor && !jugador.fuma_frecuencia &&
+          {!jugador.fechaNacimiento && !jugador.email && !jugador.contactoEmergencia && 
+           !jugador.sistemaSalud && !jugador.nombreTutor && !jugador.fumaFrecuencia &&
            !jugador.enfermedades && !jugador.alergias && !jugador.medicamentos && 
            !jugador.lesiones && !jugador.actividad && (
             <View style={styles.emptyContainer}>

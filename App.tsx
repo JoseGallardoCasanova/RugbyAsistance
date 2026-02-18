@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { ClubProvider } from './src/context/ClubContext';
+import { AuthProvider, useAuth } from './src/context/AuthContextV2';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import AsistenciaScreen from './src/screens/AsistenciaScreen';
@@ -44,8 +45,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <ClubProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </ClubProvider>
   );
 }

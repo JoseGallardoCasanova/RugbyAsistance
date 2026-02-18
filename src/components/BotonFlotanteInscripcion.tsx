@@ -12,7 +12,8 @@ import QRCode from 'react-native-qrcode-svg';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
-import SupabaseService from '../services/SupabaseService';
+import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import { useClub } from '../context/ClubContext';
 
 interface Props {
   onOpenFormulario?: () => void;
@@ -22,6 +23,7 @@ interface Props {
 type ModalView = 'none' | 'menu' | 'qr';
 
 export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: Props) {
+  const { clubActual } = useClub();
   const [currentView, setCurrentView] = useState<ModalView>('none');
   const [exportando, setExportando] = useState(false);
 
@@ -58,36 +60,41 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
     setExportando(true);
     
     try {
+      if (!clubActual?.id) {
+        Alert.alert('Error', 'No se pudo identificar el club');
+        return;
+      }
+
       // Obtener todos los jugadores con toda su información
-      const jugadores = await SupabaseService.obtenerJugadores();
+      const jugadores = await SupabaseServiceV2.getJugadoresByClub(clubActual.id);
       
       if (!jugadores || jugadores.length === 0) {
         Alert.alert('Sin datos', 'No hay jugadores registrados para exportar');
         return;
       }
       
-      // Preparar datos para Excel
+      // Preparar datos para Excel (usando camelCase de V2)
       const datosExcel = jugadores.map(j => ({
         'RUT': j.rut || '',
         'Nombre': j.nombre || '',
-        'Categoría': j.categoria || '',
+        'Categoría': j.categoriaId || '',
         'Número': j.numero || '',
-        'Fecha Nacimiento': j.fecha_nacimiento || '',
+        'Fecha Nacimiento': j.fechaNacimiento || '',
         'Email': j.email || '',
-        'Contacto Emergencia': j.contacto_emergencia || '',
-        'Tel. Emergencia': j.tel_emergencia || '',
-        'Sistema Salud': j.sistema_salud || '',
-        'Seguro Complementario': j.seguro_complementario || '',
-        'Nombre Tutor': j.nombre_tutor || '',
-        'RUT Tutor': j.rut_tutor || '',
-        'Tel. Tutor': j.tel_tutor || '',
-        'Fuma': j.fuma_frecuencia || 'No',
+        'Contacto Emergencia': j.contactoEmergencia || '',
+        'Tel. Emergencia': j.telEmergencia || '',
+        'Sistema Salud': j.sistemaSalud || '',
+        'Seguro Complementario': j.seguroComplementario || '',
+        'Nombre Tutor': j.nombreTutor || '',
+        'RUT Tutor': j.rutTutor || '',
+        'Tel. Tutor': j.telTutor || '',
+        'Fuma': j.fumaFrecuencia || 'No',
         'Enfermedades': j.enfermedades || '',
         'Alergias': j.alergias || '',
         'Medicamentos': j.medicamentos || '',
         'Lesiones': j.lesiones || '',
         'Actividad': j.actividad || '',
-        'Autoriza Uso Imagen': j.autorizo_uso_imagen ? 'Sí' : 'No',
+        'Autoriza Uso Imagen': j.autorizoUsoImagen ? 'Sí' : 'No',
         'Activo': j.activo ? 'Sí' : 'No',
       }));
       

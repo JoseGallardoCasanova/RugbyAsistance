@@ -10,14 +10,21 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { User, Categoria } from '../../types';
-import SupabaseService from '../../services/SupabaseService';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
+import { User, Categoria } from '../../types/v2';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormUsuario from './FormUsuario';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContextV2';
+import { useClub } from '../../context/ClubContext';
 
 const UsuariosTab: React.FC = () => {
+  const { user } = useAuth();
+  const { club } = useClub();
   const [usuarios, setUsuarios] = useState<User[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]); // ✅ NUEVO
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -26,29 +33,27 @@ const UsuariosTab: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const cargarDatos = useCallback(async () => {
+    if (!club) return;
+    
     try {
       setLoading(true);
-      // ✅ Cargar tanto usuarios como categorías
       const [usuariosData, categoriasData] = await Promise.all([
-        SupabaseService.obtenerUsuarios(),
-        SupabaseService.obtenerCategorias(),
+        SupabaseServiceV2.getUsuariosByClub(club.id),
+        SupabaseServiceV2.getCategoriasByClub(club.id),
       ]);
       
-      const activos = usuariosData.filter(u => u.activo !== false);
-      setUsuarios(activos);
+      setUsuarios(usuariosData);
+      setCategorias(categoriasData);
       
-      const categoriasActivas = categoriasData.filter(c => c.activo !== false);
-      setCategorias(categoriasActivas);
-      
-      console.log(`📥 Usuarios cargados: ${activos.length}`);
-      console.log(`📥 Categorías cargadas: ${categoriasActivas.length}`);
+      console.log(`📥 Usuarios cargados: ${usuariosData.length}`);
+      console.log(`📥 Categorías cargadas: ${categoriasData.length}`);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los usuarios');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [club]);
 
   useEffect(() => {
     cargarDatos();
@@ -66,15 +71,15 @@ const UsuariosTab: React.FC = () => {
     setRefreshing(false);
   };
 
-  // ✅ NUEVA FUNCIÓN: Obtener nombre de categoría
-  const getNombreCategoria = (numero: number): string => {
-    const cat = categorias.find(c => c.numero === numero);
-    return cat ? cat.nombre : `Categoría ${numero}`;
+  // Obtener nombre de categoría por UUID
+  const getNombreCategoria = (categoriaId: string): string => {
+    const cat = categorias.find(c => c.id === categoriaId);
+    return cat ? cat.nombre : `Categoría`;
   };
 
-  // ✅ NUEVA FUNCIÓN: Obtener nombres de múltiples categorías
-  const getNombresCategorias = (numeros: number[]): string => {
-    return numeros.map(n => getNombreCategoria(n)).join(', ');
+  // Obtener nombres de múltiples categorías por UUIDs
+  const getNombresCategorias = (categoriaIds: string[]): string => {
+    return categoriaIds.map(id => getNombreCategoria(id)).join(', ');
   };
 
   const handleCrear = () => {
@@ -98,14 +103,8 @@ const UsuariosTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(String(usuario.id));
-              const idNumero = typeof usuario.id === 'number' ? usuario.id : Number(usuario.id);
-              if (!Number.isFinite(idNumero)) {
-                Alert.alert('❌ Error', 'ID de usuario inválido. Verifica la configuración de la base de datos.');
-                return;
-              }
-
-              const success = await SupabaseService.eliminarUsuario(idNumero);
+              setDeletingId(usuario.id);
+              const success = await SupabaseServiceV2.eliminarUsuario(usuario.id);
               if (success) {
                 Alert.alert('✅ Éxito', 'Usuario eliminado correctamente');
                 cargarDatos();
@@ -124,37 +123,123 @@ const UsuariosTab: React.FC = () => {
   };
 
   const handleGuardar = async (datos: Partial<User>) => {
+    if (!club) {
+      Alert.alert('❌ Error', 'No se pudo obtener el club');
+      return;
+    }
+
     try {
-      let success = false;
+      let result = null;
 
       if (usuarioEditar) {
-        const idNumero = typeof usuarioEditar.id === 'number' ? usuarioEditar.id : Number(usuarioEditar.id);
-        if (!Number.isFinite(idNumero)) {
-          Alert.alert('❌ Error', 'ID de usuario inválido. Verifica la configuración de la base de datos.');
-          return;
-        }
-        success = await SupabaseService.actualizarUsuario(idNumero, datos);
+        // Editar usuario existente
+        result = await SupabaseServiceV2.actualizarUsuario(usuarioEditar.id, datos);
       } else {
-        success = await SupabaseService.crearUsuario({
-          nombre: datos.nombre!,
+        // Crear nuevo usuario con el password ingresado en el formulario
+        const nuevoUsuario: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'ultimoLogin'> = {
+          clubId: club.id,
           email: datos.email!,
-          password: datos.password!,
+          passwordHash: datos.passwordHash!, // Password viene del formulario, se hasheará en el servicio
+          nombre: datos.nombre!,
+          apellido: datos.apellido,
+          fotoUrl: datos.fotoUrl,
+          telefono: datos.telefono,
           role: datos.role!,
-          categoriaAsignada: datos.categoriaAsignada,
-          categoriasAsignadas: datos.categoriasAsignadas,
-          activo: true,
-        });
+          categoriasAsignadas: datos.categoriasAsignadas || [],
+        };
+        
+        result = await SupabaseServiceV2.crearUsuario(nuevoUsuario);
+        
+        if (result) {
+          // Confirmar creación
+          Alert.alert(
+            '✅ Usuario Creado',
+            `Usuario creado exitosamente.\n\n` +
+            `👤 Username: ${result.username}\n\n` +
+            `El usuario puede iniciar sesión con su username y la contraseña que configuraste.`
+          );
+        }
       }
 
-      if (success) {
-        Alert.alert('✅ Éxito', usuarioEditar ? 'Usuario actualizado' : 'Usuario creado');
+      if (result) {
+        if (usuarioEditar) {
+          Alert.alert('✅ Éxito', 'Usuario actualizado');
+        }
         setModalVisible(false);
         cargarDatos();
       } else {
         Alert.alert('❌ Error', 'No se pudo guardar el usuario');
       }
     } catch (error) {
-      Alert.alert('❌ Error', 'Error al guardar usuario');
+      console.error('Error al guardar usuario:', error);
+      Alert.alert('❌ Error', 'Error al guardar el usuario');
+    }
+  };
+
+  const handleExportarUsuarios = async () => {
+    try {
+      if (usuarios.length === 0) {
+        Alert.alert('Sin datos', 'No hay usuarios para exportar');
+        return;
+      }
+
+      console.log('📊 [USUARIOS] Exportando usuarios con usernames...');
+
+      // Preparar datos para Excel
+      const datosExcel = usuarios.map(u => ({
+        'Nombre': u.nombre,
+        'Apellido': u.apellido,
+        'Username': u.username,
+        'Email': u.email,
+        'Teléfono': u.telefono || '',
+        'Rol': getRoleLabel(u.role),
+        'Categorías Asignadas': u.role === 'entrenador' 
+          ? getNombresCategorias(u.categoriasAsignadas) 
+          : '-',
+        'Último Login': u.ultimoLogin 
+          ? new Date(u.ultimoLogin).toLocaleDateString('es-CL') 
+          : 'Nunca',
+      }));
+
+      // Crear workbook
+      const ws = XLSX.utils.json_to_sheet(datosExcel);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+
+      // Ajustar anchos de columna
+      ws['!cols'] = [
+        { wch: 15 }, // Nombre
+        { wch: 15 }, // Apellido
+        { wch: 15 }, // Username
+        { wch: 25 }, // Email
+        { wch: 12 }, // Teléfono
+        { wch: 15 }, // Rol
+        { wch: 30 }, // Categorías
+        { wch: 15 }, // Último Login
+      ];
+
+      // Generar archivo
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+      const fecha = new Date().toISOString().split('T')[0];
+      const fileName = `Usuarios_${club?.nombre || 'Club'}_${fecha}.xlsx`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Compartir archivo
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+        Alert.alert('✅ Exportación Exitosa', 'El archivo Excel se ha generado correctamente');
+      } else {
+        Alert.alert('Error', 'No se puede compartir archivos en este dispositivo');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error al exportar usuarios:', error);
+      Alert.alert('Error', `No se pudo exportar: ${error.message}`);
     }
   };
 
@@ -179,12 +264,7 @@ const UsuariosTab: React.FC = () => {
               </View>
             </View>
             
-            {/* ✅ MOSTRAR CATEGORÍAS CON NOMBRES DINÁMICOS */}
-            {item.role === 'ayudante' && item.categoriaAsignada && (
-              <Text style={styles.categoriaText}>
-                📋 {getNombreCategoria(item.categoriaAsignada)}
-              </Text>
-            )}
+            {/* MOSTRAR CATEGORÍAS CON NOMBRES DINÁMICOS */}
             {item.role === 'entrenador' && item.categoriasAsignadas && item.categoriasAsignadas.length > 0 && (
               <Text style={styles.categoriaText}>
                 📋 {getNombresCategorias(item.categoriasAsignadas)}
@@ -221,6 +301,7 @@ const UsuariosTab: React.FC = () => {
   const getRoleLabel = (role: string): string => {
     switch (role) {
       case 'admin': return '👑 Admin';
+      case 'admin_club': return '👑 Admin Club';
       case 'entrenador': return '🏃 Entrenador';
       case 'ayudante': return '👤 Ayudante';
       default: return role;
@@ -230,6 +311,7 @@ const UsuariosTab: React.FC = () => {
   const getRoleStyle = (role: string) => {
     switch (role) {
       case 'admin': return styles.roleAdmin;
+      case 'admin_club': return styles.roleAdmin;
       case 'entrenador': return styles.roleEntrenador;
       case 'ayudante': return styles.roleAyudante;
       default: return {};
@@ -281,10 +363,22 @@ const UsuariosTab: React.FC = () => {
         }
       />
 
-      {/* Botón crear */}
-      <TouchableOpacity style={styles.fab} onPress={handleCrear}>
-        <Text style={styles.fabText}>+ CREAR USUARIO</Text>
-      </TouchableOpacity>
+      {/* Botones de acción */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity 
+          style={[styles.fab, styles.fabExport]} 
+          onPress={handleExportarUsuarios}
+        >
+          <Text style={styles.fabText}>📊 EXPORTAR</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.fab, styles.fabCreate]} 
+          onPress={handleCrear}
+        >
+          <Text style={styles.fabText}>+ CREAR</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Modal de formulario */}
       <FormUsuario
@@ -430,13 +524,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
-  fab: {
+  actionButtons: {
     position: 'absolute',
     bottom: 20,
     right: 20,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fab: {
     backgroundColor: '#1a472a',
     paddingVertical: 15,
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
     borderRadius: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -444,10 +542,16 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
+  fabExport: {
+    backgroundColor: '#2196F3',
+  },
+  fabCreate: {
+    backgroundColor: '#1a472a',
+  },
   fabText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 });
 

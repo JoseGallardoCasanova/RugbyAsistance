@@ -11,7 +11,8 @@ import {
 // import * as XLSX from 'xlsx';
 // import { Paths, File } from 'expo-file-system';
 // import * as Sharing from 'expo-sharing';
-import SupabaseService from '../../services/SupabaseService';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
+import { useClub } from '../../context/ClubContext';
 
 type RangoTiempo = '3dias' | '1semana' | '1mes' | '3meses';
 
@@ -29,6 +30,7 @@ const OPCIONES_RANGO: OpcionRango[] = [
 ];
 
 export default function ExportarAsistenciasScreen({ navigation }: any) {
+  const { club } = useClub();
   const [rangoSeleccionado, setRangoSeleccionado] = useState<RangoTiempo | null>(null);
   const [cargando, setCargando] = useState(false);
 
@@ -49,10 +51,21 @@ export default function ExportarAsistenciasScreen({ navigation }: any) {
   };
 
   const generarExcel = async (rango: OpcionRango) => {
+    if (!club) {
+      Alert.alert('❌ Error', 'No se pudo obtener el club');
+      return;
+    }
+
     setCargando(true);
     setRangoSeleccionado(rango.id);
 
     try {
+      // TODO: Implementar exportación con datos V2
+      // const fechas = calcularFechas(rango.dias);
+      // const asistencias = await SupabaseServiceV2.getAsistenciasPorRango(club.id, fechas.inicio, fechas.fin);
+      // const jugadores = await SupabaseServiceV2.getJugadoresByClub(club.id);
+      // const categorias = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      
       Alert.alert('🚧 En desarrollo', 'La funcionalidad de exportación se está implementando. Estamos trabajando en resolver un problema de compatibilidad con las librerías.');
     } catch (error: any) {
       console.error('❌ Error:', error);

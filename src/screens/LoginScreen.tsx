@@ -9,28 +9,68 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContextV2';
+import SupabaseServiceV2 from '../services/SupabaseServiceV2';
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅ NUEVO
+  const [showPassword, setShowPassword] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [emailRecuperar, setEmailRecuperar] = useState('');
+  const [buscandoUsername, setBuscandoUsername] = useState(false);
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa email y contraseña');
+    if (!username || !password) {
+      Alert.alert('Error', 'Por favor ingresa usuario y contraseña');
       return;
     }
 
     setLoading(true);
-    const success = await login(email, password);
+    const success = await login(username, password);
     setLoading(false);
 
     if (!success) {
       Alert.alert('Error', 'Credenciales incorrectas');
+    }
+  };
+
+  const handleRecuperarUsername = async () => {
+    if (!emailRecuperar.trim()) {
+      Alert.alert('Error', 'Por favor ingresa tu email');
+      return;
+    }
+
+    setBuscandoUsername(true);
+    const resultado = await SupabaseServiceV2.recuperarUsernamePorEmail(emailRecuperar);
+    setBuscandoUsername(false);
+
+    if (resultado) {
+      Alert.alert(
+        '✅ Username Encontrado',
+        `Hola ${resultado.nombre}!\n\nTu nombre de usuario es:\n\n${resultado.username}`,
+        [
+          {
+            text: 'Copiar',
+            onPress: () => {
+              // TODO: Implementar copiado al portapapeles si es necesario
+              Alert.alert('Info', 'Anota tu username para iniciar sesión');
+            },
+          },
+          { text: 'OK', onPress: () => setModalVisible(false) },
+        ]
+      );
+      setEmailRecuperar('');
+    } else {
+      Alert.alert(
+        'Email no encontrado',
+        'No existe ninguna cuenta asociada a este email. Contacta a tu administrador.'
+      );
     }
   };
 
@@ -56,11 +96,12 @@ const LoginScreen = () => {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Usuario"
+            placeholder="Nombre de usuario"
             placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
+            autoCorrect={false}
           />
 
           {/* ✅ MEJORADO: Input de contraseña con botón show/hide */}
@@ -92,7 +133,70 @@ const LoginScreen = () => {
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Text>
           </TouchableOpacity>
+
+          {/* Enlace para recuperar username */}
+          <TouchableOpacity
+            style={styles.forgotLink}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.forgotText}>¿Olvidaste tu nombre de usuario?</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Modal de recuperar username */}
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Recuperar Username</Text>
+              <Text style={styles.modalSubtitle}>
+                Ingresa el email de tu cuenta y te mostraremos tu nombre de usuario.
+              </Text>
+
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Email"
+                placeholderTextColor="#999"
+                value={emailRecuperar}
+                onChangeText={setEmailRecuperar}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonCancel]}
+                  onPress={() => {
+                    setModalVisible(false);
+                    setEmailRecuperar('');
+                  }}
+                  disabled={buscandoUsername}
+                >
+                  <Text style={styles.modalButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
+                  onPress={handleRecuperarUsername}
+                  disabled={buscandoUsername}
+                >
+                  {buscandoUsername ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                      Buscar
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* ...se eliminó la sección de usuarios de prueba... */}
       </View>
@@ -179,6 +283,76 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  forgotLink: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  forgotText: {
+    color: '#fff',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 25,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1a472a',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#ccc',
+  },
+  modalButtonConfirm: {
+    backgroundColor: '#1a472a',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  modalButtonTextConfirm: {
+    color: '#fff',
   },
   help: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

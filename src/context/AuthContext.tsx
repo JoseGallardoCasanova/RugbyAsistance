@@ -1,3 +1,11 @@
+// ============================================
+// ⚠️ DEPRECATED - NO USAR
+// ============================================
+// Este archivo usa servicios V1 (Single-Tenant)
+// USAR: AuthContextV2.tsx en su lugar
+// Migrado: 2026-02-15
+// ============================================
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';

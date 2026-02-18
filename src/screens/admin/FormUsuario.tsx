@@ -10,8 +10,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { User, UserRole, Categoria } from '../../types';
-import SupabaseService from '../../services/SupabaseService';
+import { User, UserRole, Categoria } from '../../types/v2';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
+import { useClub } from '../../context/ClubContext';
 
 interface FormUsuarioProps {
   visible: boolean;
@@ -21,16 +22,18 @@ interface FormUsuarioProps {
 }
 
 const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, onSave }) => {
+  const { club } = useClub();
   const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameAutogenerado, setUsernameAutogenerado] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>('ayudante');
-  const [categoriaAsignada, setCategoriaAsignada] = useState<number | undefined>();
-  const [categoriasAsignadas, setCategoriasAsignadas] = useState<number[]>([]);
+  const [categoriasAsignadas, setCategoriasAsignadas] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   
-  // ✅ NUEVO: Cargar categorías dinámicas
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
 
@@ -41,11 +44,13 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   }, [visible]);
 
   const cargarCategorias = async () => {
+    if (!club) return;
+    
     try {
       setLoadingCategorias(true);
-      const cats = await SupabaseService.obtenerCategorias();
-      const activas = cats.filter(c => c.activo !== false).sort((a, b) => a.numero - b.numero);
-      setCategorias(activas);
+      const cats = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      const ordenadas = cats.sort((a, b) => a.orden - b.orden);
+      setCategorias(ordenadas);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
     } finally {
@@ -56,27 +61,58 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   useEffect(() => {
     if (usuario) {
       setNombre(usuario.nombre);
+      setApellido(usuario.apellido);
+      setUsername(usuario.username);
+      setUsernameAutogenerado(false); // Ya tiene username asignado
       setEmail(usuario.email);
       setPassword(''); // No mostrar password
       setRole(usuario.role);
-      setCategoriaAsignada(usuario.categoriaAsignada);
       setCategoriasAsignadas(usuario.categoriasAsignadas || []);
     } else {
       // Limpiar formulario
       setNombre('');
+      setApellido('');
+      setUsername('');
+      setUsernameAutogenerado(true);
       setEmail('');
       setPassword('');
       setShowPassword(false);
       setRole('ayudante');
-      setCategoriaAsignada(undefined);
       setCategoriasAsignadas([]);
     }
   }, [usuario, visible]);
+
+  // Autogenerar username cuando cambia nombre o apellido (solo si está en modo autogenerado)
+  useEffect(() => {
+    if (usernameAutogenerado && nombre.trim() && apellido.trim()) {
+      const normalize = (text: string) => text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z]/g, '');
+      
+      const nombreNorm = normalize(nombre);
+      const apellidoNorm = normalize(apellido);
+      const usernameGenerado = nombreNorm.charAt(0) + apellidoNorm;
+      
+      setUsername(usernameGenerado);
+    }
+  }, [nombre, apellido, usernameAutogenerado]);
 
   const handleGuardar = async () => {
     // Validaciones
     if (!nombre.trim()) {
       Alert.alert('Error', 'El nombre es requerido');
+      return;
+    }
+
+    if (!apellido.trim()) {
+      Alert.alert('Error', 'El apellido es requerido');
+      return;
+    }
+
+    if (!username.trim()) {
+      Alert.alert('Error', 'El nombre de usuario es requerido');
       return;
     }
 
@@ -90,11 +126,6 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
       return;
     }
 
-    if (role === 'ayudante' && !categoriaAsignada) {
-      Alert.alert('Error', 'Debes asignar una categoría para ayudantes');
-      return;
-    }
-
     if (role === 'entrenador' && categoriasAsignadas.length === 0) {
       Alert.alert('Error', 'Debes asignar al menos una categoría para entrenadores');
       return;
@@ -102,14 +133,17 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
 
     const datos: Partial<User> = {
       nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      username: username.trim().toLowerCase(),
       email: email.trim(),
       role: role,
-      categoriaAsignada: role === 'ayudante' ? categoriaAsignada : undefined,
-      categoriasAsignadas: role === 'entrenador' ? categoriasAsignadas : undefined,
+      categoriasAsignadas: role === 'entrenador' ? categoriasAsignadas : [],
     };
 
+    // En V2, guardar password como passwordHash
+    // NOTA: En producción deberías hashear esto en el backend
     if (password.trim()) {
-      datos.password = password.trim();
+      datos.passwordHash = password.trim();
     }
 
     setGuardando(true);
@@ -120,11 +154,11 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
     }
   };
 
-  const toggleCategoriaEntrenador = (numero: number) => {
-    if (categoriasAsignadas.includes(numero)) {
-      setCategoriasAsignadas(categoriasAsignadas.filter(c => c !== numero));
+  const toggleCategoriaEntrenador = (categoriaId: string) => {
+    if (categoriasAsignadas.includes(categoriaId)) {
+      setCategoriasAsignadas(categoriasAsignadas.filter(c => c !== categoriaId));
     } else {
-      setCategoriasAsignadas([...categoriasAsignadas, numero]);
+      setCategoriasAsignadas([...categoriasAsignadas, categoriaId]);
     }
   };
 
@@ -150,9 +184,54 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               style={styles.input}
               value={nombre}
               onChangeText={setNombre}
-              placeholder="Juan Pérez"
+              placeholder="Juan"
               editable={!guardando}
             />
+
+            {/* Apellido */}
+            <Text style={styles.label}>Apellido *</Text>
+            <TextInput
+              style={styles.input}
+              value={apellido}
+              onChangeText={setApellido}
+              placeholder="Pérez"
+              editable={!guardando}
+            />
+
+            {/* Username */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Nombre de usuario *</Text>
+              <View style={styles.usernameContainer}>
+                <TextInput
+                  style={[styles.input, styles.usernameInput]}
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text.toLowerCase().replace(/[^a-z0-9]/g, ''));
+                    setUsernameAutogenerado(false); // Desactivar autogeneración si edita manualmente
+                  }}
+                  placeholder="jperez"
+                  autoCapitalize="none"
+                  editable={!guardando && !usuario} // Solo editable al crear usuario nuevo
+                />
+                {!usuario && (
+                  <TouchableOpacity
+                    style={styles.autoButton}
+                    onPress={() => setUsernameAutogenerado(!usernameAutogenerado)}
+                  >
+                    <Text style={styles.autoButtonText}>
+                      {usernameAutogenerado ? '🤖 Auto' : '✏️ Manual'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.hint}>
+                {usuario 
+                  ? 'El username no se puede cambiar después de crear el usuario' 
+                  : usernameAutogenerado
+                  ? 'Se genera automáticamente: primera letra del nombre + apellido'
+                  : 'Solo letras y números, sin espacios'}
+              </Text>
+            </View>
 
             {/* Email */}
             <Text style={styles.label}>Email *</Text>
@@ -194,7 +273,6 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
                 style={[styles.roleButton, role === 'admin' && styles.roleButtonActive]}
                 onPress={() => {
                   setRole('admin');
-                  setCategoriaAsignada(undefined);
                   setCategoriasAsignadas([]);
                 }}
                 disabled={guardando}
@@ -205,10 +283,22 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.roleButton, role === 'admin_club' && styles.roleButtonActive]}
+                onPress={() => {
+                  setRole('admin_club');
+                  setCategoriasAsignadas([]);
+                }}
+                disabled={guardando}
+              >
+                <Text style={[styles.roleButtonText, role === 'admin_club' && styles.roleButtonTextActive]}>
+                  👑 Admin Club
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.roleButton, role === 'entrenador' && styles.roleButtonActive]}
                 onPress={() => {
                   setRole('entrenador');
-                  setCategoriaAsignada(undefined);
                 }}
                 disabled={guardando}
               >
@@ -231,40 +321,6 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               </TouchableOpacity>
             </View>
 
-            {/* Categoría para Ayudante */}
-            {role === 'ayudante' && (
-              <>
-                <Text style={styles.label}>Categoría Asignada *</Text>
-                {loadingCategorias ? (
-                  <ActivityIndicator color="#1a472a" style={{ marginVertical: 10 }} />
-                ) : (
-                  <View style={styles.categoriaSelector}>
-                    {categorias.map((cat) => (
-                      <TouchableOpacity
-                        key={String(cat.numero)}
-                        style={[
-                          styles.categoriaOption,
-                          categoriaAsignada === cat.numero && styles.categoriaOptionActive,
-                        ]}
-                        onPress={() => setCategoriaAsignada(cat.numero)}
-                        disabled={guardando}
-                      >
-                        <View style={[styles.categoriaColor, { backgroundColor: cat.color }]} />
-                        <Text
-                          style={[
-                            styles.categoriaOptionText,
-                            categoriaAsignada === cat.numero && styles.categoriaOptionTextActive,
-                          ]}
-                        >
-                          {cat.nombre}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </>
-            )}
-
             {/* Categorías para Entrenador */}
             {role === 'entrenador' && (
               <>
@@ -275,24 +331,24 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
                   <View style={styles.categoriaSelector}>
                     {categorias.map((cat) => (
                       <TouchableOpacity
-                        key={String(cat.numero)}
+                        key={cat.id}
                         style={[
                           styles.categoriaOption,
-                          categoriasAsignadas.includes(cat.numero) && styles.categoriaOptionActive,
+                          categoriasAsignadas.includes(cat.id) && styles.categoriaOptionActive,
                         ]}
-                        onPress={() => toggleCategoriaEntrenador(cat.numero)}
+                        onPress={() => toggleCategoriaEntrenador(cat.id)}
                         disabled={guardando}
                       >
                         <View style={[styles.categoriaColor, { backgroundColor: cat.color }]} />
                         <Text
                           style={[
                             styles.categoriaOptionText,
-                            categoriasAsignadas.includes(cat.numero) && styles.categoriaOptionTextActive,
+                            categoriasAsignadas.includes(cat.id) && styles.categoriaOptionTextActive,
                           ]}
                         >
                           {cat.nombre}
                         </Text>
-                        {categoriasAsignadas.includes(cat.numero) && (
+                        {categoriasAsignadas.includes(cat.id) && (
                           <Text style={styles.checkmark}>✓</Text>
                         )}
                       </TouchableOpacity>
@@ -493,6 +549,35 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  fieldContainer: {
+    marginBottom: 10,
+  },
+  usernameContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  usernameInput: {
+    flex: 1,
+  },
+  autoButton: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#1a472a',
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  autoButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  hint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+    fontStyle: 'italic',
   },
 });
 

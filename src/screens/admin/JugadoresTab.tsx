@@ -11,21 +11,23 @@ import {
   RefreshControl,
   ScrollView, // ✅ AGREGADO: Import faltante
 } from 'react-native';
-import { Jugador, Categoria } from '../../types';
-import SupabaseService from '../../services/SupabaseService';
+import { Jugador, Categoria } from '../../types/v2';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContextV2';
+import { useClub } from '../../context/ClubContext';
 import { useFocusEffect } from '@react-navigation/native';
 
 const JugadoresTab: React.FC = () => {
   const { user } = useAuth();
+  const { club } = useClub();
   const [jugadores, setJugadores] = useState<Jugador[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [categoriaFiltro, setCategoriaFiltro] = useState<number | null>(null);
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null); // UUID ahora
   const [modalVisible, setModalVisible] = useState(false);
   const [modalDetallesVisible, setModalDetallesVisible] = useState(false);
   const [jugadorEditar, setJugadorEditar] = useState<Jugador | undefined>();
@@ -41,40 +43,45 @@ const JugadoresTab: React.FC = () => {
     user?.role === 'entrenador' && (!Array.isArray(categoriasEntrenador) || categoriasEntrenador.length === 0);
 
   const cargarDatos = useCallback(async () => {
+    if (!club) {
+      console.warn('⚠️ [JUGADORES TAB] No hay club cargado');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const [jugadoresData, categoriasData] = await Promise.all([
-        SupabaseService.obtenerJugadores(),
-        SupabaseService.obtenerCategorias(),
+        SupabaseServiceV2.getJugadoresByClub(club.id),
+        SupabaseServiceV2.getCategoriasByClub(club.id),
       ]);
       
-      let activos = jugadoresData.filter(j => j.activo !== false);
+      // V2: No hay campo activo, todos son activos
+      let jugadoresFiltrados = jugadoresData;
       
-      let categoriasActivas = categoriasData
-        .filter(c => c.activo !== false)
-        .sort((a, b) => a.numero - b.numero);
+      let categoriasOrdenadas = categoriasData.sort((a, b) => (a.orden || 0) - (b.orden || 0));
 
-      // ✅ Permisos entrenador: solo su categoría asignada (1)
+      // ✅ Permisos entrenador: solo sus categorías asignadas (UUIDs)
       if (user?.role === 'entrenador') {
         if (Array.isArray(categoriasEntrenador) && categoriasEntrenador.length > 0) {
-          activos = activos.filter(j => categoriasEntrenador.includes(j.categoria));
-          categoriasActivas = categoriasActivas.filter(c => categoriasEntrenador.includes(c.numero));
+          jugadoresFiltrados = jugadoresFiltrados.filter(j => categoriasEntrenador.includes(j.categoriaId));
+          categoriasOrdenadas = categoriasOrdenadas.filter(c => categoriasEntrenador.includes(c.id));
         } else {
-          activos = [];
-          categoriasActivas = [];
+          jugadoresFiltrados = [];
+          categoriasOrdenadas = [];
           setCategoriaFiltro(null);
         }
       }
 
-      setJugadores(activos);
-      setCategorias(categoriasActivas);
+      setJugadores(jugadoresFiltrados);
+      setCategorias(categoriasOrdenadas);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
     } finally {
       setLoading(false);
     }
-  }, [categoriasEntrenador, user?.role]);
+  }, [club, categoriasEntrenador, user?.role]);
 
   useEffect(() => {
     cargarDatos();
@@ -92,13 +99,13 @@ const JugadoresTab: React.FC = () => {
     setRefreshing(false);
   };
 
-  const getNombreCategoria = (numero: number): string => {
-    const cat = categorias.find(c => c.numero === numero);
-    return cat ? cat.nombre : `Categoría ${numero}`;
+  const getNombreCategoria = (categoriaId: string): string => {
+    const cat = categorias.find(c => c.id === categoriaId);
+    return cat ? cat.nombre : `Categoría`;
   };
 
-  const getColorCategoria = (numero: number): string => {
-    const cat = categorias.find(c => c.numero === numero);
+  const getColorCategoria = (categoriaId: string): string => {
+    const cat = categorias.find(c => c.id === categoriaId);
     return cat?.color || '#1a472a';
   };
 
@@ -125,37 +132,8 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleBloquear = (jugador: Jugador) => {
-    const accion = jugador.bloqueado ? 'desbloquear' : 'bloquear';
-    Alert.alert(
-      `⚠️ ${jugador.bloqueado ? 'Desbloquear' : 'Bloquear'} Jugador`,
-      `¿Estás seguro de ${accion} a ${jugador.nombre}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              setDeletingId(jugador.rut);
-              const nuevoEstado = !jugador.bloqueado;
-              
-              const success = await SupabaseService.bloquearJugador(jugador.rut, nuevoEstado);
-              
-              if (success) {
-                Alert.alert('✅ Éxito', `Jugador ${accion}do correctamente`);
-                await cargarDatos();
-              } else {
-                Alert.alert('❌ Error', `No se pudo ${accion} el jugador`);
-              }
-            } catch (error) {
-              console.error('🔒 [JUGADORES TAB] Error al bloquear:', error);
-              Alert.alert('❌ Error', `Error al ${accion} el jugador: ${error}`);
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
+    // TODO V2: Implementar bloqueo en SupabaseServiceV2 (o eliminar feature)
+    Alert.alert('No implementado', 'La función de bloqueo aún no está disponible en V2');
   };
 
   const handleEliminar = (jugador: Jugador) => {
@@ -169,8 +147,8 @@ const JugadoresTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              setDeletingId(jugador.rut);
-              const success = await SupabaseService.eliminarJugador(jugador.rut);
+              setDeletingId(jugador.id);
+              const success = await SupabaseServiceV2.eliminarJugador(jugador.id);
               if (success) {
                 Alert.alert('✅ Éxito', 'Jugador eliminado correctamente');
                 cargarDatos();
@@ -189,34 +167,53 @@ const JugadoresTab: React.FC = () => {
   };
 
   const handleGuardar = async (datos: Partial<Jugador>) => {
-    try {
-      let success = false;
+    if (!club) {
+      Alert.alert('❌ Error', 'No se pudo obtener el club');
+      return;
+    }
 
-      // ✅ Permisos entrenador: debe ser una categoría asignada
-      if (user?.role === 'entrenador') {
-        if (!Array.isArray(categoriasEntrenador) || categoriasEntrenador.length === 0) {
-          Alert.alert('Sin categorías', 'No tienes categorías asignadas para crear/editar jugadores.');
-          return;
-        }
-        const categoriaElegida = datos.categoria;
-        if (typeof categoriaElegida !== 'number' || !categoriasEntrenador.includes(categoriaElegida)) {
-          Alert.alert('Sin acceso', 'Solo puedes usar tus categorías asignadas.');
-          return;
-        }
-      }
+    try {
+      let result = null;
 
       if (jugadorEditar) {
-        success = await SupabaseService.actualizarJugador(jugadorEditar.rut, datos);
+        // Editar jugador existente
+        result = await SupabaseServiceV2.actualizarJugador(jugadorEditar.id, datos);
       } else {
-        success = await SupabaseService.crearJugador({
-          nombre: datos.nombre!,
+        // Crear nuevo jugador
+        const nuevoJugador: Omit<Jugador, 'id' | 'createdAt' | 'updatedAt'> = {
+          clubId: club.id,
+          usuarioId: null,
+          categoriaId: datos.categoriaId!,
           rut: datos.rut!,
-          categoria: datos.categoria!,
-          activo: true,
-        });
+          nombre: datos.nombre!,
+          numero: datos.numero,
+          fechaNacimiento: datos.fechaNacimiento,
+          email: datos.email,
+          telefono: datos.telefono,
+          contactoEmergencia: datos.contactoEmergencia,
+          telEmergencia: datos.telEmergencia,
+          relacionEmergencia: datos.relacionEmergencia,
+          sistemaSalud: datos.sistemaSalud,
+          seguroComplementario: datos.seguroComplementario,
+          nombreTutor: datos.nombreTutor,
+          rutTutor: datos.rutTutor,
+          telTutor: datos.telTutor,
+          emailTutor: datos.emailTutor,
+          fuma: datos.fuma || false,
+          fumaFrecuencia: datos.fumaFrecuencia,
+          enfermedades: datos.enfermedades,
+          alergias: datos.alergias,
+          medicamentos: datos.medicamentos,
+          lesiones: datos.lesiones,
+          grupoSanguineo: datos.grupoSanguineo,
+          actividad: datos.actividad,
+          autorizoUsoImagen: datos.autorizoUsoImagen || false,
+          datosFormularioExtra: datos.datosFormularioExtra,
+        };
+        result = await SupabaseServiceV2.crearJugador(nuevoJugador);
       }
 
-      if (success) {
+      if (result) {
         Alert.alert('✅ Éxito', jugadorEditar ? 'Jugador actualizado' : 'Jugador creado');
         setModalVisible(false);
         cargarDatos();
@@ -224,19 +221,20 @@ const JugadoresTab: React.FC = () => {
         Alert.alert('❌ Error', 'No se pudo guardar el jugador');
       }
     } catch (error) {
-      Alert.alert('❌ Error', 'Error al guardar jugador');
+      console.error('Error al guardar jugador:', error);
+      Alert.alert('❌ Error', 'Error al guardar el jugador');
     }
   };
 
   const jugadoresFiltrados = jugadores.filter(j => {
     const matchBusqueda = j.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
                           j.rut.includes(busqueda);
-    const matchCategoria = categoriaFiltro === null || j.categoria === categoriaFiltro;
+    const matchCategoria = categoriaFiltro === null || j.categoriaId === categoriaFiltro;
     return matchBusqueda && matchCategoria;
   });
 
   const renderJugador = ({ item }: { item: Jugador }) => {
-    const isDeleting = deletingId === item.rut;
+    const isDeleting = deletingId === item.id;
 
     return (
       <View style={styles.card}>
@@ -245,24 +243,16 @@ const JugadoresTab: React.FC = () => {
             <Text style={styles.cardName}>{item.nombre}</Text>
             <Text style={styles.cardRut}>RUT: {item.rut}</Text>
             <View style={styles.categoriaContainer}>
-              <View style={[styles.categoriaIndicator, { backgroundColor: getColorCategoria(item.categoria) }]} />
-              <Text style={styles.categoriaText}>{getNombreCategoria(item.categoria)}</Text>
+              <View style={[styles.categoriaIndicator, { backgroundColor: getColorCategoria(item.categoriaId) }]} />
+              <Text style={styles.categoriaText}>{getNombreCategoria(item.categoriaId)}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.cardActions}>
           {/* Solo admins pueden editar/eliminar */}
-          {user?.role === 'admin' && (
+          {(user?.role === 'admin' || user?.role === 'admin_club') && (
             <>
-              <TouchableOpacity
-                style={[styles.button, item.bloqueado ? styles.buttonSuccess : styles.buttonWarning, isDeleting && styles.buttonDisabled]}
-                onPress={() => handleBloquear(item)}
-                disabled={isDeleting}
-              >
-                <Text style={styles.buttonText}>{item.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
                 onPress={() => handleEditar(item)}
@@ -350,14 +340,14 @@ const JugadoresTab: React.FC = () => {
         </TouchableOpacity>
 
         {categorias.map((cat) => {
-          const nombreMostrar = cat.nombre ? cat.nombre.substring(0, 5) : `M${cat.numero}`;
+          const nombreMostrar = cat.nombre ? cat.nombre.substring(0, 5) : 'Cat';
           return (
             <TouchableOpacity
-              key={String(cat.numero)}
-              style={[styles.filterButton, categoriaFiltro === cat.numero && styles.filterButtonActive]}
-              onPress={() => setCategoriaFiltro(cat.numero)}
+              key={cat.id}
+              style={[styles.filterButton, categoriaFiltro === cat.id && styles.filterButtonActive]}
+              onPress={() => setCategoriaFiltro(cat.id)}
             >
-              <Text style={[styles.filterButtonText, categoriaFiltro === cat.numero && styles.filterButtonTextActive]}>
+              <Text style={[styles.filterButtonText, categoriaFiltro === cat.id && styles.filterButtonTextActive]}>
                 {nombreMostrar}
               </Text>
             </TouchableOpacity>
@@ -368,7 +358,7 @@ const JugadoresTab: React.FC = () => {
       {/* Lista de jugadores */}
       <FlatList
         data={jugadoresFiltrados}
-        keyExtractor={(item) => item.rut}
+        keyExtractor={(item) => item.id}
         renderItem={renderJugador}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
@@ -390,7 +380,7 @@ const JugadoresTab: React.FC = () => {
       />
 
       {/* Botón crear - Solo para admins */}
-      {user?.role === 'admin' && (
+      {(user?.role === 'admin' || user?.role === 'admin_club') && (
         <TouchableOpacity
           style={styles.fab}
           onPress={handleCrear}

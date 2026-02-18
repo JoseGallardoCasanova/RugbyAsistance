@@ -10,26 +10,27 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Jugador, Categoria } from '../../types';
-import SupabaseService from '../../services/SupabaseService';
+import { Jugador, Categoria } from '../../types/v2';
+import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import { formatearRUT, validarRUT } from '../../utils/rutUtils';
+import { useClub } from '../../context/ClubContext';
 
 interface FormJugadorProps {
   visible: boolean;
   jugador?: Jugador;
-  categoriasPermitidas?: number[];
+  categoriasPermitidas?: string[]; // UUIDs de categorías
   onClose: () => void;
   onSave: (datos: Partial<Jugador>) => Promise<void>;
 }
 
 const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasPermitidas, onClose, onSave }) => {
+  const { club } = useClub();
   const [nombre, setNombre] = useState('');
   const [rut, setRut] = useState('');
   const [rutError, setRutError] = useState('');
-  const [categoria, setCategoria] = useState<number>(1);
+  const [categoria, setCategoria] = useState<string>(''); // UUID ahora
   const [guardando, setGuardando] = useState(false);
 
-  // ✅ NUEVO: Cargar categorías dinámicas
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
 
@@ -42,21 +43,22 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
   }, [visible]);
 
   const cargarCategorias = async () => {
+    if (!club) return;
+    
     try {
       setLoadingCategorias(true);
-      const cats = await SupabaseService.obtenerCategorias();
-      let activas = cats
-        .filter(c => c.activo !== false)
-        .sort((a, b) => a.numero - b.numero);
+      const cats = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      let ordenadas = cats.sort((a, b) => a.orden - b.orden);
 
+      // Si el entrenador tiene restricciones, filtrar por categorías permitidas (UUIDs)
       if (Array.isArray(categoriasPermitidas) && categoriasPermitidas.length > 0) {
-        activas = activas.filter(c => categoriasPermitidas.includes(c.numero));
+        ordenadas = ordenadas.filter(c => categoriasPermitidas.includes(c.id));
       }
-      setCategorias(activas);
+      setCategorias(ordenadas);
       
       // Si no hay categoría seleccionada y hay categorías disponibles, seleccionar la primera
-      if (!jugador && activas.length > 0) {
-        setCategoria(activas[0].numero);
+      if (!jugador && ordenadas.length > 0) {
+        setCategoria(ordenadas[0].id);
       }
     } catch (error) {
       console.error('Error al cargar categorías:', error);
@@ -69,7 +71,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
     if (jugador) {
       setNombre(jugador.nombre);
       setRut(jugador.rut);
-      setCategoria(jugador.categoria);
+      setCategoria(jugador.categoriaId); // UUID en V2
     } else {
       // Limpiar formulario
       setNombre('');
@@ -100,7 +102,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
     const datos: Partial<Jugador> = {
       nombre: nombre.trim(),
       rut: rut.trim(),
-      categoria: categoria,
+      categoriaId: categoria, // UUID en V2
     };
 
     setGuardando(true);
@@ -190,19 +192,19 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
               <View style={styles.categoriaSelector}>
                 {categorias.map((cat) => (
                   <TouchableOpacity
-                    key={String(cat.numero)}
+                    key={cat.id}
                     style={[
                       styles.categoriaOption,
-                      categoria === cat.numero && styles.categoriaOptionActive,
+                      categoria === cat.id && styles.categoriaOptionActive,
                     ]}
-                    onPress={() => setCategoria(cat.numero)}
+                    onPress={() => setCategoria(cat.id)}
                     disabled={guardando}
                   >
                     <View style={[styles.categoriaColor, { backgroundColor: cat.color }]} />
                     <Text
                       style={[
                         styles.categoriaOptionText,
-                        categoria === cat.numero && styles.categoriaOptionTextActive,
+                        categoria === cat.id && styles.categoriaOptionTextActive,
                       ]}
                     >
                       {cat.nombre}
