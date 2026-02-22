@@ -270,6 +270,26 @@ export interface ConfiguracionPagosClub {
 }
 
 // ============================================
+// ENTRENAMIENTOS
+// ============================================
+export type EstadoEntrenamiento = 'programado' | 'completado' | 'cancelado';
+
+export interface Entrenamiento {
+  id: string;
+  clubId: string;
+  categoriaId: string;
+  fecha: string;        // YYYY-MM-DD
+  horaInicio?: string;  // HH:MM
+  horaFin?: string;     // HH:MM
+  ubicacion?: string;
+  descripcion?: string;
+  estado: EstadoEntrenamiento;
+  creadoPor?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
 // LEGACY TYPES (V1 - para migración)
 // ============================================
 /**

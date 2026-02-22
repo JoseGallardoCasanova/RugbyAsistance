@@ -10,6 +10,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContextV2';
@@ -111,27 +113,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     Alert.alert('Sin permisos', 'Solo administradores y entrenadores pueden acceder');
   };
 
-  const handleConfigPress = () => {
-    if (user?.role === 'admin' || user?.role === 'admin_club') {
-      navigation.navigate('Configuracion');
-    } else {
-      Alert.alert('Sin permisos', 'Solo los administradores pueden configurar');
-    }
-  };
-
   const handlePerfilPress = () => {
     navigation.navigate('Perfil');
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro que deseas salir?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salir', onPress: logout, style: 'destructive' },
-      ]
-    );
   };
 
   const puedeVerCategoria = (categoria: Categoria): boolean => {
@@ -150,17 +133,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <StatusBar 
+          backgroundColor="#1a472a" 
+          barStyle="light-content" 
+          translucent={false}
+        />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#1a472a" />
           <Text style={styles.loadingText}>Cargando categorías...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar 
+        backgroundColor="#1a472a" 
+        barStyle="light-content" 
+        translucent={false}
+      />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
@@ -169,10 +162,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <View style={styles.headerText}>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>Hola, {userDisplayName}</Text>
             <Text style={styles.subtitle}>
-              {user?.role === 'admin' && 'Administrador'}              {user?.role === 'admin_club' && 'Administrador del Club'}              {user?.role === 'entrenador' && 'Entrenador'}
+              {user?.role === 'admin' && 'Administrador'}
+              {user?.role === 'admin_club' && 'Administrador del Club'}
+              {user?.role === 'entrenador' && 'Entrenador'}
               {user?.role === 'ayudante' && 'Ayudante'}
             </Text>
           </View>
@@ -180,22 +175,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         
         <View style={styles.headerButtons}>
           {(user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
-            <>
-              <TouchableOpacity onPress={handleAdminPress} style={styles.iconButton}>
-                <Text style={styles.iconButtonText}>⚙️</Text>
-              </TouchableOpacity>
-              {(user?.role === 'admin' || user?.role === 'admin_club') && (
-                <TouchableOpacity onPress={handleConfigPress} style={styles.iconButton}>
-                  <Text style={styles.iconButtonText}>🔧</Text>
-                </TouchableOpacity>
-              )}
-            </>
+            <TouchableOpacity onPress={handleAdminPress} style={styles.iconButton}>
+              <Text style={styles.iconButtonText}>⚙️</Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity onPress={handlePerfilPress} style={styles.iconButton}>
             <Text style={styles.iconButtonText}>👤</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
-            <Text style={styles.iconButtonText}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -267,7 +252,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           }}
         />
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -303,16 +288,16 @@ const styles = StyleSheet.create({
     height: 50,
     marginRight: 15,
   },
-  headerText: {
+  headerTextContainer: {
     flex: 1,
   },
   greeting: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#a8d5a8',
     marginTop: 2,
   },

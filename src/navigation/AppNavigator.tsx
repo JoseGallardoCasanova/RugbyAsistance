@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContextV2';
+import { RootStackParamList } from './types';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AsistenciaScreen from '../screens/AsistenciaScreen';
 import PerfilScreen from '../screens/PerfilScreen';
+import EstadisticasScreen from '../screens/EstadisticasScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import AdminScreen from '../screens/admin/AdminScreen';
 // import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScreen';
@@ -32,7 +34,7 @@ const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => (
   </View>
 );
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const { user, isLoading } = useAuth();
@@ -53,6 +55,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Asistencia" component={AsistenciaScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />
+            <Stack.Screen name="Estadisticas" component={EstadisticasScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />
             <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
             <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />

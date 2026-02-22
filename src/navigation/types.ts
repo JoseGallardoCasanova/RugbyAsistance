@@ -2,14 +2,14 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   Asistencia: {
-    categoriaNumero: number;
+    categoria: string;
     categoriaNombre: string;
-    categoriaColor: string;
   };
   Perfil: undefined;
+  Estadisticas: undefined;
   Configuracion: undefined;
   Admin: {
-    initialTab?: 'usuarios' | 'jugadores' | 'categorias';
+    initialTab?: 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario';
   } | undefined;
   ExportarAsistencias: undefined;
 };

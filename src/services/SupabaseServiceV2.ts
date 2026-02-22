@@ -17,7 +17,8 @@ import {
   Club, 
   Jugador, 
   Categoria, 
-  Asistencia 
+  Asistencia,
+  Entrenamiento
 } from '../types/v2';
 
 class SupabaseServiceV2 {
@@ -953,6 +954,445 @@ class SupabaseServiceV2 {
       notas: data.notas,
       createdAt: data.created_at,
     };
+  }
+
+  // ============================================
+  // ESTADÍSTICAS DE ASISTENCIA
+  // ============================================
+
+  /**
+   * Obtiene estadísticas generales de una categoría
+   */
+  async getEstadisticasCategoria(
+    clubId: string, 
+    categoriaId: string, 
+    fechaInicio?: string, 
+    fechaFin?: string
+  ): Promise<{
+    totalJugadores: number;
+    totalSesiones: number;
+    promedioAsistencia: number;
+    mejorAsistencia: { jugadorId: string; porcentaje: number } | null;
+    peorAsistencia: { jugadorId: string; porcentaje: number } | null;
+  }> {
+    try {
+      console.log(`📊 [ESTADÍSTICAS] Calculando para categoría: ${categoriaId}`);
+
+      // Query base
+      let query = this.supabase
+        .from('asistencias')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('categoria_id', categoriaId);
+
+      if (fechaInicio) query = query.gte('fecha', fechaInicio);
+      if (fechaFin) query = query.lte('fecha', fechaFin);
+
+      const { data: asistencias, error } = await query;
+      if (error) throw error;
+
+      if (!asistencias || asistencias.length === 0) {
+        return {
+          totalJugadores: 0,
+          totalSesiones: 0,
+          promedioAsistencia: 0,
+          mejorAsistencia: null,
+          peorAsistencia: null,
+        };
+      }
+
+      // Calcular estadísticas
+      const jugadoresUnicos = new Set(asistencias.map(a => a.jugador_id));
+      const fechasUnicas = new Set(asistencias.map(a => a.fecha));
+      
+      const totalAsistencias = asistencias.filter(a => a.asistio).length;
+      const totalPosibles = asistencias.length;
+      const promedioAsistencia = (totalAsistencias / totalPosibles) * 100;
+
+      // Calcular por jugador
+      const estadisticasPorJugador = new Map<string, { presentes: number; total: number }>();
+      asistencias.forEach(a => {
+        const stats = estadisticasPorJugador.get(a.jugador_id) || { presentes: 0, total: 0 };
+        stats.total++;
+        if (a.asistio) stats.presentes++;
+        estadisticasPorJugador.set(a.jugador_id, stats);
+      });
+
+      // Encontrar mejor y peor
+      let mejorAsistencia: { jugadorId: string; porcentaje: number } | null = null;
+      let peorAsistencia: { jugadorId: string; porcentaje: number } | null = null;
+
+      estadisticasPorJugador.forEach((stats, jugadorId) => {
+        const porcentaje = (stats.presentes / stats.total) * 100;
+        
+        if (!mejorAsistencia || porcentaje > mejorAsistencia.porcentaje) {
+          mejorAsistencia = { jugadorId, porcentaje };
+        }
+        
+        if (!peorAsistencia || porcentaje < peorAsistencia.porcentaje) {
+          peorAsistencia = { jugadorId, porcentaje };
+        }
+      });
+
+      return {
+        totalJugadores: jugadoresUnicos.size,
+        totalSesiones: fechasUnicas.size,
+        promedioAsistencia: Math.round(promedioAsistencia * 10) / 10,
+        mejorAsistencia,
+        peorAsistencia,
+      };
+    } catch (error: any) {
+      console.error('❌ [ESTADÍSTICAS] Error:', error.message);
+      return {
+        totalJugadores: 0,
+        totalSesiones: 0,
+        promedioAsistencia: 0,
+        mejorAsistencia: null,
+        peorAsistencia: null,
+      };
+    }
+  }
+
+  /**
+   * Obtiene estadísticas de un jugador específico
+   */
+  async getEstadisticasJugador(
+    clubId: string,
+    jugadorId: string,
+    fechaInicio?: string,
+    fechaFin?: string
+  ): Promise<{
+    totalSesiones: number;
+    sesionesPresente: number;
+    sesionesAusente: number;
+    porcentajeAsistencia: number;
+    rachaActual: number;
+    mejorRacha: number;
+  }> {
+    try {
+      let query = this.supabase
+        .from('asistencias')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: true });
+
+      if (fechaInicio) query = query.gte('fecha', fechaInicio);
+      if (fechaFin) query = query.lte('fecha', fechaFin);
+
+      const { data: asistencias, error } = await query;
+      if (error) throw error;
+
+      if (!asistencias || asistencias.length === 0) {
+        return {
+          totalSesiones: 0,
+          sesionesPresente: 0,
+          sesionesAusente: 0,
+          porcentajeAsistencia: 0,
+          rachaActual: 0,
+          mejorRacha: 0,
+        };
+      }
+
+      const presentes = asistencias.filter(a => a.asistio).length;
+      const ausentes = asistencias.length - presentes;
+      const porcentaje = (presentes / asistencias.length) * 100;
+
+      // Calcular rachas
+      let rachaActual = 0;
+      let mejorRacha = 0;
+      let rachaTemp = 0;
+
+      for (let i = asistencias.length - 1; i >= 0; i--) {
+        if (asistencias[i].asistio) {
+          rachaTemp++;
+          if (i === asistencias.length - 1) rachaActual = rachaTemp;
+          mejorRacha = Math.max(mejorRacha, rachaTemp);
+        } else {
+          if (i === asistencias.length - 1) rachaActual = 0;
+          rachaTemp = 0;
+        }
+      }
+
+      return {
+        totalSesiones: asistencias.length,
+        sesionesPresente: presentes,
+        sesionesAusente: ausentes,
+        porcentajeAsistencia: Math.round(porcentaje * 10) / 10,
+        rachaActual,
+        mejorRacha,
+      };
+    } catch (error: any) {
+      console.error('❌ [ESTADÍSTICAS] Error jugador:', error.message);
+      return {
+        totalSesiones: 0,
+        sesionesPresente: 0,
+        sesionesAusente: 0,
+        porcentajeAsistencia: 0,
+        rachaActual: 0,
+        mejorRacha: 0,
+      };
+    }
+  }
+
+  /**
+   * Obtiene ranking de jugadores por asistencia
+   */
+  async getRankingAsistencia(
+    clubId: string,
+    categoriaId: string,
+    fechaInicio?: string,
+    fechaFin?: string,
+    limite: number = 10
+  ): Promise<Array<{
+    jugadorId: string;
+    totalSesiones: number;
+    sesionesPresente: number;
+    porcentajeAsistencia: number;
+  }>> {
+    try {
+      let query = this.supabase
+        .from('asistencias')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('categoria_id', categoriaId);
+
+      if (fechaInicio) query = query.gte('fecha', fechaInicio);
+      if (fechaFin) query = query.lte('fecha', fechaFin);
+
+      const { data: asistencias, error } = await query;
+      if (error) throw error;
+
+      if (!asistencias || asistencias.length === 0) return [];
+
+      // Agrupar por jugador
+      const statsPorJugador = new Map<string, { total: number; presentes: number }>();
+      
+      asistencias.forEach(a => {
+        const stats = statsPorJugador.get(a.jugador_id) || { total: 0, presentes: 0 };
+        stats.total++;
+        if (a.asistio) stats.presentes++;
+        statsPorJugador.set(a.jugador_id, stats);
+      });
+
+      // Convertir a array y ordenar
+      const ranking = Array.from(statsPorJugador.entries())
+        .map(([jugadorId, stats]) => ({
+          jugadorId,
+          totalSesiones: stats.total,
+          sesionesPresente: stats.presentes,
+          porcentajeAsistencia: Math.round((stats.presentes / stats.total) * 1000) / 10,
+        }))
+        .sort((a, b) => b.porcentajeAsistencia - a.porcentajeAsistencia)
+        .slice(0, limite);
+
+      return ranking;
+    } catch (error: any) {
+      console.error('❌ [ESTADÍSTICAS] Error ranking:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene tendencias de asistencia en el tiempo (agrupado por semana)
+   */
+  async getTendenciasAsistencia(
+    clubId: string,
+    categoriaId: string,
+    fechaInicio: string,
+    fechaFin: string
+  ): Promise<Array<{
+    periodo: string;
+    totalSesiones: number;
+    totalPresentes: number;
+    porcentajeAsistencia: number;
+  }>> {
+    try {
+      const { data: asistencias, error } = await this.supabase
+        .from('asistencias')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('categoria_id', categoriaId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin)
+        .order('fecha', { ascending: true });
+
+      if (error) throw error;
+      if (!asistencias || asistencias.length === 0) return [];
+
+      // Agrupar por semana
+      const statsPorSemana = new Map<string, { total: number; presentes: number }>();
+      
+      asistencias.forEach(a => {
+        const fecha = new Date(a.fecha);
+        // Obtener número de semana del año
+        const inicioAnio = new Date(fecha.getFullYear(), 0, 1);
+        const dias = Math.floor((fecha.getTime() - inicioAnio.getTime()) / (24 * 60 * 60 * 1000));
+        const semana = Math.ceil((dias + inicioAnio.getDay() + 1) / 7);
+        const periodo = `${fecha.getFullYear()}-S${semana}`;
+        
+        const stats = statsPorSemana.get(periodo) || { total: 0, presentes: 0 };
+        stats.total++;
+        if (a.asistio) stats.presentes++;
+        statsPorSemana.set(periodo, stats);
+      });
+
+      // Convertir a array
+      return Array.from(statsPorSemana.entries())
+        .map(([periodo, stats]) => ({
+          periodo,
+          totalSesiones: stats.total,
+          totalPresentes: stats.presentes,
+          porcentajeAsistencia: Math.round((stats.presentes / stats.total) * 1000) / 10,
+        }))
+        .sort((a, b) => a.periodo.localeCompare(b.periodo));
+    } catch (error: any) {
+      console.error('❌ [ESTADÍSTICAS] Error tendencias:', error.message);
+      return [];
+    }
+  }
+
+  // ============================================
+  // ENTRENAMIENTOS
+  // ============================================
+
+  async getEntrenamientosByCategoria(
+    clubId: string,
+    categoriaId: string,
+    fechaInicio?: string,
+    fechaFin?: string
+  ): Promise<any[]> {
+    try {
+      let query = this.supabase
+        .from('entrenamientos')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('categoria_id', categoriaId)
+        .order('fecha', { ascending: true })
+        .order('hora_inicio', { ascending: true });
+
+      if (fechaInicio) query = query.gte('fecha', fechaInicio);
+      if (fechaFin) query = query.lte('fecha', fechaFin);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map((e: any) => ({
+        id: e.id,
+        clubId: e.club_id,
+        categoriaId: e.categoria_id,
+        fecha: e.fecha,
+        horaInicio: e.hora_inicio,
+        horaFin: e.hora_fin,
+        ubicacion: e.ubicacion,
+        descripcion: e.descripcion,
+        estado: e.estado || 'programado',
+        creadoPor: e.creado_por,
+        createdAt: e.created_at,
+        updatedAt: e.updated_at,
+      }));
+    } catch (error: any) {
+      console.error('❌ [ENTRENAMIENTOS] Error al obtener:', error.message);
+      return [];
+    }
+  }
+
+  async getEntrenamientosByMes(
+    clubId: string,
+    categoriaId: string,
+    anio: number,
+    mes: number // 1-12
+  ): Promise<any[]> {
+    const fechaInicio = `${anio}-${String(mes).padStart(2, '0')}-01`;
+    const ultimoDia = new Date(anio, mes, 0).getDate();
+    const fechaFin = `${anio}-${String(mes).padStart(2, '0')}-${ultimoDia}`;
+    return this.getEntrenamientosByCategoria(clubId, categoriaId, fechaInicio, fechaFin);
+  }
+
+  async crearEntrenamiento(
+    clubId: string,
+    datos: {
+      categoriaId: string;
+      fecha: string;
+      horaInicio?: string;
+      horaFin?: string;
+      ubicacion?: string;
+      descripcion?: string;
+      creadoPor?: string;
+    }
+  ): Promise<any | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('entrenamientos')
+        .insert({
+          club_id: clubId,
+          categoria_id: datos.categoriaId,
+          fecha: datos.fecha,
+          hora_inicio: datos.horaInicio || null,
+          hora_fin: datos.horaFin || null,
+          ubicacion: datos.ubicacion || null,
+          descripcion: datos.descripcion || null,
+          estado: 'programado',
+          creado_por: datos.creadoPor || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      console.log('✅ [ENTRENAMIENTOS] Creado:', data.id);
+      return data;
+    } catch (error: any) {
+      console.error('❌ [ENTRENAMIENTOS] Error al crear:', error.message);
+      return null;
+    }
+  }
+
+  async actualizarEntrenamiento(
+    entrenamientoId: string,
+    datos: {
+      fecha?: string;
+      horaInicio?: string;
+      horaFin?: string;
+      ubicacion?: string;
+      descripcion?: string;
+      estado?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('entrenamientos')
+        .update({
+          ...(datos.fecha && { fecha: datos.fecha }),
+          hora_inicio: datos.horaInicio ?? null,
+          hora_fin: datos.horaFin ?? null,
+          ubicacion: datos.ubicacion ?? null,
+          descripcion: datos.descripcion ?? null,
+          ...(datos.estado && { estado: datos.estado }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', entrenamientoId);
+
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [ENTRENAMIENTOS] Error al actualizar:', error.message);
+      return false;
+    }
+  }
+
+  async eliminarEntrenamiento(entrenamientoId: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('entrenamientos')
+        .delete()
+        .eq('id', entrenamientoId);
+
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [ENTRENAMIENTOS] Error al eliminar:', error.message);
+      return false;
+    }
   }
 
   // ============================================

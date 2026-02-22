@@ -5,10 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import UsuariosTab from './UsuariosTab';
 import JugadoresTab from './JugadoresTab';
 import CategoriasTab from './CategoriasTab';
+import EstadisticasTab from './EstadisticasTab';
+import CalendarioTab from './CalendarioTab';
 import ModalExportarAsistencias from './ModalExportarAsistencias';
 import { useAuth } from '../../context/AuthContextV2';
 import { useClub } from '../../context/ClubContext';
@@ -18,7 +21,7 @@ interface AdminScreenProps {
   route?: any;
 }
 
-type TabType = 'usuarios' | 'jugadores' | 'categorias';
+type TabType = 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario';
 
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
@@ -27,8 +30,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const [modalExportarVisible, setModalExportarVisible] = useState(false);
 
   const allowedTabs = useMemo<TabType[]>(() => {
-    if (user?.role === 'admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias'];
-    if (user?.role === 'entrenador') return ['jugadores'];
+    if (user?.role === 'admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario'];
+    if (user?.role === 'entrenador') return ['jugadores', 'estadisticas', 'calendario'];
     return [];
   }, [user?.role]);
 
@@ -98,7 +101,12 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
+      >
         {allowedTabs.includes('usuarios') && (
           <TouchableOpacity
             style={[styles.tab, activeTab === 'usuarios' && styles.tabActive]}
@@ -131,13 +139,37 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         )}
-      </View>
+
+        {allowedTabs.includes('estadisticas') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'estadisticas' && styles.tabActive]}
+            onPress={() => setActiveTab('estadisticas')}
+          >
+            <Text style={[styles.tabText, activeTab === 'estadisticas' && styles.tabTextActive]}>
+              📊 Estadísticas
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {allowedTabs.includes('calendario') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'calendario' && styles.tabActive]}
+            onPress={() => setActiveTab('calendario')}
+          >
+            <Text style={[styles.tabText, activeTab === 'calendario' && styles.tabTextActive]}>
+              📅 Calendario
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
       {/* Content */}
       <View style={styles.content}>
         {activeTab === 'usuarios' && allowedTabs.includes('usuarios') && <UsuariosTab />}
         {activeTab === 'jugadores' && allowedTabs.includes('jugadores') && <JugadoresTab />}
         {activeTab === 'categorias' && allowedTabs.includes('categorias') && <CategoriasTab />}
+        {activeTab === 'estadisticas' && allowedTabs.includes('estadisticas') && <EstadisticasTab />}
+        {activeTab === 'calendario' && allowedTabs.includes('calendario') && <CalendarioTab />}
       </View>
 
       {/* Modal de Exportación */}
@@ -185,14 +217,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   tabsContainer: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    maxHeight: 55,
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 4,
   },
   tab: {
-    flex: 1,
     paddingVertical: 15,
+    paddingHorizontal: 14,
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
