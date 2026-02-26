@@ -32,7 +32,15 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo_Old_Green.png",
+          "color": "#1a472a",
+          "defaultChannel": "entrenamientos"
+        }
+      ]
     ],
     "extra": {
       "eas": {

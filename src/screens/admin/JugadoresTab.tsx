@@ -9,9 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  ScrollView, // ✅ AGREGADO: Import faltante
+  ScrollView,
+  Modal,
 } from 'react-native';
-import { Jugador, Categoria } from '../../types/v2';
+import { Jugador, Categoria, User, RelacionApoderado } from '../../types/v2';
 import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
@@ -33,6 +34,14 @@ const JugadoresTab: React.FC = () => {
   const [jugadorEditar, setJugadorEditar] = useState<Jugador | undefined>();
   const [jugadorDetalles, setJugadorDetalles] = useState<Jugador | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Gestión apoderados
+  const [modalApodVisible, setModalApodVisible] = useState(false);
+  const [jugadorApod, setJugadorApod] = useState<Jugador | null>(null);
+  const [apodVinculados, setApodVinculados] = useState<{ relacion: RelacionApoderado; apoderado: User }[]>([]);
+  const [apodDisponibles, setApodDisponibles] = useState<User[]>([]);
+  const [busquedaApod, setBusquedaApod] = useState('');
+  const [cargandoApod, setCargandoApod] = useState(false);
 
   const categoriasEntrenador = useMemo(() => {
     if (user?.role !== 'entrenador') return undefined;
@@ -226,6 +235,54 @@ const JugadoresTab: React.FC = () => {
     }
   };
 
+  const handleGestionarApoderados = async (jugador: Jugador) => {
+    if (!club) return;
+    setJugadorApod(jugador);
+    setCargandoApod(true);
+    setModalApodVisible(true);
+    setBusquedaApod('');
+    try {
+      const [vinculados, todos] = await Promise.all([
+        SupabaseServiceV2.getApoderadosByJugador(jugador.id),
+        SupabaseServiceV2.getUsuariosByClub(club.id),
+      ]);
+      setApodVinculados(vinculados);
+      setApodDisponibles(todos.filter(u => u.role === 'apoderado'));
+    } finally {
+      setCargandoApod(false);
+    }
+  };
+
+  const handleVincularApod = async (apoderado: User) => {
+    if (!club || !jugadorApod) return;
+    const ok = await SupabaseServiceV2.vincularApoderadoJugador(club.id, apoderado.id, jugadorApod.id);
+    if (ok) {
+      // Recargar
+      const vinculados = await SupabaseServiceV2.getApoderadosByJugador(jugadorApod.id);
+      setApodVinculados(vinculados);
+      Alert.alert('✅', `${apoderado.nombre} vinculado como apoderado`);
+    } else {
+      Alert.alert('❌ Error', 'No se pudo crear el vínculo');
+    }
+  };
+
+  const handleDesvincularApod = async (apoderadoId: string, nombre: string) => {
+    if (!jugadorApod) return;
+    Alert.alert('Desvincular', `¿Eliminar a ${nombre} como apoderado?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Desvincular', style: 'destructive',
+        onPress: async () => {
+          const ok = await SupabaseServiceV2.desvincularApoderadoJugador(apoderadoId, jugadorApod.id);
+          if (ok) {
+            const vinculados = await SupabaseServiceV2.getApoderadosByJugador(jugadorApod.id);
+            setApodVinculados(vinculados);
+          }
+        },
+      },
+    ]);
+  };
+
   const jugadoresFiltrados = jugadores.filter(j => {
     const matchBusqueda = j.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
                           j.rut.includes(busqueda);
@@ -271,6 +328,13 @@ const JugadoresTab: React.FC = () => {
                 ) : (
                   <Text style={styles.buttonText}>🗑️ Eliminar</Text>
                 )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#5c6bc0' }]}
+                onPress={() => handleGestionarApoderados(item)}
+              >
+                <Text style={styles.buttonText}>👨‍👩‍👧 Apod.</Text>
               </TouchableOpacity>
             </>
           )}
@@ -404,6 +468,90 @@ const JugadoresTab: React.FC = () => {
         jugador={jugadorDetalles}
         onClose={() => setModalDetallesVisible(false)}
       />
+
+      {/* Modal Apoderados */}
+      <Modal visible={modalApodVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalApod}>
+            <View style={styles.modalApodHeader}>
+              <Text style={styles.modalApodTitulo}>👨‍👩‍👧 Apoderados</Text>
+              <TouchableOpacity onPress={() => setModalApodVisible(false)}>
+                <Text style={{ fontSize: 22, color: '#fff' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, padding: 14 }}>
+              <Text style={styles.modalApodSub}>Jugador: {jugadorApod?.nombre}</Text>
+
+              {cargandoApod ? (
+                <ActivityIndicator color="#1a472a" style={{ marginVertical: 20 }} />
+              ) : (
+                <>
+                  {/* Vinculados actuales */}
+                  <Text style={styles.modalApodSeccion}>Apoderados vinculados</Text>
+                  {apodVinculados.length === 0 ? (
+                    <Text style={styles.modalApodVacio}>Sin apoderados vinculados</Text>
+                  ) : (
+                    apodVinculados.map(({ relacion, apoderado }) => (
+                      <View key={relacion.id} style={styles.apodRow}>
+                        <Text style={styles.apodNombre}>👤 {apoderado.nombre} {apoderado.apellido}</Text>
+                        <Text style={styles.apodRol}>{relacion.tipoRelacion}</Text>
+                        <TouchableOpacity
+                          style={styles.apodRemoveBtn}
+                          onPress={() => handleDesvincularApod(apoderado.id, `${apoderado.nombre} ${apoderado.apellido}`)}
+                        >
+                          <Text style={{ color: '#c62828', fontWeight: 'bold' }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+
+                  {/* Disponibles para vincular */}
+                  <Text style={[styles.modalApodSeccion, { marginTop: 16 }]}>
+                    Usuarios con rol Apoderado
+                  </Text>
+                  <TextInput
+                    style={styles.modalApodSearch}
+                    placeholder="🔍 Buscar por nombre..."
+                    value={busquedaApod}
+                    onChangeText={setBusquedaApod}
+                  />
+                  {apodDisponibles
+                    .filter(u => {
+                      const yaVinculado = apodVinculados.some(v => v.apoderado.id === u.id);
+                      const matchBusq = `${u.nombre} ${u.apellido}`.toLowerCase().includes(busquedaApod.toLowerCase());
+                      return !yaVinculado && matchBusq;
+                    })
+                    .map(u => (
+                      <TouchableOpacity
+                        key={u.id}
+                        style={styles.apodDisponibleRow}
+                        onPress={() => handleVincularApod(u)}
+                      >
+                        <Text style={styles.apodNombre}>👤 {u.nombre} {u.apellido}</Text>
+                        <Text style={styles.apodVincularText}>⭕ Vincular</Text>
+                      </TouchableOpacity>
+                    ))
+                  }
+                  {apodDisponibles.filter(u => !apodVinculados.some(v => v.apoderado.id === u.id)).length === 0 && (
+                    <Text style={styles.modalApodVacio}>
+                      No hay usuarios con rol apoderado sin vincular.
+                      Crea uno desde la pestaña Usuarios.
+                    </Text>
+                  )}
+                </>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.modalApodCerrarBtn}
+              onPress={() => setModalApodVisible(false)}
+            >
+              <Text style={styles.modalApodCerrarText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -608,6 +756,50 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+
+  // Apoderados modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+  },
+  modalApod: {
+    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
+  modalApodHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 16, backgroundColor: '#5c6bc0',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+  },
+  modalApodTitulo: { fontSize: 17, fontWeight: 'bold', color: '#fff' },
+  modalApodSub: { fontSize: 13, color: '#666', marginBottom: 12 },
+  modalApodSeccion: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 8 },
+  modalApodVacio: { fontSize: 13, color: '#aaa', fontStyle: 'italic', marginBottom: 8 },
+  apodRow: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 10, backgroundColor: '#f5f5f5',
+    borderRadius: 8, marginBottom: 6,
+  },
+  apodNombre: { flex: 1, fontSize: 14, color: '#222' },
+  apodRol: { fontSize: 12, color: '#5c6bc0', marginRight: 10 },
+  apodRemoveBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#ffeaea', justifyContent: 'center', alignItems: 'center',
+  },
+  apodDisponibleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    padding: 10, backgroundColor: '#e8f5e9',
+    borderRadius: 8, marginBottom: 6,
+  },
+  apodVincularText: { fontSize: 13, color: '#1a472a', fontWeight: '600' },
+  modalApodSearch: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
+    padding: 10, fontSize: 14, marginBottom: 10, backgroundColor: '#fafafa',
+  },
+  modalApodCerrarBtn: {
+    margin: 14, backgroundColor: '#5c6bc0',
+    borderRadius: 10, padding: 14, alignItems: 'center',
+  },
+  modalApodCerrarText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
 });
 
 export default JugadoresTab;

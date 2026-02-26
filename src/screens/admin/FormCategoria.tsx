@@ -12,6 +12,16 @@ import {
 } from 'react-native';
 import { Categoria } from '../../types/v2';
 
+const DIAS_SEMANA = [
+  { key: 'lunes',     label: 'Lun' },
+  { key: 'martes',    label: 'Mar' },
+  { key: 'miercoles', label: 'Mié' },
+  { key: 'jueves',    label: 'Jue' },
+  { key: 'viernes',   label: 'Vie' },
+  { key: 'sabado',    label: 'Sáb' },
+  { key: 'domingo',   label: 'Dom' },
+];
+
 interface FormCategoriaProps {
   visible: boolean;
   categoria?: Categoria;
@@ -31,6 +41,8 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
   const [nombre, setNombre] = useState('');
   const [orden, setOrden] = useState('');
   const [color, setColor] = useState('#1a472a');
+  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
+  const [horarios, setHorarios] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -38,11 +50,14 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
       setNombre(categoria.nombre);
       setOrden(categoria.orden?.toString() || '');
       setColor(categoria.color || '#1a472a');
+      setDiasSeleccionados(categoria.diasEntrenamiento || []);
+      setHorarios(categoria.horarios || {});
     } else {
-      // Limpiar formulario
       setNombre('');
       setOrden('');
       setColor('#1a472a');
+      setDiasSeleccionados([]);
+      setHorarios({});
     }
   }, [categoria, visible]);
 
@@ -53,10 +68,17 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
       return;
     }
 
+    const horariosLimpios: Record<string, string> = {};
+    diasSeleccionados.forEach(dia => {
+      if (horarios[dia]?.trim()) horariosLimpios[dia] = horarios[dia].trim();
+    });
+
     const datos: Partial<Categoria> = {
       nombre: nombre.trim(),
       color: color,
       orden: orden.trim() ? parseInt(orden) : undefined,
+      diasEntrenamiento: diasSeleccionados,
+      horarios: Object.keys(horariosLimpios).length > 0 ? horariosLimpios : undefined,
     };
 
     setGuardando(true);
@@ -107,6 +129,60 @@ const FormCategoria: React.FC<FormCategoriaProps> = ({ visible, categoria, onClo
               maxLength={3}
             />
             <Text style={styles.hint}>Número para ordenar las categorías</Text>
+
+            {/* Días de entrenamiento */}
+            <Text style={styles.label}>Días de entrenamiento</Text>
+            <Text style={styles.hint}>Selecciona los días que entrena esta categoría</Text>
+            <View style={styles.diasContainer}>
+              {DIAS_SEMANA.map(dia => {
+                const activo = diasSeleccionados.includes(dia.key);
+                return (
+                  <TouchableOpacity
+                    key={dia.key}
+                    style={[styles.diaChip, activo && styles.diaChipActivo]}
+                    onPress={() => {
+                      if (activo) {
+                        setDiasSeleccionados(prev => prev.filter(d => d !== dia.key));
+                        setHorarios(prev => { const h = { ...prev }; delete h[dia.key]; return h; });
+                      } else {
+                        setDiasSeleccionados(prev => [...prev, dia.key]);
+                      }
+                    }}
+                    disabled={guardando}
+                  >
+                    <Text style={[styles.diaChipText, activo && styles.diaChipTextActivo]}>
+                      {dia.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Horarios por día */}
+            {diasSeleccionados.length > 0 && (
+              <>
+                <Text style={[styles.label, { marginTop: 18 }]}>Horarios (opcional)</Text>
+                <Text style={styles.hint}>Ej: 18:00-20:00</Text>
+                {diasSeleccionados
+                  .sort((a, b) => DIAS_SEMANA.findIndex(d => d.key === a) - DIAS_SEMANA.findIndex(d => d.key === b))
+                  .map(diaKey => {
+                    const diaLabel = DIAS_SEMANA.find(d => d.key === diaKey)?.label ?? diaKey;
+                    return (
+                      <View key={diaKey} style={styles.horarioRow}>
+                        <Text style={styles.horarioLabel}>{diaLabel}</Text>
+                        <TextInput
+                          style={styles.horarioInput}
+                          value={horarios[diaKey] || ''}
+                          onChangeText={val => setHorarios(prev => ({ ...prev, [diaKey]: val }))}
+                          placeholder="18:00-20:00"
+                          editable={!guardando}
+                          maxLength={15}
+                        />
+                      </View>
+                    );
+                  })}
+              </>
+            )}
           </ScrollView>
 
           {/* Botones */}
@@ -274,6 +350,54 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  diasContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 5,
+  },
+  diaChip: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  diaChipActivo: {
+    borderColor: '#1a472a',
+    backgroundColor: '#1a472a',
+  },
+  diaChipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  diaChipTextActivo: {
+    color: '#fff',
+  },
+  horarioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 10,
+  },
+  horarioLabel: {
+    width: 32,
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1a472a',
+  },
+  horarioInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
   },
 });
 

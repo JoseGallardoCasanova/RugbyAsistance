@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContextV2';
 import { RootStackParamList } from './types';
 import LoginScreen from '../screens/LoginScreen';
@@ -11,28 +10,10 @@ import PerfilScreen from '../screens/PerfilScreen';
 import EstadisticasScreen from '../screens/EstadisticasScreen';
 import ConfiguracionScreen from '../screens/ConfiguracionScreen';
 import AdminScreen from '../screens/admin/AdminScreen';
-// import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScreen';
-
-// COMPONENTE INLINE TEMPORAL PARA PROBAR
-const ExportarAsistenciasScreenTEMP = ({ navigation }: any) => (
-  <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-    <View style={{ backgroundColor: '#1a472a', padding: 50 }}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={{ color: '#fff', fontSize: 16 }}>← Volver</Text>
-      </TouchableOpacity>
-      <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 10 }}>
-        📊 Exportar Asistencias
-      </Text>
-    </View>
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>✅ FUNCIONA!</Text>
-      <Text style={{ fontSize: 16, textAlign: 'center', color: '#666' }}>
-        La navegación está funcionando correctamente.{'\n\n'}
-        Ahora implementaremos la funcionalidad de exportación.
-      </Text>
-    </View>
-  </View>
-);
+import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScreen';
+import PerfilJugadorScreen from '../screens/PerfilJugadorScreen';
+import ApoderadoScreen from '../screens/ApoderadoScreen';
+import PagoScreen from '../screens/PagoScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -58,7 +39,10 @@ const AppNavigator = () => {
             <Stack.Screen name="Estadisticas" component={EstadisticasScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />
             <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
-            <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreenTEMP} />
+            <Stack.Screen name="ExportarAsistencias" component={ExportarAsistenciasScreen} />
+            <Stack.Screen name="PerfilJugador" component={PerfilJugadorScreen} />
+            <Stack.Screen name="Apoderado" component={ApoderadoScreen} />
+            <Stack.Screen name="Pago" component={PagoScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

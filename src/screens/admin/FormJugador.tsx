@@ -10,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Jugador, Categoria } from '../../types/v2';
+import { Jugador, Categoria, User } from '../../types/v2';
 import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import { formatearRUT, validarRUT } from '../../utils/rutUtils';
 import { useClub } from '../../context/ClubContext';
@@ -33,6 +33,8 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(true);
+  const [usuarioId, setUsuarioId] = useState<string | undefined>(undefined);
+  const [usuarios, setUsuarios] = useState<User[]>([]);
 
   const esEntrenadorRestringido = Array.isArray(categoriasPermitidas);
 
@@ -47,7 +49,11 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
     
     try {
       setLoadingCategorias(true);
-      const cats = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      const [cats, users] = await Promise.all([
+        SupabaseServiceV2.getCategoriasByClub(club.id),
+        SupabaseServiceV2.getUsuariosByClub(club.id),
+      ]);
+      setUsuarios(users.filter(u => u.role === 'jugador'));
       let ordenadas = cats.sort((a, b) => a.orden - b.orden);
 
       // Si el entrenador tiene restricciones, filtrar por categorías permitidas (UUIDs)
@@ -72,10 +78,12 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
       setNombre(jugador.nombre);
       setRut(jugador.rut);
       setCategoria(jugador.categoriaId); // UUID en V2
+      setUsuarioId(jugador.usuarioId);
     } else {
       // Limpiar formulario
       setNombre('');
       setRut('');
+      setUsuarioId(undefined);
       // Categoría se establece cuando cargan las categorías
     }
   }, [jugador, visible]);
@@ -103,6 +111,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
       nombre: nombre.trim(),
       rut: rut.trim(),
       categoriaId: categoria, // UUID en V2
+      usuarioId: usuarioId,
     };
 
     setGuardando(true);
@@ -209,6 +218,46 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
                     >
                       {cat.nombre}
                     </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Usuario vinculado */}
+            <Text style={styles.label}>Usuario vinculado (opcional)</Text>
+            <Text style={styles.helperText}>
+              Vincula este jugador a una cuenta de usuario con rol "Jugador" para que pueda ver su perfil en la app.
+            </Text>
+            {usuarios.length === 0 ? (
+              <View style={styles.noCategoriesContainer}>
+                <Text style={styles.noCategoriesText}>
+                  No hay usuarios con rol Jugador. Crea un usuario con ese rol desde la pestaña Usuarios.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.categoriaSelector}>
+                {/* Opción sin vincular */}
+                <TouchableOpacity
+                  style={[styles.categoriaOption, !usuarioId && styles.categoriaOptionActive]}
+                  onPress={() => setUsuarioId(undefined)}
+                  disabled={guardando}
+                >
+                  <Text style={[styles.categoriaOptionText, !usuarioId && styles.categoriaOptionTextActive]}>
+                    🚫 Sin vincular
+                  </Text>
+                </TouchableOpacity>
+                {usuarios.map((u) => (
+                  <TouchableOpacity
+                    key={u.id}
+                    style={[styles.categoriaOption, usuarioId === u.id && styles.categoriaOptionActive]}
+                    onPress={() => setUsuarioId(u.id)}
+                    disabled={guardando}
+                  >
+                    <Text style={[styles.categoriaOptionText, usuarioId === u.id && styles.categoriaOptionTextActive]}>
+                      👤 {u.nombre} {u.apellido}{' '}
+                      <Text style={{ fontSize: 12, color: '#999' }}>(@{u.username})</Text>
+                    </Text>
+                    {usuarioId === u.id && <Text style={styles.checkmark}>✓</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -389,6 +438,12 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
     fontSize: 12,
     marginTop: 5,
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#1a472a',
+    fontWeight: 'bold',
+    marginLeft: 'auto',
   },
 });
 

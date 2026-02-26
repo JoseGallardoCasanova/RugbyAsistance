@@ -9,7 +9,10 @@ export type RootStackParamList = {
   Estadisticas: undefined;
   Configuracion: undefined;
   Admin: {
-    initialTab?: 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario';
+    initialTab?: 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos';
   } | undefined;
   ExportarAsistencias: undefined;
+  PerfilJugador: { jugadorId?: string } | undefined;
+  Apoderado: undefined;
+  Pago: { jugadorIds: string[]; tipo?: 'mensualidad' | 'matricula' | 'anual' };
 };

@@ -168,6 +168,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               {user?.role === 'admin' && 'Administrador'}
               {user?.role === 'admin_club' && 'Administrador del Club'}
               {user?.role === 'entrenador' && 'Entrenador'}
+              {user?.role === 'jugador' && 'Jugador'}
+              {user?.role === 'apoderado' && 'Apoderado'}
               {user?.role === 'ayudante' && 'Ayudante'}
             </Text>
           </View>
@@ -179,6 +181,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Text style={styles.iconButtonText}>⚙️</Text>
             </TouchableOpacity>
           )}
+          {user?.role === 'apoderado' && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Apoderado')}
+              style={styles.iconButton}
+            >
+              <Text style={styles.iconButtonText}>👨‍👩‍👧</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={handlePerfilPress} style={styles.iconButton}>
             <Text style={styles.iconButtonText}>👤</Text>
           </TouchableOpacity>
@@ -187,6 +197,37 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* Lista de categorías */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+
+        {/* Jugador: acceso rápido a su perfil */}
+        {user?.role === 'jugador' && (
+          <TouchableOpacity
+            style={styles.roleCard}
+            onPress={() => navigation.navigate('PerfilJugador')}
+          >
+            <Text style={styles.roleCardIcon}>🏉</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.roleCardTitle}>Mi Perfil de Jugador</Text>
+              <Text style={styles.roleCardSub}>Ver asistencias, estadísticas y datos personales</Text>
+            </View>
+            <Text style={styles.roleCardArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Apoderado: acceso al portal */}
+        {user?.role === 'apoderado' && (
+          <TouchableOpacity
+            style={[styles.roleCard, { backgroundColor: '#ede7f6', borderColor: '#5c6bc0' }]}
+            onPress={() => navigation.navigate('Apoderado')}
+          >
+            <Text style={styles.roleCardIcon}>👨‍👩‍👧</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.roleCardTitle, { color: '#3949ab' }]}>Portal Apoderado</Text>
+              <Text style={styles.roleCardSub}>Ver asistencias y datos de tus hijos</Text>
+            </View>
+            <Text style={[styles.roleCardArrow, { color: '#5c6bc0' }]}>›</Text>
+          </TouchableOpacity>
+        )}
+
         <Text style={styles.sectionTitle}>Selecciona una categoría:</Text>
 
         {categorias.length === 0 ? (
@@ -328,6 +369,25 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
+  roleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e9',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1a472a',
+    padding: 16,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  roleCardIcon: { fontSize: 30, marginRight: 12 },
+  roleCardTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a472a', marginBottom: 2 },
+  roleCardSub: { fontSize: 13, color: '#555' },
+  roleCardArrow: { fontSize: 24, color: '#1a472a', marginLeft: 8 },
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

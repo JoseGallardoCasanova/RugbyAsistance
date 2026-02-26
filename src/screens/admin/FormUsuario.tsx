@@ -319,7 +319,49 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
                   👤 Ayudante
                 </Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.roleButton, role === 'jugador' && styles.roleButtonActive]}
+                onPress={() => {
+                  setRole('jugador');
+                  setCategoriasAsignadas([]);
+                }}
+                disabled={guardando}
+              >
+                <Text style={[styles.roleButtonText, role === 'jugador' && styles.roleButtonTextActive]}>
+                  🏉 Jugador
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.roleButton, role === 'apoderado' && styles.roleButtonActive]}
+                onPress={() => {
+                  setRole('apoderado');
+                  setCategoriasAsignadas([]);
+                }}
+                disabled={guardando}
+              >
+                <Text style={[styles.roleButtonText, role === 'apoderado' && styles.roleButtonTextActive]}>
+                  👨‍👩‍👧 Apoderado
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {role === 'jugador' && (
+              <View style={styles.roleInfoBox}>
+                <Text style={styles.roleInfoText}>
+                  💡 Después de crear este usuario, vincúlalo a un jugador desde la pestaña <Text style={{ fontWeight: 'bold' }}>Jugadores → editar jugador → Usuario vinculado</Text>.
+                </Text>
+              </View>
+            )}
+
+            {role === 'apoderado' && (
+              <View style={styles.roleInfoBox}>
+                <Text style={styles.roleInfoText}>
+                  💡 El apoderado puede vincular jugadores desde su portal ingresando el RUT del jugador, o el admin puede hacerlo desde la pestaña <Text style={{ fontWeight: 'bold' }}>Jugadores → 👨‍👩‍👧 Apod.</Text>.
+                </Text>
+              </View>
+            )}
 
             {/* Categorías para Entrenador */}
             {role === 'entrenador' && (

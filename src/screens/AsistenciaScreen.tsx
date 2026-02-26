@@ -29,11 +29,19 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const [loading, setLoading] = useState(true);
   const [asistencia, setAsistencia] = useState<{ [rut: string]: boolean }>({});
   const [enviando, setEnviando] = useState(false);
-  const [yaEnviado, setYaEnviado] = useState(false); // Nuevo estado
+  const [yaEnviado, setYaEnviado] = useState(false);
+  const [fechaRetroactiva, setFechaRetroactiva] = useState(false);
 
   useEffect(() => {
     cargarJugadores();
   }, [categoria]);
+
+  // Recargar asistencia cuando cambia el modo de fecha
+  useEffect(() => {
+    if (jugadores.length > 0) {
+      cargarAsistenciaDelDia(jugadores, getFechaActiva(fechaRetroactiva));
+    }
+  }, [fechaRetroactiva]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -49,15 +57,35 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
     return `${año}-${mes}-${dia}`;
   };
 
-  const cargarAsistenciaDelDia = async (jugadoresActuales: Jugador[]) => {
+  const getFechaAyer = (): string => {
+    const ayer = new Date();
+    ayer.setDate(ayer.getDate() - 1);
+    const año = ayer.getFullYear();
+    const mes = String(ayer.getMonth() + 1).padStart(2, '0');
+    const dia = String(ayer.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+  };
+
+  const getFechaActiva = (retroactiva: boolean = fechaRetroactiva): string => {
+    return retroactiva ? getFechaAyer() : getFechaLocalHoy();
+  };
+
+  const getNombreDia = (fecha: string): string => {
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const [año, mes, dia] = fecha.split('-').map(Number);
+    const d = new Date(año, mes - 1, dia);
+    return `${dias[d.getDay()]} ${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}`;
+  };
+
+  const cargarAsistenciaDelDia = async (jugadoresActuales: Jugador[], fecha?: string) => {
     if (!club) return;
     
     try {
-      const fecha = getFechaLocalHoy();
-      console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fecha} para categoría ${categoriaNombre}`);
+      const fechaUsar = fecha ?? getFechaActiva();
+      console.log(`📥 [ASISTENCIA] Cargando asistencia del día ${fechaUsar} para categoría ${categoriaNombre}`);
       
       // Obtener asistencias del día desde Supabase V2
-      const asistenciasData = await SupabaseServiceV2.getAsistenciasPorFecha(club.id, categoria, fecha);
+      const asistenciasData = await SupabaseServiceV2.getAsistenciasPorFecha(club.id, categoria, fechaUsar);
       
       if (asistenciasData && asistenciasData.length > 0) {
         // Mapear asistencias a formato { rut: boolean }
@@ -75,7 +103,8 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
         console.log(`✅ [ASISTENCIA] Asistencia cargada: ${Object.keys(asistenciaMap).length} jugadores marcados`);
         console.log(`📋 [ASISTENCIA] Mapeados:`, asistenciaMap);
       } else {
-        console.log('ℹ️ [ASISTENCIA] No hay asistencia guardada para hoy, iniciando en blanco');
+        const label = fechaRetroactiva ? 'para ayer' : 'para hoy';
+        console.log(`ℹ️ [ASISTENCIA] No hay asistencia guardada ${label}, iniciando en blanco`);
         setAsistencia({});
         setYaEnviado(false);
       }
@@ -102,7 +131,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       console.log(`📥 Jugadores de categoría ${categoriaNombre}:`, jugadoresCategoria.length);
       
       // ✅ Cargar asistencia DESPUÉS de tener los jugadores (pasar como parámetro para evitar problemas de estado)
-      await cargarAsistenciaDelDia(jugadoresCategoria);
+      await cargarAsistenciaDelDia(jugadoresCategoria, getFechaActiva());
     } catch (error) {
       console.error('Error al cargar jugadores:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -114,7 +143,8 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const toggleAsistencia = (rut: string) => {
     // Si es entrenador y ya envió, no puede modificar
     if (user?.role === 'entrenador' && yaEnviado) {
-      Alert.alert('Asistencia enviada', 'Ya enviaste la asistencia de hoy. No puedes modificarla.');
+      const label = fechaRetroactiva ? 'de ayer' : 'de hoy';
+      Alert.alert('Asistencia enviada', `Ya enviaste la asistencia ${label}. No puedes modificarla.`);
       return;
     }
     
@@ -128,7 +158,8 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
   const marcarTodos = (valor: boolean) => {
     // Si es entrenador y ya envió, no puede modificar
     if (user?.role === 'entrenador' && yaEnviado) {
-      Alert.alert('Asistencia enviada', 'Ya enviaste la asistencia de hoy. No puedes modificarla.');
+      const label = fechaRetroactiva ? 'de ayer' : 'de hoy';
+      Alert.alert('Asistencia enviada', `Ya enviaste la asistencia ${label}. No puedes modificarla.`);
       return;
     }
     
@@ -158,9 +189,13 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
       return;
     }
 
+    const fechaLabel = fechaRetroactiva
+      ? `AYER — ${getNombreDia(getFechaAyer())}`
+      : `HOY — ${getNombreDia(getFechaLocalHoy())}`;
+
     Alert.alert(
       'Confirmar envío',
-      `¿Enviar asistencia de ${categoriaNombre}?\n\n` +
+      `¿Enviar asistencia de ${categoriaNombre}?\n📅 ${fechaLabel}\n\n` +
       `Jugadores marcados: ${totalMarcados}/${jugadores.length}`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -169,9 +204,9 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           onPress: async () => {
             setEnviando(true);
 
-            const fecha = getFechaLocalHoy();
+            const fecha = getFechaActiva();
             
-            console.log('📅 Fecha local:', fecha);
+            console.log('📅 Fecha activa:', fecha, fechaRetroactiva ? '(AYER)' : '(HOY)');
             console.log('🕐 Hora local completa:', new Date().toLocaleString('es-CL'));
             
             // Preparar registros de asistencia para V2
@@ -259,6 +294,25 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Banner fecha retroactiva */}
+      {fechaRetroactiva && (
+        <View style={styles.bannerRetroactivo}>
+          <View style={styles.bannerRetroactivoLeft}>
+            <Text style={styles.bannerRetroactivoIcon}>📅</Text>
+            <View>
+              <Text style={styles.bannerRetroactivoTitulo}>Marcando para AYER</Text>
+              <Text style={styles.bannerRetroactivoFecha}>{getNombreDia(getFechaAyer())}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.bannerRetroactivoBoton}
+            onPress={() => setFechaRetroactiva(false)}
+          >
+            <Text style={styles.bannerRetroactivoBotonText}>Volver a hoy</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Controles rápidos */}
       <View style={styles.controls}>
         <TouchableOpacity
@@ -274,6 +328,15 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
         >
           <Text style={styles.controlButtonText}>❌ Todos ausentes</Text>
         </TouchableOpacity>
+
+        {!fechaRetroactiva && (
+          <TouchableOpacity
+            style={[styles.controlButton, styles.buttonAyer]}
+            onPress={() => setFechaRetroactiva(true)}
+          >
+            <Text style={styles.controlButtonText}>📅 Ayer</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Resumen */}
@@ -362,7 +425,7 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
           {yaEnviado && user?.role === 'entrenador' ? (
             <View style={styles.enviadoInfoBox}>
               <Text style={styles.enviadoInfoText}>
-                ✅ Asistencia enviada hoy. Solo puedes visualizarla, no modificarla.
+                ✅ Asistencia enviada ({fechaRetroactiva ? 'ayer' : 'hoy'}). Solo puedes visualizarla, no modificarla.
               </Text>
             </View>
           ) : (
@@ -599,6 +662,49 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  bannerRetroactivo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff3e0',
+    borderBottomWidth: 2,
+    borderBottomColor: '#f57c00',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  bannerRetroactivoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  bannerRetroactivoIcon: {
+    fontSize: 28,
+  },
+  bannerRetroactivoTitulo: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#e65100',
+  },
+  bannerRetroactivoFecha: {
+    fontSize: 13,
+    color: '#bf360c',
+  },
+  bannerRetroactivoBoton: {
+    backgroundColor: '#f57c00',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  bannerRetroactivoBotonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  buttonAyer: {
+    backgroundColor: '#f57c00',
+    flex: 0,
+    paddingHorizontal: 14,
   },
 });
 

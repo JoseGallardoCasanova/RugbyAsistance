@@ -164,6 +164,23 @@ const CategoriasTab: React.FC = () => {
           </View>
         </View>
 
+        {/* Días de entrenamiento */}
+        {item.diasEntrenamiento && item.diasEntrenamiento.length > 0 && (
+          <View style={styles.diasRow}>
+            {['lunes','martes','miercoles','jueves','viernes','sabado','domingo'].map(dia => {
+              const activo = item.diasEntrenamiento.includes(dia);
+              const labels: Record<string,string> = { lunes:'Lu', martes:'Ma', miercoles:'Mi', jueves:'Ju', viernes:'Vi', sabado:'Sá', domingo:'Do' };
+              const horario = item.horarios?.[dia];
+              return activo ? (
+                <View key={dia} style={[styles.diaTag, { borderColor: item.color || '#1a472a' }]}>
+                  <Text style={[styles.diaTagText, { color: item.color || '#1a472a' }]}>{labels[dia]}</Text>
+                  {horario ? <Text style={styles.diaTagHora}>{horario}</Text> : null}
+                </View>
+              ) : null;
+            })}
+          </View>
+        )}
+
         <View style={styles.cardActions}>
           <TouchableOpacity
             style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
@@ -324,6 +341,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  diasRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  diaTag: {
+    borderWidth: 1.5,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  diaTagText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  diaTagHora: {
+    fontSize: 9,
+    color: '#666',
+    marginTop: 1,
   },
   colorIndicator: {
     width: 40,

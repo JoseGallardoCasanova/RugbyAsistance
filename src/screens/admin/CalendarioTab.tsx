@@ -36,6 +36,7 @@ import {
 import { useAuth } from '../../context/AuthContextV2';
 import { useClub } from '../../context/ClubContext';
 import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
+import NotificacionesService from '../../services/NotificacionesService';
 import { Categoria, Entrenamiento } from '../../types/v2';
 
 const { width } = Dimensions.get('window');
@@ -94,7 +95,7 @@ const CalendarioTab: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
 
   const puedeEditar =
-    user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador';
+    user?.role === 'super_admin' || user?.role === 'admin_club' || user?.role === 'entrenador';
 
   useEffect(() => {
     cargarCategorias();
@@ -249,6 +250,21 @@ const CalendarioTab: React.FC = () => {
       }
       setModalVisible(false);
       await cargarEntrenamientos();
+
+      // Programar/reprogramar notificación
+      const catNombre = categorias.find(c => c.id === (form.categoriaId || categoriaSeleccionada))?.nombre;
+      if (editando) {
+        // Reprogramar con los nuevos datos (el servicio cancela el anterior internamente)
+        await NotificacionesService.programarRecordatorio(
+          { ...editando, fecha: form.fecha, horaInicio: form.horaInicio || undefined, horaFin: form.horaFin || undefined, ubicacion: form.ubicacion || undefined },
+          catNombre
+        );
+      } else {
+        // Buscar el entrenamiento recién creado para tener su id
+        const lista = await SupabaseServiceV2.getEntrenamientosByMes(club!.id, categoriaSeleccionada!, anio, mes);
+        const nuevo = lista.find(e => e.fecha === form.fecha && e.horaInicio === (form.horaInicio || undefined));
+        if (nuevo) await NotificacionesService.programarRecordatorio(nuevo, catNombre);
+      }
     } catch (e) {
       Alert.alert('Error', 'No se pudo guardar el entrenamiento');
     } finally {
@@ -267,6 +283,7 @@ const CalendarioTab: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await SupabaseServiceV2.eliminarEntrenamiento(e.id);
+            await NotificacionesService.cancelarRecordatorio(e.id);
             await cargarEntrenamientos();
             if (entrenamientosDia(Number(e.fecha.split('-')[2])).length <= 1) {
               setDiaSeleccionado(null);

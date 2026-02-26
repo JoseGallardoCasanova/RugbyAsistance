@@ -18,7 +18,12 @@ import {
   Jugador, 
   Categoria, 
   Asistencia,
-  Entrenamiento
+  Entrenamiento,
+  FormularioConfiguracion,
+  FormularioCampo,
+  RelacionApoderado,
+  Pago,
+  ConfiguracionPagosClub,
 } from '../types/v2';
 
 class SupabaseServiceV2 {
@@ -726,6 +731,7 @@ class SupabaseServiceV2 {
       if (updates.actividad) updateData.actividad = updates.actividad;
       if (updates.autorizoUsoImagen !== undefined) updateData.autorizo_uso_imagen = updates.autorizoUsoImagen;
       if (updates.datosFormularioExtra) updateData.datos_formulario_extra = updates.datosFormularioExtra;
+      if (updates.usuarioId !== undefined) updateData.usuario_id = updates.usuarioId || null;
 
       const { data, error } = await this.supabase
         .from('jugadores')
@@ -761,6 +767,163 @@ class SupabaseServiceV2 {
     } catch (error: any) {
       console.error('❌ [SUPABASE V2] Error al eliminar jugador:', error.message);
       return false;
+    }
+  }
+
+  async getJugadorById(jugadorId: string): Promise<Jugador | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('jugadores')
+        .select('*')
+        .eq('id', jugadorId)
+        .single();
+      if (error) throw error;
+      return this.mapJugador(data);
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener jugador por ID:', error.message);
+      return null;
+    }
+  }
+
+  async findJugadorByRUT(clubId: string, rut: string): Promise<Jugador | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('jugadores')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('rut', rut.trim())
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return this.mapJugador(data);
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al buscar jugador por RUT:', error.message);
+      return null;
+    }
+  }
+
+  async getJugadorByUsuarioId(usuarioId: string): Promise<Jugador | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('jugadores')
+        .select('*')
+        .eq('usuario_id', usuarioId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return this.mapJugador(data);
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener jugador por usuarioId:', error.message);
+      return null;
+    }
+  }
+
+  // ============================================
+  // RELACIONES APODERADO
+  // ============================================
+
+  async getRelacionesByApoderado(apoderadoId: string): Promise<{ relacion: RelacionApoderado; jugador: Jugador }[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('relaciones_apoderado')
+        .select(`
+          *,
+          jugadores (*)
+        `)
+        .eq('apoderado_id', apoderadoId);
+      if (error) throw error;
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        relacion: {
+          id: row.id,
+          clubId: row.club_id,
+          apoderadoId: row.apoderado_id,
+          jugadorId: row.jugador_id,
+          tipoRelacion: row.tipo_relacion,
+          puedeAutorizarPagos: row.puede_autorizar_pagos,
+          puedeVerAsistencia: row.puede_ver_asistencia,
+          esContactoEmergencia: row.es_contacto_emergencia,
+          createdAt: row.created_at,
+        } as RelacionApoderado,
+        jugador: this.mapJugador(row.jugadores),
+      }));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener relaciones apoderado:', error.message);
+      return [];
+    }
+  }
+
+  async vincularApoderadoJugador(
+    clubId: string,
+    apoderadoId: string,
+    jugadorId: string,
+    tipoRelacion: RelacionApoderado['tipoRelacion'] = 'padre'
+  ): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('relaciones_apoderado')
+        .insert([{
+          club_id: clubId,
+          apoderado_id: apoderadoId,
+          jugador_id: jugadorId,
+          tipo_relacion: tipoRelacion,
+          puede_autorizar_pagos: true,
+          puede_ver_asistencia: true,
+          es_contacto_emergencia: false,
+        }]);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al vincular apoderado-jugador:', error.message);
+      return false;
+    }
+  }
+
+  async desvincularApoderadoJugador(apoderadoId: string, jugadorId: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('relaciones_apoderado')
+        .delete()
+        .eq('apoderado_id', apoderadoId)
+        .eq('jugador_id', jugadorId);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al desvincular apoderado-jugador:', error.message);
+      return false;
+    }
+  }
+
+  async getApoderadosByJugador(jugadorId: string): Promise<{ relacion: RelacionApoderado; apoderado: User }[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('relaciones_apoderado')
+        .select(`
+          *,
+          usuarios (*)
+        `)
+        .eq('jugador_id', jugadorId);
+      if (error) throw error;
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        relacion: {
+          id: row.id,
+          clubId: row.club_id,
+          apoderadoId: row.apoderado_id,
+          jugadorId: row.jugador_id,
+          tipoRelacion: row.tipo_relacion,
+          puedeAutorizarPagos: row.puede_autorizar_pagos,
+          puedeVerAsistencia: row.puede_ver_asistencia,
+          esContactoEmergencia: row.es_contacto_emergencia,
+          createdAt: row.created_at,
+        } as RelacionApoderado,
+        apoderado: this.mapUser(row.usuarios),
+      }));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener apoderados del jugador:', error.message);
+      return [];
     }
   }
 
@@ -845,6 +1008,185 @@ class SupabaseServiceV2 {
       console.error('❌ [SUPABASE V2] Error al obtener asistencias:', error.message);
       return [];
     }
+  }
+
+  async getAsistenciasByJugador(
+    clubId: string,
+    jugadorId: string,
+    fechaInicio?: string,
+    fechaFin?: string
+  ): Promise<Asistencia[]> {
+    try {
+      let query = this.supabase
+        .from('asistencias')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: false });
+
+      if (fechaInicio) query = query.gte('fecha', fechaInicio);
+      if (fechaFin) query = query.lte('fecha', fechaFin);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(a => this.mapAsistencia(a));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener asistencias del jugador:', error.message);
+      return [];
+    }
+  }
+
+  // ============================================
+  // PAGOS
+  // ============================================
+
+  async getConfigPagosByClub(clubId: string): Promise<ConfiguracionPagosClub | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('configuracion_pagos_club')
+        .select('*')
+        .eq('club_id', clubId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        clubId: data.club_id,
+        proveedor: data.proveedor,
+        precioMatricula: data.precio_matricula,
+        precioMensualidad: data.precio_mensualidad,
+        precioAnual: data.precio_anual,
+        descuentoAnualPorcentaje: data.descuento_anual_porcentaje ?? 0,
+        moneda: data.moneda ?? 'CLP',
+        activo: data.activo ?? false,
+        modoPrueba: data.modo_prueba ?? true,
+        credencialesEncriptadas: data.credenciales_encriptadas,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener config pagos:', error.message);
+      return null;
+    }
+  }
+
+  async upsertConfigPagos(clubId: string, config: Partial<ConfiguracionPagosClub>): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('configuracion_pagos_club')
+        .upsert({
+          club_id: clubId,
+          proveedor: config.proveedor ?? 'mercadopago',
+          precio_matricula: config.precioMatricula,
+          precio_mensualidad: config.precioMensualidad,
+          precio_anual: config.precioAnual,
+          descuento_anual_porcentaje: config.descuentoAnualPorcentaje ?? 0,
+          moneda: config.moneda ?? 'CLP',
+          activo: config.activo ?? false,
+          modo_prueba: config.modoPrueba ?? true,
+        }, { onConflict: 'club_id' });
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al guardar config pagos:', error.message);
+      return false;
+    }
+  }
+
+  async crearPago(pago: Omit<Pago, 'id' | 'createdAt' | 'updatedAt'>): Promise<Pago | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('pagos')
+        .insert([{
+          club_id: pago.clubId,
+          pagador_id: pago.pagadorId,
+          beneficiarios: pago.beneficiarios,
+          tipo: pago.tipo,
+          monto: pago.monto,
+          moneda: pago.moneda ?? 'CLP',
+          estado: pago.estado,
+          proveedor_pago: pago.proveedorPago ?? 'simulado',
+          transaction_id: pago.transactionId,
+          payment_method: pago.paymentMethod,
+          metadata_pago: pago.metadataPago,
+          fecha_pago: pago.fechaPago,
+        }])
+        .select()
+        .single();
+      if (error) throw error;
+      return this.mapPago(data);
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al crear pago:', error.message);
+      return null;
+    }
+  }
+
+  async getPagosByClub(clubId: string): Promise<Pago[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('pagos')
+        .select('*')
+        .eq('club_id', clubId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(p => this.mapPago(p));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener pagos:', error.message);
+      return [];
+    }
+  }
+
+  async getPagosByApoderado(clubId: string, pagadorId: string): Promise<Pago[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('pagos')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('pagador_id', pagadorId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(p => this.mapPago(p));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener pagos del apoderado:', error.message);
+      return [];
+    }
+  }
+
+  async actualizarEstadoPago(pagoId: string, estado: Pago['estado'], notas?: string): Promise<boolean> {
+    try {
+      const update: any = { estado };
+      if (estado === 'pagado') update.fecha_pago = new Date().toISOString().split('T')[0];
+      if (notas) update.metadata_pago = { notas };
+      const { error } = await this.supabase
+        .from('pagos')
+        .update(update)
+        .eq('id', pagoId);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al actualizar estado pago:', error.message);
+      return false;
+    }
+  }
+
+  private mapPago(data: any): Pago {
+    return {
+      id: data.id,
+      clubId: data.club_id,
+      pagadorId: data.pagador_id,
+      beneficiarios: data.beneficiarios ?? [],
+      tipo: data.tipo,
+      monto: data.monto,
+      moneda: data.moneda ?? 'CLP',
+      estado: data.estado,
+      proveedorPago: data.proveedor_pago,
+      transactionId: data.transaction_id,
+      paymentMethod: data.payment_method,
+      metadataPago: data.metadata_pago,
+      fechaPago: data.fecha_pago,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   }
 
   // ============================================
@@ -1398,6 +1740,92 @@ class SupabaseServiceV2 {
   // ============================================
   // TEST DE CONEXIÓN
   // ============================================
+
+  // ============================================
+  // FORMULARIOS CONFIGURACIÓN
+  // ============================================
+
+  async getFormularioByClub(clubId: string): Promise<FormularioConfiguracion | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('formularios_configuracion')
+        .select('*')
+        .eq('club_id', clubId)
+        .eq('activo', true)
+        .order('version', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+
+      // La BD guarda { "campos": [...] } por el check constraint jsonb_typeof = 'object'
+      const camposArray: FormularioCampo[] =
+        Array.isArray(data.campos) ? data.campos
+        : (data.campos?.campos ?? []);
+
+      return {
+        id: data.id,
+        clubId: data.club_id,
+        nombre: data.nombre,
+        descripcion: data.descripcion,
+        campos: camposArray,
+        activo: data.activo,
+        version: data.version,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+        createdBy: data.created_by,
+      };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener formulario:', error.message);
+      return null;
+    }
+  }
+
+  async guardarFormulario(
+    clubId: string,
+    campos: FormularioCampo[],
+    nombre: string = 'Formulario de inscripción'
+  ): Promise<boolean> {
+    try {
+      // Buscar si ya existe
+      const existing = await this.getFormularioByClub(clubId);
+
+      // El check constraint exige jsonb_typeof(campos) = 'object', por eso se
+      // envuelve el array en { "campos": [...] }
+      const camposJson = { campos };
+
+      if (existing) {
+        const { error } = await this.supabase
+          .from('formularios_configuracion')
+          .update({
+            campos: camposJson,
+            nombre,
+            version: existing.version + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await this.supabase
+          .from('formularios_configuracion')
+          .insert([{
+            club_id: clubId,
+            nombre,
+            campos: camposJson,
+            activo: true,
+            version: 1,
+          }]);
+        if (error) throw error;
+      }
+
+      console.log('✅ [SUPABASE V2] Formulario guardado');
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al guardar formulario:', error.message);
+      return false;
+    }
+  }
 
   async testConexion(): Promise<boolean> {
     try {

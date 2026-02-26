@@ -12,7 +12,8 @@ import JugadoresTab from './JugadoresTab';
 import CategoriasTab from './CategoriasTab';
 import EstadisticasTab from './EstadisticasTab';
 import CalendarioTab from './CalendarioTab';
-import ModalExportarAsistencias from './ModalExportarAsistencias';
+import FormularioTab from './FormularioTab';
+import PagosTab from './PagosTab';
 import { useAuth } from '../../context/AuthContextV2';
 import { useClub } from '../../context/ClubContext';
 
@@ -21,23 +22,22 @@ interface AdminScreenProps {
   route?: any;
 }
 
-type TabType = 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario';
+type TabType = 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos';
 
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { club } = useClub();
   const routeInitialTab: TabType | undefined = route?.params?.initialTab;
-  const [modalExportarVisible, setModalExportarVisible] = useState(false);
 
   const allowedTabs = useMemo<TabType[]>(() => {
-    if (user?.role === 'admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario'];
+    if (user?.role === 'super_admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario', 'formulario', 'pagos'];
     if (user?.role === 'entrenador') return ['jugadores', 'estadisticas', 'calendario'];
     return [];
   }, [user?.role]);
 
   const resolvedInitialTab = useMemo<TabType>(() => {
     if (user?.role === 'entrenador') return 'jugadores';
-    if (user?.role === 'admin') {
+    if (user?.role === 'super_admin' || user?.role === 'admin_club') {
       if (routeInitialTab && allowedTabs.includes(routeInitialTab)) return routeInitialTab;
       return 'usuarios';
     }
@@ -89,15 +89,16 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
         <Text style={styles.title}>Panel de Admin</Text>
         
         {/* Botón Exportar (solo para admins) */}
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin_club' || user?.role === 'super_admin') ? (
           <TouchableOpacity 
             style={styles.exportButton}
-            onPress={() => setModalExportarVisible(true)}
+            onPress={() => navigation.navigate('ExportarAsistencias')}
           >
             <Text style={styles.exportIcon}>📊</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
         )}
-        {user?.role !== 'admin' && <View style={{ width: 40 }} />}
       </View>
 
       {/* Tabs */}
@@ -161,6 +162,28 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         )}
+
+        {allowedTabs.includes('formulario') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'formulario' && styles.tabActive]}
+            onPress={() => setActiveTab('formulario')}
+          >
+            <Text style={[styles.tabText, activeTab === 'formulario' && styles.tabTextActive]}>
+              📝 Formulario
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {allowedTabs.includes('pagos') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'pagos' && styles.tabActive]}
+            onPress={() => setActiveTab('pagos')}
+          >
+            <Text style={[styles.tabText, activeTab === 'pagos' && styles.tabTextActive]}>
+              💳 Pagos
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Content */}
@@ -170,13 +193,9 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
         {activeTab === 'categorias' && allowedTabs.includes('categorias') && <CategoriasTab />}
         {activeTab === 'estadisticas' && allowedTabs.includes('estadisticas') && <EstadisticasTab />}
         {activeTab === 'calendario' && allowedTabs.includes('calendario') && <CalendarioTab />}
+        {activeTab === 'formulario' && allowedTabs.includes('formulario') && <FormularioTab />}
+        {activeTab === 'pagos' && allowedTabs.includes('pagos') && <PagosTab />}
       </View>
-
-      {/* Modal de Exportación */}
-      <ModalExportarAsistencias
-        visible={modalExportarVisible}
-        onClose={() => setModalExportarVisible(false)}
-      />
     </SafeAreaView>
   );
 };

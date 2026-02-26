@@ -11,11 +11,13 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContextV2';
 import { useClub } from '../context/ClubContext';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import NotificacionesService, { ConfigNotificaciones } from '../services/NotificacionesService';
 
 interface PerfilScreenProps {
   navigation: any;
@@ -27,7 +29,51 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState(user?.email || '');
   const [editandoEmail, setEditandoEmail] = useState(false);
   const [categoriasNombres, setCategoriasNombres] = useState<string[]>([]);
-  
+
+  // Estados notificaciones
+  const [notifConfig, setNotifConfig] = useState<ConfigNotificaciones>({ habilitadas: false, minutosAntes: 60 });
+  const [cargandoNotif, setCargandoNotif] = useState(false);
+
+  // Cargar config de notificaciones al montar
+  React.useEffect(() => {
+    NotificacionesService.obtenerConfig().then(setNotifConfig);
+  }, []);
+
+  const handleToggleNotificaciones = async (valor: boolean) => {
+    if (valor) {
+      const permiso = await NotificacionesService.solicitarPermisos();
+      if (!permiso) {
+        Alert.alert(
+          'Permiso denegado',
+          'Para recibir recordatorios, habilita las notificaciones en los ajustes de tu dispositivo.'
+        );
+        return;
+      }
+    } else {
+      await NotificacionesService.cancelarTodos();
+    }
+    const nueva = { ...notifConfig, habilitadas: valor };
+    await NotificacionesService.guardarConfig(nueva);
+    setNotifConfig(nueva);
+  };
+
+  const handleCambiarMinutos = async (min: number) => {
+    const nueva = { ...notifConfig, minutosAntes: min };
+    await NotificacionesService.guardarConfig(nueva);
+    setNotifConfig(nueva);
+  };
+
+  const handleProbarNotificacion = async () => {
+    setCargandoNotif(true);
+    const ok = await NotificacionesService.enviarPrueba();
+    setCargandoNotif(false);
+    if (ok) {
+      Alert.alert('✅ Prueba enviada', 'Recibirás la notificación en ~3 segundos.');
+    } else {
+      Alert.alert('❌ Sin permisos', 'Habilita las notificaciones en los ajustes de tu dispositivo.');
+    }
+  };
+
   // Estados para cambio de contraseña
   const [modalPasswordVisible, setModalPasswordVisible] = useState(false);
   const [passwordActual, setPasswordActual] = useState('');
@@ -299,6 +345,57 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
               <Text style={styles.infoLabel}>Club</Text>
               <Text style={styles.infoValue}>{club.nombre}</Text>
             </View>
+          )}
+        </View>
+
+        {/* ── Notificaciones ─────────────────────────────────── */}
+        <View style={styles.notifSection}>
+          <Text style={styles.notifTitulo}>🔔 Recordatorios de entrenamiento</Text>
+
+          <View style={styles.notifRow}>
+            <Text style={styles.notifLabel}>Activar recordatorios</Text>
+            <Switch
+              value={notifConfig.habilitadas}
+              onValueChange={handleToggleNotificaciones}
+              trackColor={{ false: '#ccc', true: '#a5d6a7' }}
+              thumbColor={notifConfig.habilitadas ? '#1a472a' : '#f5f5f5'}
+            />
+          </View>
+
+          {notifConfig.habilitadas && (
+            <>
+              <Text style={styles.notifSubLabel}>Recordarme con antelación:</Text>
+              <View style={styles.notifChips}>
+                {[15, 30, 60, 120].map(min => (
+                  <TouchableOpacity
+                    key={min}
+                    onPress={() => handleCambiarMinutos(min)}
+                    style={[
+                      styles.notifChip,
+                      notifConfig.minutosAntes === min && styles.notifChipActive,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.notifChipText,
+                      notifConfig.minutosAntes === min && styles.notifChipTextActive,
+                    ]}>
+                      {min < 60 ? `${min} min` : `${min / 60} hora${min > 60 ? 's' : ''}`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.notifTestBtn}
+                onPress={handleProbarNotificacion}
+                disabled={cargandoNotif}
+              >
+                {cargandoNotif
+                  ? <ActivityIndicator color="#1a472a" size="small" />
+                  : <Text style={styles.notifTestBtnText}>Enviar notificación de prueba</Text>
+                }
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -697,6 +794,73 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     marginBottom: 30,
+  },
+  // Notificaciones
+  notifSection: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginTop: 10,
+    padding: 16,
+  },
+  notifTitulo: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 14,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  notifLabel: {
+    fontSize: 15,
+    color: '#444',
+  },
+  notifSubLabel: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  notifChips: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  notifChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#1a472a',
+    backgroundColor: '#fff',
+  },
+  notifChipActive: {
+    backgroundColor: '#1a472a',
+  },
+  notifChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1a472a',
+  },
+  notifChipTextActive: {
+    color: '#fff',
+  },
+  notifTestBtn: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#1a472a',
+    borderRadius: 8,
+    padding: 11,
+    alignItems: 'center',
+  },
+  notifTestBtnText: {
+    color: '#1a472a',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

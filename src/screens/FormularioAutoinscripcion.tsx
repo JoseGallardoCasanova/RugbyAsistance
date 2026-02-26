@@ -9,10 +9,11 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
-import { Categoria } from '../types/v2';
+import { Categoria, FormularioConfiguracion, FormularioCampo } from '../types/v2';
 import { validarRUT, formatearRUT } from '../utils/rutUtils';
 import { useClub } from '../context/ClubContext';
 
@@ -66,9 +67,26 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
   const [rutError, setRutError] = useState('');
   const [rutTutorError, setRutTutorError] = useState('');
 
+  // Formulario dinámico
+  const [formularioConfig, setFormularioConfig] = useState<FormularioConfiguracion | null>(null);
+  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
+
   useEffect(() => {
     cargarCategorias();
+    cargarFormularioConfig();
   }, []);
+
+  const cargarFormularioConfig = async () => {
+    if (!club) return;
+    try {
+      const config = await SupabaseServiceV2.getFormularioByClub(club.id);
+      if (config && config.campos.length > 0) {
+        setFormularioConfig(config);
+      }
+    } catch (e) {
+      // Silencioso: si falla, usa el formulario hardcoded
+    }
+  };
 
   // Validar RUT en tiempo real
   const validarRUTEnTiempoReal = (rutValue: string) => {
@@ -105,6 +123,186 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
     }
   };
 
+  // ─── RENDER DINÁMICO ──────────────────────────────────────────────
+  const renderCampoDinamico = (campo: FormularioCampo) => {
+    const valor = respuestas[campo.id] ?? '';
+    const setValor = (v: string) => setRespuestas(prev => ({ ...prev, [campo.id]: v }));
+
+    return (
+      <View key={campo.id} style={{ marginBottom: 4 }}>
+        <Text style={styles.label}>
+          {campo.label}{campo.obligatorio ? ' *' : ''}
+        </Text>
+        {campo.tipo === 'textarea' ? (
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={valor}
+            onChangeText={setValor}
+            placeholder={campo.placeholder}
+            multiline
+            numberOfLines={3}
+            placeholderTextColor="#999"
+          />
+        ) : campo.tipo === 'select' && campo.opciones ? (
+          <View style={styles.pickerContainer}>
+            <Picker selectedValue={valor} onValueChange={setValor} style={styles.picker}>
+              <Picker.Item label="Selecciona..." value="" />
+              {campo.opciones.map(op => (
+                <Picker.Item key={op} label={op} value={op} />
+              ))}
+            </Picker>
+          </View>
+        ) : campo.tipo === 'checkbox' ? (
+          <View style={styles.checkboxContainer}>
+            <Switch
+              value={valor === 'true'}
+              onValueChange={v => setValor(v ? 'true' : 'false')}
+              trackColor={{ false: '#ccc', true: '#1a472a' }}
+            />
+            <Text style={styles.checkboxLabel}>{valor === 'true' ? 'Sí' : 'No'}</Text>
+          </View>
+        ) : campo.tipo === 'rut' ? (
+          <TextInput
+            style={styles.input}
+            value={valor}
+            onChangeText={text => setValor(formatearRUT(text))}
+            placeholder={campo.placeholder ?? '12345678-9'}
+            maxLength={10}
+            autoCapitalize="characters"
+            placeholderTextColor="#999"
+          />
+        ) : (
+          <TextInput
+            style={styles.input}
+            value={valor}
+            onChangeText={setValor}
+            placeholder={campo.placeholder}
+            keyboardType={
+              campo.tipo === 'email' ? 'email-address'
+              : campo.tipo === 'tel' ? 'phone-pad'
+              : campo.tipo === 'number' ? 'numeric'
+              : 'default'
+            }
+            autoCapitalize={campo.tipo === 'email' ? 'none' : 'sentences'}
+            placeholderTextColor="#999"
+          />
+        )}
+      </View>
+    );
+  };
+
+  const renderFormularioDinamico = () => {
+    const secciones: Record<string, FormularioCampo[]> = {};
+    formularioConfig!.campos.forEach(c => {
+      const sec = c.seccion || '';
+      if (!secciones[sec]) secciones[sec] = [];
+      secciones[sec].push(c);
+    });
+    return (
+      <>
+        {/* Categoría: siempre presente */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏉 Categoría</Text>
+          <Text style={styles.label}>Selecciona tu categoría *</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={categoriaSeleccionada}
+              onValueChange={(value: string | null) => setCategoriaSeleccionada(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecciona una categoría..." value={null} />
+              {categorias.map(cat => (
+                <Picker.Item key={cat.id} label={cat.nombre} value={cat.id} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+        {/* Campos agrupados por sección */}
+        {Object.entries(secciones).map(([sec, camposSec]) => (
+          <View key={sec || '__default'} style={styles.section}>
+            {sec ? <Text style={styles.sectionTitle}>{sec}</Text> : null}
+            {camposSec.map(renderCampoDinamico)}
+          </View>
+        ))}
+        {/* Submit dinámico */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleEnviarDinamico}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>✅ Enviar Inscripción</Text>
+          )}
+        </TouchableOpacity>
+      </>
+    );
+  };
+
+  // ─── SUBMIT DINÁMICO ──────────────────────────────────────────────
+  const handleEnviarDinamico = async () => {
+    if (!club || !formularioConfig) return;
+
+    // Validar campos obligatorios
+    for (const campo of formularioConfig.campos) {
+      if (campo.obligatorio) {
+        const val = respuestas[campo.id];
+        if (!val || val.trim() === '') {
+          Alert.alert('Error', `El campo "${campo.label}" es obligatorio`);
+          return;
+        }
+      }
+    }
+    if (!categoriaSeleccionada) {
+      Alert.alert('Error', 'Debes seleccionar una categoría');
+      return;
+    }
+
+    // Extraer rut
+    const rutCampo = formularioConfig.campos.find(c => c.tipo === 'rut');
+    const rutValor = rutCampo ? (respuestas[rutCampo.id] ?? '') : '';
+    if (!rutValor || !validarRUT(rutValor)) {
+      Alert.alert('Error', 'El RUT ingresado no es válido. Verifica el dígito verificador.');
+      return;
+    }
+
+    // Extraer nombre
+    const nombreCampo =
+      formularioConfig.campos.find(c => c.tipo === 'text' && c.label.toLowerCase().includes('nombre')) ??
+      formularioConfig.campos.find(c => c.tipo === 'text');
+    const nombreValor = nombreCampo ? (respuestas[nombreCampo.id] ?? '') : '';
+    if (!nombreValor.trim()) {
+      Alert.alert('Error', 'El nombre completo es obligatorio');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const success = await SupabaseServiceV2.crearJugador({
+        clubId: club.id,
+        rut: rutValor.trim(),
+        nombre: nombreValor.trim(),
+        categoriaId: categoriaSeleccionada,
+        datosFormularioExtra: respuestas,
+      });
+      if (success) {
+        Alert.alert(
+          '✅ Inscripción Exitosa',
+          'Te has registrado correctamente. ¡Bienvenido al club!',
+          [{ text: 'OK', onPress: () => { if (onSuccess) onSuccess(); else if (navigation) navigation.goBack(); } }]
+        );
+      } else {
+        Alert.alert('Error', 'No se pudo completar la inscripción. Intenta nuevamente.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Ocurrió un error al enviar el formulario');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── SUBMIT HARDCODED ─────────────────────────────────────────────
   const validarFormulario = (): boolean => {
     if (!nombreCompleto.trim()) {
       Alert.alert('Error', 'El nombre completo es obligatorio');
@@ -244,9 +442,10 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
       <ScrollView style={styles.content}>
         <Text style={styles.subtitle}>
-          Completa todos los campos para registrarte en el club
+          {formularioConfig ? 'Completa los siguientes campos para registrarte' : 'Completa todos los campos para registrarte en el club'}
         </Text>
 
+        {formularioConfig ? renderFormularioDinamico() : (<>
         {/* DATOS PERSONALES */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📋 Datos Personales</Text>
@@ -560,6 +759,7 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
             <Text style={styles.submitButtonText}>✅ Enviar Inscripción</Text>
           )}
         </TouchableOpacity>
+        </>)}
 
         <View style={{ height: 40 }} />
       </ScrollView>
