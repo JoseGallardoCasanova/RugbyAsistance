@@ -9,10 +9,13 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
+import * as DocumentPicker from 'expo-document-picker';
 import { User, Categoria } from '../../types/v2';
 import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormUsuario from './FormUsuario';
@@ -31,6 +34,13 @@ const UsuariosTab: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [usuarioEditar, setUsuarioEditar] = useState<User | undefined>();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Importación masiva
+  const [importModal, setImportModal] = useState(false);
+  const [importPaso, setImportPaso] = useState(0);
+  const [importTotal, setImportTotal] = useState(0);
+  const [importErrores, setImportErrores] = useState<string[]>([]);
+  const [importDone, setImportDone] = useState(false);
 
   const cargarDatos = useCallback(async () => {
     if (!club) return;
@@ -173,6 +183,90 @@ const UsuariosTab: React.FC = () => {
     } catch (error) {
       console.error('Error al guardar usuario:', error);
       Alert.alert('❌ Error', 'Error al guardar el usuario');
+    }
+  };
+
+  const handleDescargarPlantillaEntrenadores = async () => {
+    if (!club) return;
+    try {
+      const columnas = ['nombre', 'apellido', 'email', 'telefono'];
+      const wsData = [columnas];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = columnas.map(() => ({ wch: 22 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Entrenadores');
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      const fecha = new Date().toISOString().split('T')[0];
+      const fileName = `Plantilla_Entrenadores_${club.nombre}_${fecha}.xlsx`;
+      const fileUri = (FileSystem.documentDirectory ?? '') + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      } else {
+        Alert.alert('Descargado', `Plantilla guardada: ${fileName}`);
+      }
+    } catch (e: any) {
+      Alert.alert('Error', `No se pudo generar la plantilla: ${e.message}`);
+    }
+  };
+
+  const handleImportarEntrenadores = async () => {
+    if (!club) return;
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+               'application/vnd.ms-excel', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      const uri = picked.assets[0].uri;
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const wb = XLSX.read(base64, { type: 'base64' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const filas: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!filas.length) { Alert.alert('Vacío', 'El archivo no tiene datos.'); return; }
+
+      setImportTotal(filas.length);
+      setImportPaso(0);
+      setImportErrores([]);
+      setImportDone(false);
+      setImportModal(true);
+
+      const errores: string[] = [];
+      for (let i = 0; i < filas.length; i++) {
+        const fila = filas[i];
+        setImportPaso(i + 1);
+        const nombreVal = String(fila['nombre'] || fila['Nombre'] || '').trim();
+        const apellidoVal = String(fila['apellido'] || fila['Apellido'] || '').trim();
+        const emailVal = String(fila['email'] || fila['Email'] || '').trim();
+        if (!nombreVal) {
+          errores.push(`Fila ${i + 2}: nombre es obligatorio`);
+          continue;
+        }
+        try {
+          const result = await SupabaseServiceV2.crearUsuario({
+            clubId: club.id,
+            nombre: nombreVal,
+            apellido: apellidoVal || undefined,
+            email: emailVal || undefined,
+            telefono: String(fila['telefono'] || fila['Telefono'] || '').trim() || undefined,
+            role: 'entrenador',
+            passwordHash: 'entrenador123',
+            categoriasAsignadas: [],
+          } as any);
+          if (!result) {
+            errores.push(`Fila ${i + 2} (${nombreVal}): No se pudo crear`);
+          }
+        } catch (e: any) {
+          errores.push(`Fila ${i + 2} (${nombreVal}): ${e.message}`);
+        }
+      }
+      setImportErrores(errores);
+      setImportDone(true);
+      cargarDatos();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+      setImportModal(false);
     }
   };
 
@@ -363,20 +457,19 @@ const UsuariosTab: React.FC = () => {
         }
       />
 
-      {/* Botones de acción */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={[styles.fab, styles.fabExport]} 
-          onPress={handleExportarUsuarios}
-        >
-          <Text style={styles.fabText}>📊 EXPORTAR</Text>
+      {/* Barra de acción */}
+      <View style={styles.actionBar}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1a472a' }]} onPress={handleCrear}>
+          <Text style={styles.actionBtnText}>➕ Crear</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.fab, styles.fabCreate]} 
-          onPress={handleCrear}
-        >
-          <Text style={styles.fabText}>+ CREAR</Text>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1565c0' }]} onPress={handleImportarEntrenadores}>
+          <Text style={styles.actionBtnText}>📥 Importar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#6a1b9a' }]} onPress={handleDescargarPlantillaEntrenadores}>
+          <Text style={styles.actionBtnText}>📋 Plantilla</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#0277bd' }]} onPress={handleExportarUsuarios}>
+          <Text style={styles.actionBtnText}>📊 Exportar</Text>
         </TouchableOpacity>
       </View>
 
@@ -387,6 +480,33 @@ const UsuariosTab: React.FC = () => {
         onClose={() => setModalVisible(false)}
         onSave={handleGuardar}
       />
+
+      {/* Modal progreso importación */}
+      <Modal visible={importModal} animationType="fade" transparent>
+        <View style={styles.importOverlay}>
+          <View style={styles.importCard}>
+            <Text style={styles.importTitle}>📥 Importando entrenadores...</Text>
+            <Text style={styles.importSub}>⚠️ No cierres la app hasta que termine el proceso.</Text>
+            <Text style={styles.importCount}>{importPaso} / {importTotal}</Text>
+            {!importDone && <ActivityIndicator color="#1a472a" size="large" style={{ marginTop: 12 }} />}
+            {importDone && (
+              <>
+                <Text style={[styles.importCount, { color: '#2e7d32', marginTop: 12 }]}>✅ Proceso completado</Text>
+                {importErrores.length > 0 && (
+                  <ScrollView style={{ maxHeight: 130, marginTop: 8, width: '100%' }}>
+                    {importErrores.map((e, i) => (
+                      <Text key={i} style={styles.importError}>{e}</Text>
+                    ))}
+                  </ScrollView>
+                )}
+                <TouchableOpacity style={styles.importClose} onPress={() => setImportModal(false)}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Cerrar</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -420,6 +540,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 15,
+    paddingBottom: 100,
   },
   card: {
     backgroundColor: '#fff',
@@ -524,34 +645,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
-  actionButtons: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
+  actionBar: {
     flexDirection: 'row',
-    gap: 10,
+    justifyContent: 'space-around',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    gap: 6,
   },
-  fab: {
-    backgroundColor: '#1a472a',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    borderRadius: 30,
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  fabExport: {
-    backgroundColor: '#2196F3',
-  },
-  fabCreate: {
-    backgroundColor: '#1a472a',
-  },
-  fabText: {
+  actionBtnText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
+  },
+  importOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  importCard: {
+    backgroundColor: '#fff', borderRadius: 16,
+    padding: 24, width: '85%', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,
+  },
+  importTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a472a', marginBottom: 8 },
+  importSub: { fontSize: 12, color: '#e65100', textAlign: 'center', marginBottom: 16 },
+  importCount: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+  importError: { fontSize: 12, color: '#c62828', marginBottom: 4 },
+  importClose: {
+    marginTop: 16, backgroundColor: '#1a472a',
+    borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32,
   },
 });
 

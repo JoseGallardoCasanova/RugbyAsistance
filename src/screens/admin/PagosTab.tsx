@@ -11,6 +11,7 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useClub } from '../../context/ClubContext';
@@ -61,6 +62,23 @@ const PagosTab: React.FC = () => {
   const [mensualidad, setMensualidad] = useState('');
   const [matricula, setMatricula] = useState('');
   const [anual, setAnual] = useState('');
+  const [anualEditadoManual, setAnualEditadoManual] = useState(false);
+  // Descuentos por tipo — estados planos para evitar lag en TextInput
+  const [dtoMensActivo, setDtoMensActivo] = useState(false);
+  const [dtoMensPct, setDtoMensPct] = useState('0');
+  const [dtoMensInicio, setDtoMensInicio] = useState('');
+  const [dtoMensFin, setDtoMensFin] = useState('');
+  const [dtoMatrActivo, setDtoMatrActivo] = useState(false);
+  const [dtoMatrPct, setDtoMatrPct] = useState('0');
+  const [dtoMatrInicio, setDtoMatrInicio] = useState('');
+  const [dtoMatrFin, setDtoMatrFin] = useState('');
+  const [dtoAnualActivo, setDtoAnualActivo] = useState(false);
+  const [dtoAnualPct, setDtoAnualPct] = useState('0');
+  const [dtoAnualInicio, setDtoAnualInicio] = useState('');
+  const [dtoAnualFin, setDtoAnualFin] = useState('');
+  const [matriculaActiva, setMatriculaActiva] = useState(true);
+  const [mensualidadActiva, setMensualidadActiva] = useState(true);
+  const [anualActivo, setAnualActivo] = useState(false);
   const [guardandoConfig, setGuardandoConfig] = useState(false);
 
   const cargarDatos = useCallback(async () => {
@@ -117,10 +135,35 @@ const PagosTab: React.FC = () => {
     );
   };
 
+  // Auto-calcular anual = mensualidad × 12 cuando no fue editado manualmente
+  const handleMensualidadChange = (v: string) => {
+    setMensualidad(v);
+    if (!anualEditadoManual) {
+      const num = parseFloat(v);
+      setAnual(!isNaN(num) && num > 0 ? String(Math.round(num * 12)) : '');
+    }
+  };
+
   const abrirModalConfig = () => {
     setMensualidad(config?.precioMensualidad ? String(config.precioMensualidad) : '');
     setMatricula(config?.precioMatricula ? String(config.precioMatricula) : '');
     setAnual(config?.precioAnual ? String(config.precioAnual) : '');
+    setAnualEditadoManual(!!config?.precioAnual);
+    setDtoMensActivo(config?.descuentoMensualidadActivo ?? false);
+    setDtoMensPct(String(config?.descuentoMensualidad ?? 0));
+    setDtoMensInicio(config?.descuentoMensualidadInicio ?? '');
+    setDtoMensFin(config?.descuentoMensualidadFin ?? '');
+    setDtoMatrActivo(config?.descuentoMatriculaActivo ?? false);
+    setDtoMatrPct(String(config?.descuentoMatricula ?? 0));
+    setDtoMatrInicio(config?.descuentoMatriculaInicio ?? '');
+    setDtoMatrFin(config?.descuentoMatriculaFin ?? '');
+    setDtoAnualActivo(config?.descuentoAnualActivo ?? false);
+    setDtoAnualPct(String(config?.descuentoAnual ?? 0));
+    setDtoAnualInicio(config?.descuentoAnualInicio ?? '');
+    setDtoAnualFin(config?.descuentoAnualFin ?? '');
+    setMatriculaActiva(config?.matriculaActiva ?? true);
+    setMensualidadActiva(config?.mensualidadActiva ?? true);
+    setAnualActivo(config?.anualActivo ?? false);
     setModalConfigVisible(true);
   };
 
@@ -131,6 +174,21 @@ const PagosTab: React.FC = () => {
       precioMensualidad: mensualidad ? parseFloat(mensualidad) : undefined,
       precioMatricula: matricula ? parseFloat(matricula) : undefined,
       precioAnual: anual ? parseFloat(anual) : undefined,
+      descuentoMensualidad: dtoMensPct ? Math.min(100, Math.max(0, parseInt(dtoMensPct))) : 0,
+      descuentoMensualidadInicio: dtoMensInicio || undefined,
+      descuentoMensualidadFin: dtoMensFin || undefined,
+      descuentoMensualidadActivo: dtoMensActivo,
+      descuentoMatricula: dtoMatrPct ? Math.min(100, Math.max(0, parseInt(dtoMatrPct))) : 0,
+      descuentoMatriculaInicio: dtoMatrInicio || undefined,
+      descuentoMatriculaFin: dtoMatrFin || undefined,
+      descuentoMatriculaActivo: dtoMatrActivo,
+      descuentoAnual: dtoAnualPct ? Math.min(100, Math.max(0, parseInt(dtoAnualPct))) : 0,
+      descuentoAnualInicio: dtoAnualInicio || undefined,
+      descuentoAnualFin: dtoAnualFin || undefined,
+      descuentoAnualActivo: dtoAnualActivo,
+      matriculaActiva,
+      mensualidadActiva,
+      anualActivo,
       proveedor: 'mercadopago',
       moneda: 'CLP',
     });
@@ -252,6 +310,15 @@ const PagosTab: React.FC = () => {
         {config?.precioMensualidad && (
           <Text style={styles.configBtnSub}>Mensualidad: {formatMonto(config.precioMensualidad)}</Text>
         )}
+        {config?.descuentoMensualidadActivo && (config.descuentoMensualidad ?? 0) > 0 && (
+          <Text style={[styles.configBtnSub, { color: '#2e7d32' }]}>🏷️ Mensualidad: -{config.descuentoMensualidad}%{config.descuentoMensualidadFin ? ` (hasta ${config.descuentoMensualidadFin})` : ''}</Text>
+        )}
+        {config?.descuentoMatriculaActivo && (config.descuentoMatricula ?? 0) > 0 && (
+          <Text style={[styles.configBtnSub, { color: '#2e7d32' }]}>🏷️ Matrícula: -{config.descuentoMatricula}%{config.descuentoMatriculaFin ? ` (hasta ${config.descuentoMatriculaFin})` : ''}</Text>
+        )}
+        {config?.descuentoAnualActivo && (config.descuentoAnual ?? 0) > 0 && (
+          <Text style={[styles.configBtnSub, { color: '#2e7d32' }]}>🏷️ Anual: -{config.descuentoAnual}%{config.descuentoAnualFin ? ` (hasta ${config.descuentoAnualFin})` : ''}</Text>
+        )}
       </TouchableOpacity>
 
       {/* Filtros */}
@@ -299,15 +366,83 @@ const PagosTab: React.FC = () => {
                 <Text style={{ fontSize: 22, color: '#fff' }}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ padding: 20 }}>
+            <ScrollView style={{ flexShrink: 1, padding: 20 }}>
               <Text style={styles.configLabel}>Mensualidad (CLP)</Text>
-              <TextInput style={styles.configInput} value={mensualidad} onChangeText={setMensualidad} keyboardType="numeric" placeholder="Ej: 15000" />
+              <View style={styles.toggleRow}>
+                <Switch value={mensualidadActiva} onValueChange={setMensualidadActiva} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={mensualidadActiva ? '#1a472a' : '#f4f3f4'} />
+                <Text style={styles.toggleLabel}>{mensualidadActiva ? 'Activa' : 'Desactivada'}</Text>
+              </View>
+              <TextInput style={[styles.configInput, !mensualidadActiva && { opacity: 0.4 }]} value={mensualidad} onChangeText={handleMensualidadChange} keyboardType="numeric" placeholder="Ej: 15000" editable={mensualidadActiva} />
 
               <Text style={styles.configLabel}>Matrícula (CLP)</Text>
-              <TextInput style={styles.configInput} value={matricula} onChangeText={setMatricula} keyboardType="numeric" placeholder="Ej: 30000" />
+              <View style={styles.toggleRow}>
+                <Switch value={matriculaActiva} onValueChange={setMatriculaActiva} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={matriculaActiva ? '#1a472a' : '#f4f3f4'} />
+                <Text style={styles.toggleLabel}>{matriculaActiva ? 'Activa' : 'Desactivada'}</Text>
+              </View>
+              <TextInput style={[styles.configInput, !matriculaActiva && { opacity: 0.4 }]} value={matricula} onChangeText={setMatricula} keyboardType="numeric" placeholder="Ej: 30000" editable={matriculaActiva} />
 
               <Text style={styles.configLabel}>Pago Anual (CLP)</Text>
-              <TextInput style={styles.configInput} value={anual} onChangeText={setAnual} keyboardType="numeric" placeholder="Ej: 150000" />
+              <View style={styles.toggleRow}>
+                <Switch value={anualActivo} onValueChange={setAnualActivo} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={anualActivo ? '#1a472a' : '#f4f3f4'} />
+                <Text style={styles.toggleLabel}>{anualActivo ? 'Activo' : 'Desactivado'}</Text>
+              </View>
+              {!anualEditadoManual && mensualidad ? (
+                <Text style={styles.configHint}>💡 Calculado automáticamente: mensualidad × 12. Edítalo para personalizarlo.</Text>
+              ) : null}
+              <TextInput
+                style={[styles.configInput, !anualActivo && { opacity: 0.4 }]}
+                value={anual}
+                onChangeText={v => { setAnualEditadoManual(true); setAnual(v); }}
+                keyboardType="numeric"
+                placeholder="Ej: 150000"
+                editable={anualActivo}
+              />
+
+              {/* ── Descuentos especiales por tipo ── */}
+              <View style={styles.dtoSection}>
+                <Text style={styles.configLabel}>🏷️ Descuento Mensualidad</Text>
+                <View style={styles.dtoRow}>
+                  <Switch value={dtoMensActivo} onValueChange={setDtoMensActivo} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={dtoMensActivo ? '#1a472a' : '#f4f3f4'} />
+                  <Text style={styles.toggleLabel}>{dtoMensActivo ? 'Activo' : 'Inactivo'}</Text>
+                  {dtoMensActivo && <TextInput style={styles.inputPct} value={dtoMensPct} onChangeText={v => setDtoMensPct(v.replace(/[^0-9]/g, ''))} keyboardType="numeric" placeholder="%" maxLength={3} />}
+                </View>
+                {dtoMensActivo && (
+                  <View style={styles.dtoFechas}>
+                    <TextInput style={styles.inputFecha} value={dtoMensInicio} onChangeText={setDtoMensInicio} placeholder="Desde: AAAA-MM-DD (opcional)" />
+                    <TextInput style={styles.inputFecha} value={dtoMensFin} onChangeText={setDtoMensFin} placeholder="Hasta: AAAA-MM-DD (vacío = sin límite)" />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.dtoSection}>
+                <Text style={styles.configLabel}>🏷️ Descuento Matrícula</Text>
+                <View style={styles.dtoRow}>
+                  <Switch value={dtoMatrActivo} onValueChange={setDtoMatrActivo} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={dtoMatrActivo ? '#1a472a' : '#f4f3f4'} />
+                  <Text style={styles.toggleLabel}>{dtoMatrActivo ? 'Activo' : 'Inactivo'}</Text>
+                  {dtoMatrActivo && <TextInput style={styles.inputPct} value={dtoMatrPct} onChangeText={v => setDtoMatrPct(v.replace(/[^0-9]/g, ''))} keyboardType="numeric" placeholder="%" maxLength={3} />}
+                </View>
+                {dtoMatrActivo && (
+                  <View style={styles.dtoFechas}>
+                    <TextInput style={styles.inputFecha} value={dtoMatrInicio} onChangeText={setDtoMatrInicio} placeholder="Desde: AAAA-MM-DD (opcional)" />
+                    <TextInput style={styles.inputFecha} value={dtoMatrFin} onChangeText={setDtoMatrFin} placeholder="Hasta: AAAA-MM-DD (vacío = sin límite)" />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.dtoSection}>
+                <Text style={styles.configLabel}>🏷️ Descuento Pago Anual</Text>
+                <View style={styles.dtoRow}>
+                  <Switch value={dtoAnualActivo} onValueChange={setDtoAnualActivo} trackColor={{ false: '#ccc', true: '#a5d6a7' }} thumbColor={dtoAnualActivo ? '#1a472a' : '#f4f3f4'} />
+                  <Text style={styles.toggleLabel}>{dtoAnualActivo ? 'Activo' : 'Inactivo'}</Text>
+                  {dtoAnualActivo && <TextInput style={styles.inputPct} value={dtoAnualPct} onChangeText={v => setDtoAnualPct(v.replace(/[^0-9]/g, ''))} keyboardType="numeric" placeholder="%" maxLength={3} />}
+                </View>
+                {dtoAnualActivo && (
+                  <View style={styles.dtoFechas}>
+                    <TextInput style={styles.inputFecha} value={dtoAnualInicio} onChangeText={setDtoAnualInicio} placeholder="Desde: AAAA-MM-DD (opcional)" />
+                    <TextInput style={styles.inputFecha} value={dtoAnualFin} onChangeText={setDtoAnualFin} placeholder="Hasta: AAAA-MM-DD (vacío = sin límite)" />
+                  </View>
+                )}
+              </View>
 
               <View style={styles.modalFooter}>
                 <TouchableOpacity style={styles.cancelar} onPress={() => setModalConfigVisible(false)}>
@@ -419,6 +554,17 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 17, fontWeight: 'bold', color: '#fff' },
   configLabel: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 6, marginTop: 14 },
+  configHint: { fontSize: 12, color: '#888', marginBottom: 6, fontStyle: 'italic' },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  toggleLabel: {
+    fontSize: 13,
+    color: '#555',
+  },
   configInput: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -432,6 +578,40 @@ const styles = StyleSheet.create({
   cancelarText: { color: '#555', fontWeight: '600' },
   guardar: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#1a472a', alignItems: 'center' },
   guardarText: { color: '#fff', fontWeight: '700' },
+  // Discount per-item styles
+  dtoSection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 10,
+  },
+  dtoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  dtoFechas: { gap: 8, marginTop: 4 },
+  inputPct: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#1a472a',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    backgroundColor: '#f1f8e9',
+    marginLeft: 6,
+  },
+  inputFecha: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    backgroundColor: '#fafafa',
+    color: '#333',
+  },
 });
 
 export default PagosTab;

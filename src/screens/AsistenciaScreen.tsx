@@ -175,10 +175,11 @@ const AsistenciaScreen: React.FC<AsistenciaScreenProps> = ({ navigation, route }
     if (!user) return;
 
     // Verificar permisos
-    if (user.role === 'ayudante') {
+    const puedeEnviar = ['super_admin', 'admin_club', 'entrenador'].includes(user.role);
+    if (!puedeEnviar) {
       Alert.alert(
         'Sin permisos',
-        'Los ayudantes no pueden enviar la asistencia. Solo el entrenador o admin puede hacerlo.'
+        'Solo el entrenador o administrador puede enviar la asistencia.'
       );
       return;
     }

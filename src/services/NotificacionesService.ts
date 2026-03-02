@@ -12,6 +12,15 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// ─── Notificaciones semanales recurrentes (por días de la categoría) ─────────
+// expo-notifications: 1=domingo, 2=lunes, … 7=sábado
+const DIA_WEEKDAY: Record<string, number> = {
+  domingo: 1, lunes: 2, martes: 3, miercoles: 4,
+  jueves: 5, viernes: 6, sabado: 7,
+};
+const SEMANAL_PREFIX  = 'semanal_';
+const SEMANAL_ACTIVO  = '@notif_semanal_activo';
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export interface ConfigNotificaciones {
   habilitadas: boolean;
@@ -205,6 +214,111 @@ const NotificacionesService = {
 
   async obtenerPendientes(): Promise<Notifications.NotificationRequest[]> {
     return Notifications.getAllScheduledNotificationsAsync();
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // NOTIFICACIONES SEMANALES RECURRENTES (basadas en diasEntrenamiento + horarios
+  // de la Categoria, no en sesiones individuales)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /** Devuelve true si el jugador tiene activas las notificaciones semanales. */
+  async estaActivoSemanal(): Promise<boolean> {
+    try {
+      return (await AsyncStorage.getItem(SEMANAL_ACTIVO)) === 'true';
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * Programa notificaciones semanales repetidas para cada día de entrenamiento.
+   * La notificación se dispara 15 min antes del inicio (17:45 si no hay horario).
+   */
+  async programarEntrenamientosSemanales(
+    categoriaNombre: string,
+    diasEntrenamiento: string[],
+    horarios?: Record<string, string>
+  ): Promise<boolean> {
+    if (Platform.OS === 'web') return false;
+
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('entrenamientos', {
+        name: 'Recordatorios de entrenamiento',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#1a472a',
+        sound: 'default',
+      });
+    }
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return false;
+
+    // Cancelar las semanales anteriores
+    await this.cancelarEntrenamientosSemanales(false);
+
+    for (const dia of diasEntrenamiento) {
+      const weekday = DIA_WEEKDAY[dia];
+      if (!weekday) continue;
+
+      const horario = horarios?.[dia];
+
+      // Parsear hora de inicio y restar 15 min
+      let hour = 17, minute = 45; // defecto: 17:45
+      if (horario) {
+        const m = horario.match(/^(\d{1,2}):(\d{2})/);
+        if (m) {
+          const totalMin = parseInt(m[1]) * 60 + parseInt(m[2]) - 15;
+          hour   = Math.floor(Math.max(totalMin, 0) / 60);
+          minute = Math.max(totalMin, 0) % 60;
+        }
+      }
+
+      try {
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${SEMANAL_PREFIX}${dia}`,
+          content: {
+            title: '🏉 Entrenamiento hoy',
+            body: horario
+              ? `${categoriaNombre} · ${horario}`
+              : `Recuerda tu entrenamiento de ${categoriaNombre}`,
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday,
+            hour,
+            minute,
+            channelId: 'entrenamientos',
+          } as any,
+        });
+      } catch (err) {
+        console.warn(`[Notif Semanal] Error programando ${dia}:`, err);
+      }
+    }
+
+    await AsyncStorage.setItem(SEMANAL_ACTIVO, 'true');
+    console.log(`🔔 [Notif Semanal] Programadas para: ${diasEntrenamiento.join(', ')}`);
+    return true;
+  },
+
+  /**
+   * Cancela todas las notificaciones semanales de entrenamiento.
+   * @param updateStorage  Si true (defecto), actualiza AsyncStorage a 'false'.
+   */
+  async cancelarEntrenamientosSemanales(updateStorage = true): Promise<void> {
+    if (Platform.OS === 'web') return;
+    try {
+      const programadas = await Notifications.getAllScheduledNotificationsAsync();
+      await Promise.all(
+        programadas
+          .filter(n => n.identifier.startsWith(SEMANAL_PREFIX))
+          .map(n => Notifications.cancelScheduledNotificationAsync(n.identifier))
+      );
+    } catch (err) {
+      console.warn('[Notif Semanal] Error cancelando:', err);
+    }
+    if (updateStorage) await AsyncStorage.setItem(SEMANAL_ACTIVO, 'false');
   },
 };
 

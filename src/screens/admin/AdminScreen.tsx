@@ -14,6 +14,10 @@ import EstadisticasTab from './EstadisticasTab';
 import CalendarioTab from './CalendarioTab';
 import FormularioTab from './FormularioTab';
 import PagosTab from './PagosTab';
+import CodigosTab from './CodigosTab';
+import AvisosTab from './AvisosTab';
+import EvaluacionesTab from './EvaluacionesTab';
+import ClubTab from './ClubTab';
 import { useAuth } from '../../context/AuthContextV2';
 import { useClub } from '../../context/ClubContext';
 
@@ -22,7 +26,7 @@ interface AdminScreenProps {
   route?: any;
 }
 
-type TabType = 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos';
+type TabType = 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos' | 'codigos' | 'avisos' | 'evaluaciones' | 'club';
 
 const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const { user } = useAuth();
@@ -30,7 +34,8 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
   const routeInitialTab: TabType | undefined = route?.params?.initialTab;
 
   const allowedTabs = useMemo<TabType[]>(() => {
-    if (user?.role === 'super_admin' || user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario', 'formulario', 'pagos'];
+    if (user?.role === 'super_admin') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario', 'formulario', 'pagos', 'avisos', 'codigos', 'evaluaciones', 'club'];
+    if (user?.role === 'admin_club') return ['usuarios', 'jugadores', 'categorias', 'estadisticas', 'calendario', 'formulario', 'pagos', 'avisos', 'evaluaciones', 'club'];
     if (user?.role === 'entrenador') return ['jugadores', 'estadisticas', 'calendario'];
     return [];
   }, [user?.role]);
@@ -184,6 +189,50 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         )}
+
+        {allowedTabs.includes('codigos') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'codigos' && styles.tabActive]}
+            onPress={() => setActiveTab('codigos')}
+          >
+            <Text style={[styles.tabText, activeTab === 'codigos' && styles.tabTextActive]}>
+              🔑 Códigos
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {allowedTabs.includes('avisos') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'avisos' && styles.tabActive]}
+            onPress={() => setActiveTab('avisos')}
+          >
+            <Text style={[styles.tabText, activeTab === 'avisos' && styles.tabTextActive]}>
+              📢 Avisos
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {allowedTabs.includes('evaluaciones') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'evaluaciones' && styles.tabActive]}
+            onPress={() => setActiveTab('evaluaciones')}
+          >
+            <Text style={[styles.tabText, activeTab === 'evaluaciones' && styles.tabTextActive]}>
+              ⭐ Evaluaciones
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {allowedTabs.includes('club') && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'club' && styles.tabActive]}
+            onPress={() => setActiveTab('club')}
+          >
+            <Text style={[styles.tabText, activeTab === 'club' && styles.tabTextActive]}>
+              🏟️ Club
+            </Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Content */}
@@ -193,8 +242,12 @@ const AdminScreen: React.FC<AdminScreenProps> = ({ navigation, route }) => {
         {activeTab === 'categorias' && allowedTabs.includes('categorias') && <CategoriasTab />}
         {activeTab === 'estadisticas' && allowedTabs.includes('estadisticas') && <EstadisticasTab />}
         {activeTab === 'calendario' && allowedTabs.includes('calendario') && <CalendarioTab />}
-        {activeTab === 'formulario' && allowedTabs.includes('formulario') && <FormularioTab />}
+        {activeTab === 'formulario' && allowedTabs.includes('formulario') && <FormularioTab navigation={navigation} />}
         {activeTab === 'pagos' && allowedTabs.includes('pagos') && <PagosTab />}
+        {activeTab === 'codigos' && allowedTabs.includes('codigos') && <CodigosTab />}
+        {activeTab === 'avisos' && allowedTabs.includes('avisos') && <AvisosTab />}
+        {activeTab === 'evaluaciones' && allowedTabs.includes('evaluaciones') && <EvaluacionesTab />}
+        {activeTab === 'club' && allowedTabs.includes('club') && <ClubTab />}
       </View>
     </SafeAreaView>
   );

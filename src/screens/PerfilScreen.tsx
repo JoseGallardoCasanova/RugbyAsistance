@@ -93,7 +93,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -432,7 +432,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalContent}>
+            <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: 20 }}>
               {/* Contraseña actual */}
               <Text style={styles.modalLabel}>Contraseña actual *</Text>
               <View style={styles.passwordInputContainer}>
@@ -739,6 +739,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   modalContent: {
+    flexShrink: 1,
     padding: 20,
   },
   modalLabel: {

@@ -69,15 +69,56 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
   // Formulario dinámico
   const [formularioConfig, setFormularioConfig] = useState<FormularioConfiguracion | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState(true);
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
 
+  // Credenciales de acceso a la app (editables por el jugador)
+  const [credUsername, setCredUsername] = useState('');
+  const [credUsernameManual, setCredUsernameManual] = useState(false);
+  const [credPassword, setCredPassword] = useState('jugador123');
+  const [credPasswordVisible, setCredPasswordVisible] = useState(false);
+
+  // Derivar username automáticamente del nombre completo (form estático)
   useEffect(() => {
+    if (credUsernameManual || !nombreCompleto.trim()) return;
+    const partes = nombreCompleto.trim().split(/\s+/);
+    const n = partes[0] || '';
+    const a = partes.length > 1 ? partes[partes.length - 1] : '';
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    const auto = norm(n).charAt(0) + norm(a || n);
+    if (auto) setCredUsername(auto);
+  }, [nombreCompleto, credUsernameManual]);
+
+  // Derivar username del formulario dinámico
+  useEffect(() => {
+    if (credUsernameManual || !formularioConfig) return;
+    const nombreCampo =
+      formularioConfig.campos.find(c => c.tipo === 'text' && c.label.toLowerCase().includes('nombre')) ??
+      formularioConfig.campos.find(c => c.tipo === 'text');
+    if (!nombreCampo) return;
+    const val = respuestas[nombreCampo.id] || '';
+    if (!val.trim()) return;
+    const partes = val.trim().split(/\s+/);
+    const n = partes[0] || '';
+    const a = partes.length > 1 ? partes[partes.length - 1] : '';
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    const auto = norm(n).charAt(0) + norm(a || n);
+    if (auto) setCredUsername(auto);
+  }, [respuestas, formularioConfig, credUsernameManual]);
+
+  // Re-run when club loads (club may be null on first render if context is still initializing)
+  useEffect(() => {
+    if (!club) {
+      setLoadingConfig(false);
+      return;
+    }
     cargarCategorias();
     cargarFormularioConfig();
-  }, []);
+  }, [club?.id]);
 
   const cargarFormularioConfig = async () => {
     if (!club) return;
+    setLoadingConfig(true);
     try {
       const config = await SupabaseServiceV2.getFormularioByClub(club.id);
       if (config && config.campos.length > 0) {
@@ -85,6 +126,8 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
       }
     } catch (e) {
       // Silencioso: si falla, usa el formulario hardcoded
+    } finally {
+      setLoadingConfig(false);
     }
   };
 
@@ -225,6 +268,35 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
           </View>
         ))}
         {/* Submit dinámico */}
+        {/* Sección credenciales */}
+        <View style={styles.credSection}>
+          <Text style={styles.credTitle}>🔑 Tu acceso a la app</Text>
+          <Text style={styles.credHint}>Con estos datos podrás ingresar. El usuario se genera automáticamente de tu nombre — puedes cambiarlo.</Text>
+          <Text style={styles.credLabel}>Usuario</Text>
+          <TextInput
+            style={styles.credInput}
+            value={credUsername}
+            onChangeText={v => { setCredUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setCredUsernameManual(true); }}
+            placeholder="ej: jgallardo"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.credLabel}>Contraseña</Text>
+          <View style={styles.credPasswordRow}>
+            <TextInput
+              style={[styles.credInput, { flex: 1 }]}
+              value={credPassword}
+              onChangeText={setCredPassword}
+              placeholder="jugador123"
+              secureTextEntry={!credPasswordVisible}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity style={styles.credEye} onPress={() => setCredPasswordVisible(v => !v)}>
+              <Text style={{ fontSize: 18 }}>{credPasswordVisible ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {/* Submit dinámico */}
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleEnviarDinamico}
@@ -279,19 +351,37 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
 
     setLoading(true);
     try {
-      const success = await SupabaseServiceV2.crearJugador({
+      const jugadorCreado = await SupabaseServiceV2.crearJugador({
         clubId: club.id,
         rut: rutValor.trim(),
         nombre: nombreValor.trim(),
         categoriaId: categoriaSeleccionada,
         datosFormularioExtra: respuestas,
       });
-      if (success) {
-        Alert.alert(
-          '✅ Inscripción Exitosa',
-          'Te has registrado correctamente. ¡Bienvenido al club!',
-          [{ text: 'OK', onPress: () => { if (onSuccess) onSuccess(); else if (navigation) navigation.goBack(); } }]
-        );
+      if (jugadorCreado) {
+        // Auto-crear cuenta de usuario
+        const partes = nombreValor.trim().split(' ');
+        const apellidoAuto = partes.length > 1 ? partes[partes.length - 1] : 'Jugador';
+        const nombreAuto = partes.slice(0, partes.length > 1 ? -1 : 1).join(' ');
+        try {
+          const resultado = await SupabaseServiceV2.autoCrearUsuarioJugador(
+            club.id, jugadorCreado.id, nombreAuto, apellidoAuto, undefined,
+            credUsername.trim() || undefined, credPassword.trim() || undefined
+          );
+          const usernameReal = resultado?.user.username ?? credUsername;
+          const passReal = resultado?.plainPassword ?? credPassword;
+          Alert.alert(
+            '\u2705 Inscripci\u00f3n Exitosa',
+            `Te has registrado correctamente.\n\n\ud83d\udc64 Usuario: ${usernameReal}\n\ud83d\udd11 Contrase\u00f1a: ${passReal}\n\nGuarda estos datos para ingresar a la app.`,
+            [{ text: 'OK', onPress: () => { if (onSuccess) onSuccess(); else if (navigation) navigation.goBack(); } }]
+          );
+        } catch (_) {
+          Alert.alert(
+            '\u2705 Inscripci\u00f3n Exitosa',
+            'Te has registrado correctamente. Tu usuario fue creado autom\u00e1ticamente con contrase\u00f1a jugador123.',
+            [{ text: 'OK', onPress: () => { if (onSuccess) onSuccess(); else if (navigation) navigation.goBack(); } }]
+          );
+        }
       } else {
         Alert.alert('Error', 'No se pudo completar la inscripción. Intenta nuevamente.');
       }
@@ -394,25 +484,50 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         autorizoUsoImagen: autorizoUsoImagen ?? false,
       };
 
-      const success = await SupabaseServiceV2.crearJugador(nuevoJugador);
+      const jugadorCreado = await SupabaseServiceV2.crearJugador(nuevoJugador);
 
-      if (success) {
-        Alert.alert(
-          '✅ Inscripción Exitosa',
-          'Te has registrado correctamente. ¡Bienvenido al club!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                if (onSuccess) {
-                  onSuccess();
-                } else if (navigation) {
-                  navigation.goBack();
-                }
+      if (jugadorCreado) {
+        // Auto-crear cuenta de usuario con contraseña predeterminada
+        const partes = nombreCompleto.trim().split(' ');
+        const apellidoAuto = partes.length > 1 ? partes[partes.length - 1] : 'Jugador';
+        const nombreAuto = partes.slice(0, partes.length > 1 ? -1 : 1).join(' ');
+        try {
+          const resultado = await SupabaseServiceV2.autoCrearUsuarioJugador(
+            club.id, jugadorCreado.id, nombreAuto, apellidoAuto, email.trim() || undefined,
+            credUsername.trim() || undefined, credPassword.trim() || undefined
+          );
+          const usernameReal = resultado?.user.username ?? credUsername;
+          const passReal = resultado?.plainPassword ?? credPassword;
+          Alert.alert(
+            '\u2705 Inscripci\u00f3n Exitosa',
+            `Te has registrado correctamente.\n\n\ud83d\udc64 Usuario: ${usernameReal}\n\ud83d\udd11 Contrase\u00f1a: ${passReal}\n\nGuarda estos datos para ingresar a la app.`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  if (onSuccess) {
+                    onSuccess();
+                  } else if (navigation) {
+                    navigation.goBack();
+                  }
+                },
               },
-            },
-          ]
-        );
+            ]
+          );
+        } catch (_) {
+          Alert.alert(
+            '\u2705 Inscripci\u00f3n Exitosa',
+            'Te has registrado correctamente. Tu usuario fue creado autom\u00e1ticamente con contrase\u00f1a jugador123.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  if (onSuccess) { onSuccess(); } else if (navigation) { navigation.goBack(); }
+                },
+              },
+            ]
+          );
+        }
       } else {
         Alert.alert('Error', 'No se pudo completar la inscripción. Intenta nuevamente.');
       }
@@ -440,7 +555,15 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         <Text style={styles.title}>📝 Formulario de Inscripción</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 60 }}>
+        {/* Spinner mientras se carga la configuración del formulario */}
+        {loadingConfig ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
+            <ActivityIndicator size="large" color="#1a472a" />
+            <Text style={{ marginTop: 12, color: '#666' }}>Cargando formulario...</Text>
+          </View>
+        ) : (
+        <>
         <Text style={styles.subtitle}>
           {formularioConfig ? 'Completa los siguientes campos para registrarte' : 'Completa todos los campos para registrarte en el club'}
         </Text>
@@ -747,6 +870,35 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
           </View>
         </View>
 
+        {/* SECCIÓN CREDENCIALES */}
+        <View style={styles.credSection}>
+          <Text style={styles.credTitle}>🔑 Tu acceso a la app</Text>
+          <Text style={styles.credHint}>Con estos datos podrás ingresar. El usuario se genera automáticamente de tu nombre — puedes cambiarlo.</Text>
+          <Text style={styles.credLabel}>Usuario</Text>
+          <TextInput
+            style={styles.credInput}
+            value={credUsername}
+            onChangeText={v => { setCredUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setCredUsernameManual(true); }}
+            placeholder="ej: jgallardo"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Text style={styles.credLabel}>Contraseña</Text>
+          <View style={styles.credPasswordRow}>
+            <TextInput
+              style={[styles.credInput, { flex: 1 }]}
+              value={credPassword}
+              onChangeText={setCredPassword}
+              placeholder="jugador123"
+              secureTextEntry={!credPasswordVisible}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity style={styles.credEye} onPress={() => setCredPasswordVisible(v => !v)}>
+              <Text style={{ fontSize: 18 }}>{credPasswordVisible ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* BOTÓN ENVIAR */}
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
@@ -762,6 +914,8 @@ export default function FormularioAutoinscripcion({ navigation, onSuccess }: Pro
         </>)}
 
         <View style={{ height: 40 }} />
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -952,5 +1106,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Credentials section
+  credSection: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#1a472a',
+    padding: 16,
+    marginTop: 24,
+    marginBottom: 4,
+  },
+  credTitle: { fontSize: 15, fontWeight: 'bold', color: '#1a472a', marginBottom: 4 },
+  credHint: { fontSize: 12, color: '#555', marginBottom: 12, lineHeight: 17 },
+  credLabel: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 4, marginTop: 8 },
+  credInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#c8e6c9',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 15,
+    color: '#222',
+  },
+  credPasswordRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  credEye: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c8e6c9',
   },
 });

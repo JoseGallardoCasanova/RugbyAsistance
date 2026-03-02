@@ -12,7 +12,11 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import { Jugador, Categoria, User, RelacionApoderado } from '../../types/v2';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
+import * as DocumentPicker from 'expo-document-picker';
+import { Jugador, Categoria, User, RelacionApoderado, ConfiguracionPagosClub, FormularioConfiguracion } from '../../types/v2';
 import SupabaseServiceV2 from '../../services/SupabaseServiceV2';
 import FormJugador from './FormJugador';
 import ModalDetallesJugador from './ModalDetallesJugador';
@@ -43,6 +47,22 @@ const JugadoresTab: React.FC = () => {
   const [busquedaApod, setBusquedaApod] = useState('');
   const [cargandoApod, setCargandoApod] = useState(false);
 
+  // Gestión descuentos personales
+  const [modalDescuentoVisible, setModalDescuentoVisible] = useState(false);
+  const [jugadorDescuentoTarget, setJugadorDescuentoTarget] = useState<Jugador | null>(null);
+  const [descuentoValorStr, setDescuentoValorStr] = useState('0');
+  const [notaDescuentoStr, setNotaDescuentoStr] = useState('');
+  const [guardandoDescuento, setGuardandoDescuento] = useState(false);
+  const [config, setConfig] = useState<ConfiguracionPagosClub | null>(null);
+  const [formularioConfig, setFormularioConfig] = useState<FormularioConfiguracion | null>(null);
+
+  // Importación masiva
+  const [importModal, setImportModal] = useState(false);
+  const [importPaso, setImportPaso] = useState(0);
+  const [importTotal, setImportTotal] = useState(0);
+  const [importErrores, setImportErrores] = useState<string[]>([]);
+  const [importDone, setImportDone] = useState(false);
+
   const categoriasEntrenador = useMemo(() => {
     if (user?.role !== 'entrenador') return undefined;
     return user.categoriasAsignadas;
@@ -60,9 +80,11 @@ const JugadoresTab: React.FC = () => {
 
     try {
       setLoading(true);
-      const [jugadoresData, categoriasData] = await Promise.all([
+      const [jugadoresData, categoriasData, configData, formConfigData] = await Promise.all([
         SupabaseServiceV2.getJugadoresByClub(club.id),
         SupabaseServiceV2.getCategoriasByClub(club.id),
+        SupabaseServiceV2.getConfigPagosByClub(club.id),
+        SupabaseServiceV2.getFormularioByClub(club.id),
       ]);
       
       // V2: No hay campo activo, todos son activos
@@ -84,6 +106,8 @@ const JugadoresTab: React.FC = () => {
 
       setJugadores(jugadoresFiltrados);
       setCategorias(categoriasOrdenadas);
+      setConfig(configData);
+      setFormularioConfig(formConfigData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los jugadores');
@@ -117,6 +141,17 @@ const JugadoresTab: React.FC = () => {
     const cat = categorias.find(c => c.id === categoriaId);
     return cat?.color || '#1a472a';
   };
+
+  // Descuento de item vigente (activo + dentro de rango de fechas)
+  const getDescuentoItem = (pct: number, activo: boolean, inicio?: string, fin?: string): number => {
+    if (!activo || !pct) return 0;
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (inicio && hoy < inicio) return 0;
+    if (fin && hoy > fin) return 0;
+    return pct;
+  };
+
+  const formatK = (n: number) => n >= 1000 ? `$${Math.round(n / 1000)}k` : `$${n}`;
 
   const handleCrear = () => {
     if (entrenadorSinCategorias) {
@@ -220,10 +255,38 @@ const JugadoresTab: React.FC = () => {
           datosFormularioExtra: datos.datosFormularioExtra,
         };
         result = await SupabaseServiceV2.crearJugador(nuevoJugador);
+
+        // Auto-crear usuario para el jugador
+        if (result) {
+          const partes = (datos.nombre!).trim().split(/\s+/);
+          const apellidoAuto = partes.length > 1 ? partes[partes.length - 1] : '';
+          const nombreAuto = partes.slice(0, partes.length > 1 ? -1 : 1).join(' ') || partes[0];
+          try {
+            const cred = await SupabaseServiceV2.autoCrearUsuarioJugador(
+              club.id, result.id, nombreAuto, apellidoAuto, datos.email
+            );
+            if (cred) {
+              Alert.alert(
+                '✅ Jugador Creado',
+                `Jugador registrado exitosamente.\n\n👤 Usuario: ${cred.user.username}\n🔑 Contraseña: ${cred.plainPassword}\n\nComparte estas credenciales con el jugador para que pueda ingresar a la app.`
+              );
+            } else {
+              Alert.alert('✅ Jugador Creado', 'Jugador registrado. No se pudo crear el usuario automáticamente, configúralo desde la pestaña Usuarios.');
+            }
+          } catch (_) {
+            Alert.alert('✅ Jugador Creado', 'Jugador registrado. No se pudo crear el usuario automáticamente.');
+          }
+          setModalVisible(false);
+          cargarDatos();
+          return;
+        }
+        Alert.alert('❌ Error', 'No se pudo crear el jugador');
+        return;
       }
 
+      // Ruta edición: verificar resultado
       if (result) {
-        Alert.alert('✅ Éxito', jugadorEditar ? 'Jugador actualizado' : 'Jugador creado');
+        Alert.alert('✅ Éxito', 'Jugador actualizado correctamente');
         setModalVisible(false);
         cargarDatos();
       } else {
@@ -283,6 +346,127 @@ const JugadoresTab: React.FC = () => {
     ]);
   };
 
+  const handleDescargarPlantilla = async () => {
+    if (!club) return;
+    try {
+      const columnas = formularioConfig?.campos && formularioConfig.campos.length > 0
+        ? ['categoria', ...formularioConfig.campos.map((c: any) => c.label)]
+        : ['nombre', 'apellido', 'rut', 'fecha_nacimiento', 'email', 'telefono',
+           'categoria', 'contacto_emergencia', 'tel_emergencia', 'sistema_salud', 'actividad'];
+      const wsData = [columnas];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = columnas.map(() => ({ wch: 22 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Jugadores');
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      const fecha = new Date().toISOString().split('T')[0];
+      const fileName = `Plantilla_Jugadores_${club.nombre}_${fecha}.xlsx`;
+      const fileUri = (FileSystem.documentDirectory ?? '') + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      } else {
+        Alert.alert('Descargado', `Plantilla guardada: ${fileName}`);
+      }
+    } catch (e: any) {
+      Alert.alert('Error', `No se pudo generar la plantilla: ${e.message}`);
+    }
+  };
+
+  const handleImportarJugadores = async () => {
+    if (!club) return;
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+               'application/vnd.ms-excel', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      const uri = picked.assets[0].uri;
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+      const wb = XLSX.read(base64, { type: 'base64' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const filas: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!filas.length) { Alert.alert('Vacío', 'El archivo no tiene datos.'); return; }
+
+      setImportTotal(filas.length);
+      setImportPaso(0);
+      setImportErrores([]);
+      setImportDone(false);
+      setImportModal(true);
+
+      const errores: string[] = [];
+      for (let i = 0; i < filas.length; i++) {
+        const fila = filas[i];
+        setImportPaso(i + 1);
+        const nombreVal = String(fila['nombre'] || fila['Nombre'] || '').trim();
+        const apellidoVal = String(fila['apellido'] || fila['Apellido'] || '').trim();
+        const rutVal = String(fila['rut'] || fila['RUT'] || '').trim();
+        const catNombre = String(fila['categoria'] || fila['Categoria'] || fila['Categoría'] || '').trim();
+        if (!nombreVal || !rutVal) {
+          errores.push(`Fila ${i + 2}: nombre y rut son obligatorios`);
+          continue;
+        }
+        const catObj = categorias.find(c => c.nombre.toLowerCase() === catNombre.toLowerCase());
+        try {
+          const jugadorCreado = await SupabaseServiceV2.crearJugador({
+            clubId: club.id,
+            rut: rutVal,
+            nombre: `${nombreVal} ${apellidoVal}`.trim(),
+            categoriaId: catObj?.id ?? (categorias[0]?.id ?? ''),
+            email: String(fila['email'] || fila['Email'] || '').trim() || undefined,
+            telefono: String(fila['telefono'] || fila['Telefono'] || '').trim() || undefined,
+            fechaNacimiento: String(fila['fecha_nacimiento'] || '').trim() || undefined,
+            contactoEmergencia: String(fila['contacto_emergencia'] || '').trim() || undefined,
+            telEmergencia: String(fila['tel_emergencia'] || '').trim() || undefined,
+            sistemaSalud: String(fila['sistema_salud'] || '').trim() || undefined,
+            actividad: String(fila['actividad'] || '').trim() || undefined,
+          });
+          if (jugadorCreado) {
+            await SupabaseServiceV2.autoCrearUsuarioJugador(club.id, jugadorCreado.id, nombreVal, apellidoVal);
+          } else {
+            errores.push(`Fila ${i + 2} (${nombreVal}): No se pudo crear`);
+          }
+        } catch (e: any) {
+          errores.push(`Fila ${i + 2} (${nombreVal}): ${e.message}`);
+        }
+      }
+      setImportErrores(errores);
+      setImportDone(true);
+      cargarDatos();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+      setImportModal(false);
+    }
+  };
+
+  const handleAbrirDescuento = (jugador: Jugador) => {
+    setJugadorDescuentoTarget(jugador);
+    setDescuentoValorStr(String(jugador.descuentoPersonal ?? 0));
+    setNotaDescuentoStr(jugador.notaDescuento ?? '');
+    setModalDescuentoVisible(true);
+  };
+
+  const handleGuardarDescuento = async () => {
+    if (!jugadorDescuentoTarget) return;
+    const pct = Math.min(100, Math.max(0, parseInt(descuentoValorStr || '0', 10)));
+    setGuardandoDescuento(true);
+    const updated = await SupabaseServiceV2.actualizarJugador(jugadorDescuentoTarget.id, {
+      descuentoPersonal: pct,
+      notaDescuento: notaDescuentoStr.trim() || undefined,
+    });
+    setGuardandoDescuento(false);
+    if (updated) {
+      setJugadores(prev => prev.map(j => j.id === jugadorDescuentoTarget.id ? {
+        ...j, descuentoPersonal: pct, notaDescuento: notaDescuentoStr.trim() || undefined,
+      } : j));
+      setModalDescuentoVisible(false);
+      Alert.alert('✅', pct > 0 ? `Descuento del ${pct}% asignado a ${jugadorDescuentoTarget.nombre}.` : 'Descuento eliminado.');
+    } else {
+      Alert.alert('Error', 'No se pudo guardar el descuento.');
+    }
+  };
+
   const jugadoresFiltrados = jugadores.filter(j => {
     const matchBusqueda = j.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
                           j.rut.includes(busqueda);
@@ -297,18 +481,72 @@ const JugadoresTab: React.FC = () => {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardInfo}>
-            <Text style={styles.cardName}>{item.nombre}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.cardName}>{item.nombre}</Text>
+              {(item.descuentoPersonal ?? 0) > 0 && (
+                <View style={styles.descuentoBadge}>
+                  <Text style={styles.descuentoBadgeText}>🏷️ {item.descuentoPersonal}%</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.cardRut}>RUT: {item.rut}</Text>
             <View style={styles.categoriaContainer}>
               <View style={[styles.categoriaIndicator, { backgroundColor: getColorCategoria(item.categoriaId) }]} />
               <Text style={styles.categoriaText}>{getNombreCategoria(item.categoriaId)}</Text>
             </View>
+            {/* Precios vigentes con descuento aplicado */}
+            {config && (
+              <View style={styles.preciosRow}>
+                {config.mensualidadActiva && config.precioMensualidad ? (() => {
+                  const dtoClub = getDescuentoItem(config.descuentoMensualidad, config.descuentoMensualidadActivo, config.descuentoMensualidadInicio, config.descuentoMensualidadFin);
+                  const dto = Math.max(dtoClub, item.descuentoPersonal ?? 0);
+                  const base = config.precioMensualidad;
+                  const final = dto > 0 ? Math.round(base * (1 - dto / 100)) : base;
+                  return (
+                    <View key="mens" style={styles.precioChip}>
+                      <Text style={styles.precioChipLabel}>Mens</Text>
+                      {dto > 0 ? <Text style={styles.precioBase}>{formatK(base)}</Text> : null}
+                      <Text style={styles.precioFinal}>{formatK(final)}</Text>
+                      {dto > 0 && <Text style={styles.precioDtoTag}>-{dto}%</Text>}
+                    </View>
+                  );
+                })() : null}
+                {config.matriculaActiva && config.precioMatricula ? (() => {
+                  const dtoClub = getDescuentoItem(config.descuentoMatricula, config.descuentoMatriculaActivo, config.descuentoMatriculaInicio, config.descuentoMatriculaFin);
+                  const dto = Math.max(dtoClub, item.descuentoPersonal ?? 0);
+                  const base = config.precioMatricula;
+                  const final = dto > 0 ? Math.round(base * (1 - dto / 100)) : base;
+                  return (
+                    <View key="matr" style={styles.precioChip}>
+                      <Text style={styles.precioChipLabel}>Matr</Text>
+                      {dto > 0 ? <Text style={styles.precioBase}>{formatK(base)}</Text> : null}
+                      <Text style={styles.precioFinal}>{formatK(final)}</Text>
+                      {dto > 0 && <Text style={styles.precioDtoTag}>-{dto}%</Text>}
+                    </View>
+                  );
+                })() : null}
+                {config.anualActivo && config.precioAnual ? (() => {
+                  const dtoClub = getDescuentoItem(config.descuentoAnual, config.descuentoAnualActivo, config.descuentoAnualInicio, config.descuentoAnualFin);
+                  const dto = Math.max(dtoClub, item.descuentoPersonal ?? 0);
+                  const base = config.precioAnual;
+                  const final = dto > 0 ? Math.round(base * (1 - dto / 100)) : base;
+                  return (
+                    <View key="anual" style={styles.precioChip}>
+                      <Text style={styles.precioChipLabel}>Anual</Text>
+                      {dto > 0 ? <Text style={styles.precioBase}>{formatK(base)}</Text> : null}
+                      <Text style={styles.precioFinal}>{formatK(final)}</Text>
+                      {dto > 0 && <Text style={styles.precioDtoTag}>-{dto}%</Text>}
+                    </View>
+                  );
+                })() : null}
+              </View>
+            )}
           </View>
         </View>
 
         <View style={styles.cardActions}>
           {/* Solo admins pueden editar/eliminar */}
-          {(user?.role === 'admin' || user?.role === 'admin_club') && (
+          {(user?.role === 'super_admin' || user?.role === 'admin_club') && (
             <>
               <TouchableOpacity
                 style={[styles.button, styles.buttonEdit, isDeleting && styles.buttonDisabled]}
@@ -335,6 +573,13 @@ const JugadoresTab: React.FC = () => {
                 onPress={() => handleGestionarApoderados(item)}
               >
                 <Text style={styles.buttonText}>👨‍👩‍👧 Apod.</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: (item.descuentoPersonal ?? 0) > 0 ? '#e65100' : '#795548' }]}
+                onPress={() => handleAbrirDescuento(item)}
+              >
+                <Text style={styles.buttonText}>🏷️ % Dto</Text>
               </TouchableOpacity>
             </>
           )}
@@ -443,14 +688,19 @@ const JugadoresTab: React.FC = () => {
         }
       />
 
-      {/* Botón crear - Solo para admins */}
-      {(user?.role === 'admin' || user?.role === 'admin_club') && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleCrear}
-        >
-          <Text style={styles.fabText}>+ CREAR JUGADOR</Text>
-        </TouchableOpacity>
+      {/* Barra de acciones - Solo para admins */}
+      {(user?.role === 'super_admin' || user?.role === 'admin_club') && (
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1a472a' }]} onPress={handleCrear}>
+            <Text style={styles.actionBtnText}>➕ Crear</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#1565c0' }]} onPress={handleImportarJugadores}>
+            <Text style={styles.actionBtnText}>📥 Importar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#6a1b9a' }]} onPress={handleDescargarPlantilla}>
+            <Text style={styles.actionBtnText}>📋 Plantilla</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Modal de formulario */}
@@ -469,6 +719,85 @@ const JugadoresTab: React.FC = () => {
         onClose={() => setModalDetallesVisible(false)}
       />
 
+      {/* Modal Descuento Personal */}
+      <Modal visible={modalDescuentoVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalApod}>
+            <View style={[styles.modalApodHeader, { backgroundColor: '#795548' }]}>
+              <Text style={styles.modalApodTitulo}>🏷️ Descuento especial</Text>
+              <TouchableOpacity onPress={() => setModalDescuentoVisible(false)}>
+                <Text style={{ fontSize: 22, color: '#fff' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flexShrink: 1, padding: 14 }}>
+              <Text style={styles.modalApodSub}>Jugador: {jugadorDescuentoTarget?.nombre}</Text>
+
+              <Text style={[styles.modalApodSeccion, { marginTop: 8 }]}>Porcentaje de descuento (0 = sin descuento)</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <TextInput
+                  style={[styles.modalApodSearch, { flex: 1, marginBottom: 0, fontSize: 20, fontWeight: 'bold', textAlign: 'center' }]}
+                  value={descuentoValorStr}
+                  onChangeText={v => setDescuentoValorStr(v.replace(/[^0-9]/g, ''))}
+                  keyboardType="numeric"
+                  maxLength={3}
+                  placeholder="0"
+                />
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#795548' }}>%</Text>
+              </View>
+
+              {/* Chips rápidos */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {[0, 10, 15, 20, 25, 50, 100].map(v => (
+                  <TouchableOpacity
+                    key={v}
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 7,
+                      borderRadius: 20, borderWidth: 1.5,
+                      borderColor: descuentoValorStr === String(v) ? '#795548' : '#ddd',
+                      backgroundColor: descuentoValorStr === String(v) ? '#efebe9' : '#f8f8f8',
+                    }}
+                    onPress={() => setDescuentoValorStr(String(v))}
+                  >
+                    <Text style={{ color: '#795548', fontWeight: descuentoValorStr === String(v) ? 'bold' : '400' }}>
+                      {v === 0 ? 'Sin descuento' : `${v}%`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.modalApodSeccion}>Nota interna (opcional)</Text>
+              <TextInput
+                style={[styles.modalApodSearch, { height: 60, textAlignVertical: 'top' }]}
+                value={notaDescuentoStr}
+                onChangeText={setNotaDescuentoStr}
+                placeholder="Ej: Beca deportiva, acuerdo con directiva..."
+                multiline
+              />
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', padding: 14, gap: 10, borderTopWidth: 1, borderTopColor: '#eee' }}>
+              <TouchableOpacity
+                style={[styles.modalApodCerrarBtn, { flex: 1, backgroundColor: '#ccc' }]}
+                onPress={() => setModalDescuentoVisible(false)}
+              >
+                <Text style={styles.modalApodCerrarText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalApodCerrarBtn, { flex: 1, backgroundColor: '#795548', opacity: guardandoDescuento ? 0.5 : 1 }]}
+                onPress={handleGuardarDescuento}
+                disabled={guardandoDescuento}
+              >
+                {guardandoDescuento
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.modalApodCerrarText}>Guardar</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal Apoderados */}
       <Modal visible={modalApodVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
@@ -480,7 +809,7 @@ const JugadoresTab: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1, padding: 14 }}>
+            <ScrollView style={{ flexShrink: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.modalApodSub}>Jugador: {jugadorApod?.nombre}</Text>
 
               {cargandoApod ? (
@@ -549,6 +878,33 @@ const JugadoresTab: React.FC = () => {
             >
               <Text style={styles.modalApodCerrarText}>Cerrar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal progreso importación */}
+      <Modal visible={importModal} animationType="fade" transparent>
+        <View style={styles.importOverlay}>
+          <View style={styles.importCard}>
+            <Text style={styles.importTitle}>📥 Importando jugadores...</Text>
+            <Text style={styles.importSub}>⚠️ No cierres la app hasta que termine el proceso.</Text>
+            <Text style={styles.importCount}>{importPaso} / {importTotal}</Text>
+            {!importDone && <ActivityIndicator color="#1a472a" size="large" style={{ marginTop: 12 }} />}
+            {importDone && (
+              <>
+                <Text style={[styles.importCount, { color: '#2e7d32', marginTop: 12 }]}>✅ Proceso completado</Text>
+                {importErrores.length > 0 && (
+                  <ScrollView style={{ maxHeight: 130, marginTop: 8, width: '100%' }}>
+                    {importErrores.map((e, i) => (
+                      <Text key={i} style={styles.importError}>{e}</Text>
+                    ))}
+                  </ScrollView>
+                )}
+                <TouchableOpacity style={styles.importClose} onPress={() => setImportModal(false)}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Cerrar</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -623,6 +979,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 15,
+    paddingBottom: 100,
   },
   card: {
     backgroundColor: '#fff',
@@ -800,6 +1157,74 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 14, alignItems: 'center',
   },
   modalApodCerrarText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+
+  // Descuento personal
+  descuentoBadge: {
+    backgroundColor: '#fff3e0', borderRadius: 10, borderWidth: 1,
+    borderColor: '#e65100', paddingHorizontal: 8, paddingVertical: 2,
+  },
+  descuentoBadgeText: { fontSize: 11, color: '#e65100', fontWeight: 'bold' },
+
+  // Barra de acción
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    gap: 8,
+  },
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  actionBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+
+  // Modal importación
+  importOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  importCard: {
+    backgroundColor: '#fff', borderRadius: 16,
+    padding: 24, width: '85%', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 10,
+  },
+  importTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a472a', marginBottom: 8 },
+  importSub: { fontSize: 12, color: '#e65100', textAlign: 'center', marginBottom: 16 },
+  importCount: { fontSize: 22, fontWeight: 'bold', color: '#333' },
+  importError: { fontSize: 12, color: '#c62828', marginBottom: 4 },
+  importClose: {
+    marginTop: 16, backgroundColor: '#1a472a',
+    borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32,
+  },
+
+  // Precios por jugador
+  preciosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 6 },
+  precioChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#f1f8e9', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#c8e6c9',
+  },
+  precioChipLabel: { fontSize: 10, color: '#555', fontWeight: '700', marginRight: 2 },
+  precioBase: { fontSize: 11, color: '#bbb', textDecorationLine: 'line-through' },
+  precioFinal: { fontSize: 11, color: '#1a472a', fontWeight: 'bold' },
+  precioDtoTag: { fontSize: 10, color: '#e65100', fontWeight: 'bold' },
 });
 
 export default JugadoresTab;

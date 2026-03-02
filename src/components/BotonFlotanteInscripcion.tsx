@@ -23,7 +23,7 @@ interface Props {
 type ModalView = 'none' | 'menu' | 'qr';
 
 export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: Props) {
-  const { clubActual } = useClub();
+  const { club } = useClub();
   const [currentView, setCurrentView] = useState<ModalView>('none');
   const [exportando, setExportando] = useState(false);
 
@@ -60,13 +60,13 @@ export default function BotonFlotanteInscripcion({ onOpenFormulario, isAdmin }: 
     setExportando(true);
     
     try {
-      if (!clubActual?.id) {
+      if (!club?.id) {
         Alert.alert('Error', 'No se pudo identificar el club');
         return;
       }
 
       // Obtener todos los jugadores con toda su información
-      const jugadores = await SupabaseServiceV2.getJugadoresByClub(clubActual.id);
+      const jugadores = await SupabaseServiceV2.getJugadoresByClub(club.id);
       
       if (!jugadores || jugadores.length === 0) {
         Alert.alert('Sin datos', 'No hay jugadores registrados para exportar');

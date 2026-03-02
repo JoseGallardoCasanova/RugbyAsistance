@@ -137,7 +137,7 @@ const FormJugador: React.FC<FormJugadorProps> = ({ visible, jugador, categoriasP
           </View>
 
           {/* Form */}
-          <ScrollView style={styles.form}>
+          <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
             {/* Nombre */}
             <Text style={styles.label}>Nombre *</Text>
             <TextInput
@@ -323,7 +323,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   form: {
+    flexShrink: 1,
     padding: 20,
+  },
+  formContent: {
+    paddingBottom: 20,
   },
   label: {
     fontSize: 16,

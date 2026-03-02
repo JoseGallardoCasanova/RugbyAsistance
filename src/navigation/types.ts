@@ -9,10 +9,13 @@ export type RootStackParamList = {
   Estadisticas: undefined;
   Configuracion: undefined;
   Admin: {
-    initialTab?: 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos';
+    initialTab?: 'usuarios' | 'jugadores' | 'categorias' | 'estadisticas' | 'calendario' | 'formulario' | 'pagos' | 'codigos' | 'avisos' | 'evaluaciones';
   } | undefined;
+  Evaluaciones: undefined;
   ExportarAsistencias: undefined;
   PerfilJugador: { jugadorId?: string } | undefined;
   Apoderado: undefined;
   Pago: { jugadorIds: string[]; tipo?: 'mensualidad' | 'matricula' | 'anual' };
+  RegistroClub: undefined;
+  FormularioInscripcion: undefined;
 };

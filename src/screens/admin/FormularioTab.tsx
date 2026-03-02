@@ -37,7 +37,11 @@ const CAMPOS_DEFAULT: FormularioCampo[] = [
   { id: generarId(), tipo: 'tel',   label: 'Teléfono',              obligatorio: false, orden: 5 },
 ];
 
-export default function FormularioTab() {
+interface FormularioTabProps {
+  navigation?: any;
+}
+
+export default function FormularioTab({ navigation }: FormularioTabProps) {
   const { club } = useClub();
 
   const [campos, setCampos] = useState<FormularioCampo[]>([]);
@@ -281,6 +285,16 @@ export default function FormularioTab() {
           )}
         </TouchableOpacity>
 
+        {/* Botón preview */}
+        {navigation && (
+          <TouchableOpacity
+            style={styles.previewBtn}
+            onPress={() => navigation.navigate('FormularioInscripcion')}
+          >
+            <Text style={styles.previewBtnText}>👁️ Probar formulario</Text>
+          </TouchableOpacity>
+        )}
+
       </ScrollView>
 
       {/* ── Modal editor de campo ── */}
@@ -296,7 +310,7 @@ export default function FormularioTab() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 20 }}>
 
               {/* Nombre */}
               <Text style={styles.modalLabel}>Nombre del campo *</Text>
@@ -462,6 +476,11 @@ const styles = StyleSheet.create({
   },
   guardarBtnDisabled: { opacity: 0.5 },
   guardarBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  previewBtn: {
+    borderWidth: 2, borderColor: '#1a472a', borderRadius: 10,
+    padding: 14, alignItems: 'center', marginTop: 10,
+  },
+  previewBtnText: { color: '#1a472a', fontSize: 15, fontWeight: '600' },
 
   // Modal
   modalOverlay: {
@@ -479,7 +498,7 @@ const styles = StyleSheet.create({
   },
   modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   modalClose: { fontSize: 22, color: '#fff' },
-  modalBody: { padding: 18 },
+  modalBody: { flexShrink: 1, padding: 18 },
   modalLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 14 },
   modalInput: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 8,

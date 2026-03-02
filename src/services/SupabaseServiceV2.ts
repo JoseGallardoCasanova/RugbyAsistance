@@ -11,6 +11,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import * as FileSystem from 'expo-file-system';
 import ENV from '../config/env';
 import { 
   User, 
@@ -24,6 +25,9 @@ import {
   RelacionApoderado,
   Pago,
   ConfiguracionPagosClub,
+  CodigoInvitacion,
+  Aviso,
+  TipoAviso,
 } from '../types/v2';
 
 class SupabaseServiceV2 {
@@ -136,6 +140,20 @@ class SupabaseServiceV2 {
     }
   }
 
+  async getAllClubs(): Promise<Club[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('clubes')
+        .select('*')
+        .order('nombre');
+      if (error) throw error;
+      return (data || []).map((d: any) => this.mapClub(d));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener todos los clubes:', error.message);
+      return [];
+    }
+  }
+
   async getClubBySlug(slug: string): Promise<Club | null> {
     try {
       console.log(`🏆 [SUPABASE V2] Obteniendo club por slug: ${slug}`);
@@ -187,6 +205,293 @@ class SupabaseServiceV2 {
       console.error('❌ [SUPABASE V2] Error al actualizar club:', error.message);
       return null;
     }
+  }
+
+  async crearClub(
+    nombreClub: string,
+    adminNombre: string,
+    adminApellido: string,
+    adminUsername: string,
+    adminPassword: string,
+    adminEmail: string,
+    logoUri?: string
+  ): Promise<{ club: Club; admin: User } | null> {
+    try {
+      const slug = nombreClub
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const { data: clubData, error: clubError } = await this.supabase
+        .from('clubes')
+        .insert([{
+          nombre: nombreClub,
+          slug: `${slug}-${Date.now().toString(36)}`,
+          color_primario: '#1a472a',
+          color_secundario: '#2d7a4a',
+          pais: 'Chile',
+          timezone: 'America/Santiago',
+          deporte: 'Rugby',
+        }])
+        .select()
+        .single();
+
+      if (clubError || !clubData) throw clubError ?? new Error('No se pudo crear el club');
+      const club = this.mapClub(clubData);
+
+      if (logoUri) {
+        const logoUrl = await this.subirLogoClub(club.id, logoUri);
+        if (logoUrl) {
+          await this.supabase.from('clubes').update({ logo_url: logoUrl }).eq('id', club.id);
+          club.logoUrl = logoUrl;
+        }
+      }
+
+      const passwordHashed = await this.hashPassword(adminPassword);
+      const { data: userData, error: userError } = await this.supabase
+        .from('usuarios')
+        .insert([{
+          club_id: club.id,
+          username: adminUsername,
+          password_hash: passwordHashed,
+          nombre: adminNombre,
+          apellido: adminApellido,
+          email: adminEmail,
+          role: 'admin_club',
+          categorias_asignadas: [],
+        }])
+        .select()
+        .single();
+
+      if (userError || !userData) throw userError ?? new Error('No se pudo crear el admin');
+      const admin = this.mapUser(userData);
+      return { club, admin };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al crear club:', error.message);
+      return null;
+    }
+  }
+
+  async subirLogoClub(clubId: string, imageUri: string): Promise<string | null> {
+    try {
+      const ext = imageUri.split('.').pop()?.split('?')[0]?.toLowerCase() ?? 'jpg';
+      const path = `logos/${clubId}.${ext}`;
+
+      // React Native: blob.arrayBuffer() no existe → leer con expo-file-system en base64
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Convertir base64 → Uint8Array
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const { error } = await this.supabase.storage
+        .from('club-logos')
+        .upload(path, bytes, { contentType: `image/${ext}`, upsert: true });
+
+      if (error) throw error;
+      const { data } = this.supabase.storage.from('club-logos').getPublicUrl(path);
+      return data.publicUrl ?? null;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al subir logo:', error.message);
+      return null;
+    }
+  }
+
+  async autoCrearUsuarioJugador(
+    clubId: string,
+    jugadorId: string,
+    nombre: string,
+    apellido: string,
+    email?: string,
+    customUsername?: string,
+    customPassword?: string
+  ): Promise<{ user: User; plainPassword: string } | null> {
+    const plainPassword = customPassword?.trim() || 'jugador123';
+    try {
+      const nuevoUsuario = await this.crearUsuario({
+        clubId,
+        username: customUsername?.trim() || '',
+        email: email ?? '',
+        passwordHash: plainPassword,
+        nombre,
+        apellido,
+        role: 'jugador',
+        categoriasAsignadas: [],
+      });
+      if (!nuevoUsuario) throw new Error('No se pudo crear el usuario');
+      await this.actualizarJugador(jugadorId, { usuarioId: nuevoUsuario.id });
+      return { user: nuevoUsuario, plainPassword };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al auto-crear usuario jugador:', error.message);
+      return null;
+    }
+  }
+
+  async generarCodigoInvitacion(creadoPorId: string): Promise<CodigoInvitacion | null> {
+    try {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const grupo = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      const codigo = `${grupo()}-${grupo()}-${grupo()}`;
+
+      const { data, error } = await this.supabase
+        .from('codigos_invitacion')
+        .insert([{ codigo, creado_por_id: creadoPorId }])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return this.mapCodigoInvitacion(data);
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al generar código:', error.message);
+      return null;
+    }
+  }
+
+  async getCodigosInvitacion(): Promise<CodigoInvitacion[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('codigos_invitacion')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(c => this.mapCodigoInvitacion(c));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener códigos:', error.message);
+      return [];
+    }
+  }
+
+  async validarCodigoInvitacion(codigo: string): Promise<boolean> {
+    try {
+      const { data, error } = await this.supabase
+        .from('codigos_invitacion')
+        .select('id, usado')
+        .eq('codigo', codigo.toUpperCase().trim())
+        .maybeSingle();
+      if (error || !data) return false;
+      return !data.usado;
+    } catch {
+      return false;
+    }
+  }
+
+  async marcarCodigoUsado(codigo: string, clubId: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('codigos_invitacion')
+        .update({ usado: true, club_id_creado: clubId })
+        .eq('codigo', codigo.toUpperCase().trim());
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  private mapCodigoInvitacion(data: any): CodigoInvitacion {
+    return {
+      id: data.id,
+      codigo: data.codigo,
+      usado: data.usado,
+      clubIdCreado: data.club_id_creado,
+      creadoPorId: data.creado_por_id,
+      createdAt: data.created_at,
+    };
+  }
+
+  // ============================================
+  // AVISOS DEL CLUB
+  // ============================================
+
+  async getAvisosByClub(clubId: string, soloActivos = true): Promise<Aviso[]> {
+    try {
+      let query = this.supabase
+        .from('avisos')
+        .select(`*, usuarios(nombre, apellido)`)
+        .eq('club_id', clubId)
+        .order('created_at', { ascending: false });
+      if (soloActivos) query = query.eq('activo', true);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map(a => this.mapAviso(a));
+    } catch (error: any) {
+      console.error('❌ [AVISOS] getAvisosByClub:', error.message);
+      return [];
+    }
+  }
+
+  async crearAviso(
+    clubId: string,
+    autorId: string,
+    titulo: string,
+    contenido: string,
+    tipo: TipoAviso = 'info'
+  ): Promise<Aviso | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('avisos')
+        .insert({ club_id: clubId, autor_id: autorId, titulo, contenido, tipo, activo: true })
+        .select(`*, usuarios(nombre, apellido)`)
+        .single();
+      if (error) throw error;
+      return this.mapAviso(data);
+    } catch (error: any) {
+      console.error('❌ [AVISOS] crearAviso:', error.message);
+      return null;
+    }
+  }
+
+  async actualizarAviso(
+    id: string,
+    titulo: string,
+    contenido: string,
+    tipo: TipoAviso,
+    activo: boolean
+  ): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('avisos')
+        .update({ titulo, contenido, tipo, activo, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [AVISOS] actualizarAviso:', error.message);
+      return false;
+    }
+  }
+
+  async eliminarAviso(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase.from('avisos').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [AVISOS] eliminarAviso:', error.message);
+      return false;
+    }
+  }
+
+  private mapAviso(data: any): Aviso {
+    const usuario = data.usuarios;
+    return {
+      id: data.id,
+      clubId: data.club_id,
+      autorId: data.autor_id,
+      autorNombre: usuario ? `${usuario.nombre} ${usuario.apellido}` : undefined,
+      titulo: data.titulo,
+      contenido: data.contenido,
+      tipo: data.tipo as TipoAviso,
+      activo: data.activo,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   }
 
   // ============================================
@@ -514,7 +819,7 @@ class SupabaseServiceV2 {
 
       const { data, error } = await this.supabase
         .from('categorias')
-        .select('*')
+        .select('*, jugadores(count)')
         .eq('club_id', clubId)
         .order('orden', { ascending: true });
 
@@ -732,6 +1037,8 @@ class SupabaseServiceV2 {
       if (updates.autorizoUsoImagen !== undefined) updateData.autorizo_uso_imagen = updates.autorizoUsoImagen;
       if (updates.datosFormularioExtra) updateData.datos_formulario_extra = updates.datosFormularioExtra;
       if (updates.usuarioId !== undefined) updateData.usuario_id = updates.usuarioId || null;
+      if (updates.descuentoPersonal !== undefined) updateData.descuento_personal = updates.descuentoPersonal;
+      if (updates.notaDescuento !== undefined) updateData.nota_descuento = updates.notaDescuento || null;
 
       const { data, error } = await this.supabase
         .from('jugadores')
@@ -1057,6 +1364,21 @@ class SupabaseServiceV2 {
         precioMensualidad: data.precio_mensualidad,
         precioAnual: data.precio_anual,
         descuentoAnualPorcentaje: data.descuento_anual_porcentaje ?? 0,
+        descuentoMensualidad: data.descuento_mensualidad ?? 0,
+        descuentoMensualidadInicio: data.descuento_mensualidad_inicio ?? undefined,
+        descuentoMensualidadFin: data.descuento_mensualidad_fin ?? undefined,
+        descuentoMensualidadActivo: data.descuento_mensualidad_activo ?? false,
+        descuentoMatricula: data.descuento_matricula ?? 0,
+        descuentoMatriculaInicio: data.descuento_matricula_inicio ?? undefined,
+        descuentoMatriculaFin: data.descuento_matricula_fin ?? undefined,
+        descuentoMatriculaActivo: data.descuento_matricula_activo ?? false,
+        descuentoAnual: data.descuento_anual ?? 0,
+        descuentoAnualInicio: data.descuento_anual_inicio ?? undefined,
+        descuentoAnualFin: data.descuento_anual_fin ?? undefined,
+        descuentoAnualActivo: data.descuento_anual_activo ?? false,
+        matriculaActiva: data.matricula_activa ?? true,
+        mensualidadActiva: data.mensualidad_activa ?? true,
+        anualActivo: data.anual_activo ?? false,
         moneda: data.moneda ?? 'CLP',
         activo: data.activo ?? false,
         modoPrueba: data.modo_prueba ?? true,
@@ -1072,19 +1394,53 @@ class SupabaseServiceV2 {
 
   async upsertConfigPagos(clubId: string, config: Partial<ConfiguracionPagosClub>): Promise<boolean> {
     try {
-      const { error } = await this.supabase
+      const payload = {
+        club_id: clubId,
+        proveedor: config.proveedor ?? 'mercadopago',
+        precio_matricula: config.precioMatricula,
+        precio_mensualidad: config.precioMensualidad,
+        precio_anual: config.precioAnual,
+        descuento_anual_porcentaje: config.descuentoAnualPorcentaje ?? 0,
+        descuento_mensualidad: config.descuentoMensualidad ?? 0,
+        descuento_mensualidad_inicio: config.descuentoMensualidadInicio || null,
+        descuento_mensualidad_fin: config.descuentoMensualidadFin || null,
+        descuento_mensualidad_activo: config.descuentoMensualidadActivo ?? false,
+        descuento_matricula: config.descuentoMatricula ?? 0,
+        descuento_matricula_inicio: config.descuentoMatriculaInicio || null,
+        descuento_matricula_fin: config.descuentoMatriculaFin || null,
+        descuento_matricula_activo: config.descuentoMatriculaActivo ?? false,
+        descuento_anual: config.descuentoAnual ?? 0,
+        descuento_anual_inicio: config.descuentoAnualInicio || null,
+        descuento_anual_fin: config.descuentoAnualFin || null,
+        descuento_anual_activo: config.descuentoAnualActivo ?? false,
+        matricula_activa: config.matriculaActiva ?? true,
+        mensualidad_activa: config.mensualidadActiva ?? true,
+        anual_activo: config.anualActivo ?? false,
+        moneda: config.moneda ?? 'CLP',
+        activo: config.activo ?? false,
+        modo_prueba: config.modoPrueba ?? true,
+      };
+
+      // Buscar fila existente por club_id
+      const { data: existing } = await this.supabase
         .from('configuracion_pagos_club')
-        .upsert({
-          club_id: clubId,
-          proveedor: config.proveedor ?? 'mercadopago',
-          precio_matricula: config.precioMatricula,
-          precio_mensualidad: config.precioMensualidad,
-          precio_anual: config.precioAnual,
-          descuento_anual_porcentaje: config.descuentoAnualPorcentaje ?? 0,
-          moneda: config.moneda ?? 'CLP',
-          activo: config.activo ?? false,
-          modo_prueba: config.modoPrueba ?? true,
-        }, { onConflict: 'club_id' });
+        .select('id')
+        .eq('club_id', clubId)
+        .maybeSingle();
+
+      let error;
+      if (existing?.id) {
+        // UPDATE usando el id primario — más compatible con RLS
+        ({ error } = await this.supabase
+          .from('configuracion_pagos_club')
+          .update(payload)
+          .eq('id', existing.id));
+      } else {
+        ({ error } = await this.supabase
+          .from('configuracion_pagos_club')
+          .insert(payload));
+      }
+
       if (error) throw error;
       return true;
     } catch (error: any) {
@@ -1148,6 +1504,22 @@ class SupabaseServiceV2 {
       return (data || []).map(p => this.mapPago(p));
     } catch (error: any) {
       console.error('❌ [SUPABASE V2] Error al obtener pagos del apoderado:', error.message);
+      return [];
+    }
+  }
+
+  async getPagosByJugador(clubId: string, jugadorId: string): Promise<Pago[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('pagos')
+        .select('*')
+        .eq('club_id', clubId)
+        .contains('beneficiarios', [jugadorId])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(p => this.mapPago(p));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener pagos del jugador:', error.message);
       return [];
     }
   }
@@ -1242,6 +1614,7 @@ class SupabaseServiceV2 {
       diasEntrenamiento: data.dias_entrenamiento || [],
       horarios: data.horarios,
       orden: data.orden,
+      totalJugadores: Array.isArray(data.jugadores) ? (data.jugadores[0]?.count ?? 0) : undefined,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -1278,6 +1651,8 @@ class SupabaseServiceV2 {
       actividad: data.actividad,
       autorizoUsoImagen: data.autorizo_uso_imagen,
       datosFormularioExtra: data.datos_formulario_extra,
+      descuentoPersonal: data.descuento_personal ?? 0,
+      notaDescuento: data.nota_descuento,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -1823,6 +2198,148 @@ class SupabaseServiceV2 {
       return true;
     } catch (error: any) {
       console.error('❌ [SUPABASE V2] Error al guardar formulario:', error.message);
+      return false;
+    }
+  }
+
+  // ============================================
+  // EVALUACIONES
+  // ============================================
+
+  /** Crear una nueva evaluación (jugador → entrenador) */
+  async crearEvaluacion(data: {
+    clubId: string;
+    categoriaId: string;
+    evaluadorId: string;
+    evaluadoId: string;
+    puntuacion: number;
+    comentario?: string;
+  }): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('evaluaciones')
+        .insert([{
+          club_id: data.clubId,
+          categoria_id: data.categoriaId,
+          evaluador_id: data.evaluadorId,
+          evaluado_id: data.evaluadoId,
+          puntuacion: data.puntuacion,
+          comentario: data.comentario ?? null,
+        }]);
+      if (error) throw error;
+      console.log('✅ [SUPABASE V2] Evaluación creada');
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al crear evaluación:', error.message);
+      return false;
+    }
+  }
+
+  /** Verificar si el evaluador ya calificó a este entrenador en esta categoría */
+  async getMyEvaluacion(
+    evaluadorId: string,
+    evaluadoId: string,
+    categoriaId: string
+  ): Promise<{ id: string; puntuacion: number; comentario?: string; createdAt: string } | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('evaluaciones')
+        .select('id, puntuacion, comentario, created_at')
+        .eq('evaluador_id', evaluadorId)
+        .eq('evaluado_id', evaluadoId)
+        .eq('categoria_id', categoriaId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return { id: data.id, puntuacion: data.puntuacion, comentario: data.comentario, createdAt: data.created_at };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al verificar evaluación propia:', error.message);
+      return null;
+    }
+  }
+
+  /** Resumen agregado (anonimizado): promedio, total, distribución 1-5 */
+  async getEvaluacionesResumen(
+    evaluadoId: string,
+    categoriaId: string
+  ): Promise<{ promedio: number; total: number; distribucion: Record<number, number> } | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from('evaluaciones')
+        .select('puntuacion')
+        .eq('evaluado_id', evaluadoId)
+        .eq('categoria_id', categoriaId);
+      if (error) throw error;
+      if (!data || data.length === 0) return { promedio: 0, total: 0, distribucion: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+
+      const distribucion: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      let suma = 0;
+      for (const row of data) {
+        suma += row.puntuacion;
+        distribucion[row.puntuacion] = (distribucion[row.puntuacion] || 0) + 1;
+      }
+      return { promedio: Math.round((suma / data.length) * 10) / 10, total: data.length, distribucion };
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener resumen evaluaciones:', error.message);
+      return null;
+    }
+  }
+
+  /** Detalle completo con nombre del evaluador (solo para admins) */
+  async getEvaluacionesDetalle(
+    evaluadoId: string,
+    categoriaId: string
+  ): Promise<{
+    id: string;
+    puntuacion: number;
+    comentario?: string;
+    createdAt: string;
+    evaluador: { id: string; nombre: string; username: string };
+  }[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from('evaluaciones')
+        .select(`
+          id,
+          puntuacion,
+          comentario,
+          created_at,
+          usuarios!evaluaciones_evaluador_id_fkey (id, nombre, username)
+        `)
+        .eq('evaluado_id', evaluadoId)
+        .eq('categoria_id', categoriaId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        puntuacion: row.puntuacion,
+        comentario: row.comentario ?? undefined,
+        createdAt: row.created_at,
+        evaluador: {
+          id: row.usuarios?.id ?? row.evaluador_id,
+          nombre: row.usuarios?.nombre ?? 'Desconocido',
+          username: row.usuarios?.username ?? '—',
+        },
+      }));
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al obtener detalle evaluaciones:', error.message);
+      return [];
+    }
+  }
+
+  /** Eliminar evaluación (admin) */
+  async deleteEvaluacion(id: string): Promise<boolean> {
+    try {
+      const { error } = await this.supabase
+        .from('evaluaciones')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error: any) {
+      console.error('❌ [SUPABASE V2] Error al eliminar evaluación:', error.message);
       return false;
     }
   }

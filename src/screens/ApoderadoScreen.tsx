@@ -190,7 +190,17 @@ export default function ApoderadoScreen({ navigation }: Props) {
           </View>
         ) : (
           <>
-            <Text style={styles.seccionTitulo}>Mis jugadores vinculados</Text>
+            <View style={styles.seccionHeader}>
+              <Text style={styles.seccionTitulo}>Mis jugadores vinculados</Text>
+              {hijos.length > 1 && (
+                <TouchableOpacity
+                  style={styles.pagarTodosBtn}
+                  onPress={() => navigation.navigate('Pago', { jugadorIds: hijos.map(h => h.jugador.id) })}
+                >
+                  <Text style={styles.pagarTodosBtnText}>💳 Pagar todos ({hijos.length})</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {hijos.map(hijo => {
               const pct = hijo.stats.porcentajeAsistencia;
@@ -304,7 +314,7 @@ export default function ApoderadoScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.modalInfo}>
                 Ingresa el RUT del jugador (tu hijo/a u otro familiar) inscrito en el club para vincularlo a tu cuenta.
               </Text>
@@ -389,7 +399,15 @@ const styles = StyleSheet.create({
   addBtn: { width: 40, alignItems: 'flex-end' },
   addText: { fontSize: 28, color: '#fff', fontWeight: 'bold' },
   scroll: { padding: 15, paddingBottom: 40 },
-  seccionTitulo: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 10 },
+  seccionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+  },
+  seccionTitulo: { fontSize: 16, fontWeight: '700', color: '#333' },
+  pagarTodosBtn: {
+    backgroundColor: '#1a472a', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 7,
+  },
+  pagarTodosBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
 
   emptyCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 32,
@@ -480,7 +498,7 @@ const styles = StyleSheet.create({
   },
   modalTitulo: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   modalClose: { fontSize: 22, color: '#fff' },
-  modalBody: { padding: 18 },
+  modalBody: { flexShrink: 1, padding: 18 },
   modalInfo: {
     fontSize: 14, color: '#555', backgroundColor: '#f5f9f5',
     borderRadius: 8, padding: 12, marginBottom: 6, lineHeight: 20,

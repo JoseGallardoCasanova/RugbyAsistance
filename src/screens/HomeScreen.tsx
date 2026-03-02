@@ -12,12 +12,14 @@ import {
   Modal,
   StatusBar,
   Platform,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContextV2';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import NotificacionesService from '../services/NotificacionesService';
 import { useClub } from '../context/ClubContext';
-import { Categoria } from '../types/v2';
+import { Categoria, Aviso, Jugador, Club } from '../types/v2';
 import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
 import FormularioAutoinscripcion from './FormularioAutoinscripcion';
 
@@ -27,32 +29,90 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, logout, reloadUser } = useAuth();
-  const { club } = useClub();
+  const { club, loadClub } = useClub();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [formularioVisible, setFormularioVisible] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState(user?.nombre || '');
+  // Rol dual: jugador que también es apoderado (y viceversa)
+  const [jugadorVinculadoId, setJugadorVinculadoId] = useState<string | null>(null);
+  const [esApoderadoTambien, setEsApoderadoTambien] = useState(false);
+  // Avisos del club
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  // Jugador vinculado (datos completos, incluyendo categoriaId)
+  const [jugadorData, setJugadorData] = useState<Jugador | null>(null);
+  // Notificaciones semanales de entrenamiento
+  const [notifActivas, setNotifActivas] = useState(false);
+  const [cargandoNotif, setCargandoNotif] = useState(false);
+  // Super admin: selector de club
+  const [todosLosClubs, setTodosLosClubs] = useState<Club[]>([]);
+  const [cargandoClubes, setCargandoClubes] = useState(false);
 
+  // ✅ Refs estables para evitar que useFocusEffect se re-dispare al cambiar user/club
+  const clubRef = React.useRef(club);
+  const userRef = React.useRef(user);
+  React.useEffect(() => { clubRef.current = club; }, [club]);
+  React.useEffect(() => { userRef.current = user; }, [user]);
+
+  // Carga inicial de categorías cuando club esté disponible
   useEffect(() => {
     cargarCategorias();
-  }, []);
+  }, [club?.id]); // solo si cambia el clubId real
 
   // Sincronizar nombre del usuario cuando cambie
   useEffect(() => {
     setUserDisplayName(user?.nombre || '');
   }, [user?.nombre]);
 
-  // ✅ Auto-recargar categorías y usuario al volver a esta pantalla
+  // ✅ Auto-recargar al volver a esta pantalla — deps vacías para evitar loop infinito.
+  // Accedemos a club/user a través de refs para leer el valor actual sin re-ejecutar al cambiar.
   useFocusEffect(
     React.useCallback(() => {
       console.log('🔄 [HOME] Pantalla enfocada, recargando datos...');
-      reloadUser(); // Recargar usuario desde Supabase
+      reloadUser();
       cargarCategorias();
-    }, [])
+
+      const currentClub = clubRef.current;
+      const currentUser = userRef.current;
+
+      if (currentClub) {
+        SupabaseServiceV2.getAvisosByClub(currentClub.id, true)
+          .then(data => setAvisos(data.slice(0, 5)))
+          .catch(() => {});
+      }
+
+      if (currentClub && currentUser) {
+        const esJugadorOApoderado = currentUser.role === 'jugador' || currentUser.role === 'apoderado';
+        if (esJugadorOApoderado) {
+          SupabaseServiceV2.getJugadorByUsuarioId(currentUser.id)
+            .then(j => {
+              setJugadorVinculadoId(j?.id ?? null);
+              setJugadorData(j);
+            })
+            .catch(() => {});
+          SupabaseServiceV2.getRelacionesByApoderado(currentUser.id)
+            .then(rels => setEsApoderadoTambien(rels.length > 0))
+            .catch(() => {});
+          NotificacionesService.estaActivoSemanal()
+            .then(activo => setNotifActivas(activo))
+            .catch(() => {});
+        }
+        // Super admin: cargar todos los clubes para el selector
+        if (currentUser.role === 'super_admin') {
+          setCargandoClubes(true);
+          SupabaseServiceV2.getAllClubs()
+            .then(clubs => setTodosLosClubs(clubs))
+            .catch(() => {})
+            .finally(() => setCargandoClubes(false));
+        }
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // ← deps vacías: el callback nunca se recrea, rompe el loop
   );
 
   const cargarCategorias = async () => {
-    if (!club) {
+    const currentClub = clubRef.current;
+    if (!currentClub) {
       console.warn('⚠️ [HOME] No hay club cargado');
       setLoading(false);
       return;
@@ -60,10 +120,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     try {
       setLoading(true);
-      const data = await SupabaseServiceV2.getCategoriasByClub(club.id);
+      const data = await SupabaseServiceV2.getCategoriasByClub(currentClub.id);
       
       // Ordenar por número
-      const ordenadas = data.sort((a, b) => (a.numero || 0) - (b.numero || 0));
+      const ordenadas = data.sort((a, b) => (a.orden || 0) - (b.orden || 0));
       
       setCategorias(ordenadas);
       console.log(`📥 Categorías cargadas: ${ordenadas.length}`);
@@ -100,7 +160,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleAdminPress = () => {
-    if (user?.role === 'admin' || user?.role === 'admin_club') {
+    if (user?.role === 'super_admin' || user?.role === 'admin_club') {
       navigation.navigate('Admin');
       return;
     }
@@ -117,10 +177,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate('Perfil');
   };
 
+  // Categoría del jugador (derivado de jugadorData + lista de categorías cargadas)
+  const categoriaJugador: Categoria | null =
+    jugadorData?.categoriaId
+      ? (categorias.find(c => c.id === jugadorData.categoriaId) ?? null)
+      : null;
+
+  const handleToggleNotif = async (activar: boolean) => {
+    if (!categoriaJugador) return;
+    setCargandoNotif(true);
+    try {
+      if (activar) {
+        const ok = await NotificacionesService.programarEntrenamientosSemanales(
+          categoriaJugador.nombre,
+          categoriaJugador.diasEntrenamiento,
+          categoriaJugador.horarios
+        );
+        if (ok) {
+          setNotifActivas(true);
+          Alert.alert('🔔 Listo', 'Recibirás recordatorios 15 min antes de cada entrenamiento.');
+        } else {
+          Alert.alert('Sin permiso', 'Debes permitir las notificaciones en la configuración del dispositivo.');
+        }
+      } else {
+        await NotificacionesService.cancelarEntrenamientosSemanales();
+        setNotifActivas(false);
+      }
+    } finally {
+      setCargandoNotif(false);
+    }
+  };
+
   const puedeVerCategoria = (categoria: Categoria): boolean => {
     // TODO V2: Actualizar lógica de permisos para usar categorias_asignadas (UUID[])
     // Por ahora, admin_club y admin tienen acceso total
-    if (user?.role === 'admin' || user?.role === 'admin_club') return true;
+    if (user?.role === 'super_admin' || user?.role === 'admin_club') return true;
     
     // Para entrenadores, verificar si tienen la categoría asignada (por UUID)
     if (user?.role === 'entrenador') {
@@ -158,25 +249,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Image 
-            source={require('../../assets/logo_Old_Green.png')} 
+            source={club?.logoUrl ? { uri: club.logoUrl } : require('../../assets/logo_Old_Green.png')} 
             style={styles.logo}
             resizeMode="contain"
           />
           <View style={styles.headerTextContainer}>
             <Text style={styles.greeting}>Hola, {userDisplayName}</Text>
             <Text style={styles.subtitle}>
-              {user?.role === 'admin' && 'Administrador'}
+              {user?.role === 'super_admin' && 'Super Admin'}
               {user?.role === 'admin_club' && 'Administrador del Club'}
               {user?.role === 'entrenador' && 'Entrenador'}
               {user?.role === 'jugador' && 'Jugador'}
               {user?.role === 'apoderado' && 'Apoderado'}
-              {user?.role === 'ayudante' && 'Ayudante'}
             </Text>
           </View>
         </View>
         
         <View style={styles.headerButtons}>
-          {(user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
+          {(user?.role === 'super_admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
             <TouchableOpacity onPress={handleAdminPress} style={styles.iconButton}>
               <Text style={styles.iconButtonText}>⚙️</Text>
             </TouchableOpacity>
@@ -196,13 +286,59 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </View>
 
       {/* Lista de categorías */}
+      {/* Super admin: selector de club */}
+      {user?.role === 'super_admin' && todosLosClubs.length > 0 && (
+        <View style={styles.clubSelectorContainer}>
+          <Text style={styles.clubSelectorLabel}>🏟️ Club activo:</Text>
+          {cargandoClubes ? (
+            <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 10 }} />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+            >
+              {todosLosClubs.map(c => {
+                const activo = c.id === club?.id;
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.clubChip, activo && styles.clubChipActivo]}
+                    onPress={() => { if (!activo) loadClub(c.id); }}
+                  >
+                    <Text style={[styles.clubChipText, activo && styles.clubChipTextActivo]}>
+                      {activo ? '✓ ' : ''}{c.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
 
+        {/* Admin / Super Admin: acceso rápido a pagos */}
+        {(user?.role === 'super_admin' || user?.role === 'admin_club') && (
+          <TouchableOpacity
+            style={[styles.roleCard, { backgroundColor: '#e8f5e9', borderColor: '#1a472a' }]}
+            onPress={() => navigation.navigate('Admin', { initialTab: 'pagos' })}
+          >
+            <Text style={styles.roleCardIcon}>💳</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.roleCardTitle, { color: '#1b5e20' }]}>Pagos del Club</Text>
+              <Text style={styles.roleCardSub}>Precios, descuentos globales y historial de pagos</Text>
+            </View>
+            <Text style={[styles.roleCardArrow, { color: '#1a472a' }]}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Jugador: acceso rápido a su perfil */}
-        {user?.role === 'jugador' && (
+        {(user?.role === 'jugador' || jugadorVinculadoId) && (
           <TouchableOpacity
             style={styles.roleCard}
-            onPress={() => navigation.navigate('PerfilJugador')}
+            onPress={() => navigation.navigate('PerfilJugador', jugadorVinculadoId && user?.role !== 'jugador' ? { jugadorId: jugadorVinculadoId } : undefined)}
           >
             <Text style={styles.roleCardIcon}>🏉</Text>
             <View style={{ flex: 1 }}>
@@ -213,8 +349,81 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
+        {/* Jugador: tarjeta de entrenamiento */}
+        {user?.role === 'jugador' && categoriaJugador && categoriaJugador.diasEntrenamiento?.length > 0 && (() => {
+          const diasOrden = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
+          const diasLabels: Record<string,string> = { lunes:'Lun', martes:'Mar', miercoles:'Mié', jueves:'Jue', viernes:'Vie', sabado:'Sáb', domingo:'Dom' };
+          const hoyNum = new Date().getDay(); // 0=dom, 1=lun, ...
+          const hoyKey = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'][hoyNum];
+          const entrenaHoy = categoriaJugador.diasEntrenamiento.includes(hoyKey);
+
+          return (
+            <View style={[styles.entrenamientoCard, entrenaHoy && styles.entrenamientoCardHoy]}>
+              <View style={styles.entrenamientoHeader}>
+                <Text style={styles.entrenamientoTitulo}>
+                  {entrenaHoy ? '⚡ ¡Entrenas hoy!' : '📅 Horario de Entrenamientos'}
+                </Text>
+                <Text style={styles.entrenamientoCat}>{categoriaJugador.nombre}</Text>
+              </View>
+
+              {/* Chips de días */}
+              <View style={styles.diasRow}>
+                {diasOrden.map(dia => {
+                  const activo = categoriaJugador.diasEntrenamiento.includes(dia);
+                  const esHoy  = dia === hoyKey;
+                  if (!activo) return null;
+                  return (
+                    <View key={dia} style={[
+                      styles.diaChip,
+                      esHoy && styles.diaChipHoy,
+                    ]}>
+                      <Text style={[styles.diaChipText, esHoy && styles.diaChipTextHoy]}>
+                        {diasLabels[dia]}
+                      </Text>
+                      {categoriaJugador.horarios?.[dia] ? (
+                        <Text style={[styles.diaChipHora, esHoy && styles.diaChipHoraHoy]}>
+                          {categoriaJugador.horarios[dia]}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Toggle notificaciones */}
+              <View style={styles.notifRow}>
+                <Text style={styles.notifLabel}>🔔 Recordatorios</Text>
+                {cargandoNotif
+                  ? <ActivityIndicator size="small" color="#1a472a" />
+                  : <Switch
+                      value={notifActivas}
+                      onValueChange={handleToggleNotif}
+                      trackColor={{ false: '#ddd', true: '#a5d6a7' }}
+                      thumbColor={notifActivas ? '#1a472a' : '#f4f3f4'}
+                    />
+                }
+              </View>
+            </View>
+          );
+        })()}
+
+        {/* Jugador: acceso rápido a pago */}
+        {user?.role === 'jugador' && jugadorData && (
+          <TouchableOpacity
+            style={[styles.roleCard, { backgroundColor: '#fff3e0', borderColor: '#e65100' }]}
+            onPress={() => navigation.navigate('Pago', { jugadorIds: [jugadorData.id] })}
+          >
+            <Text style={styles.roleCardIcon}>💳</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.roleCardTitle, { color: '#bf360c' }]}>Pagar cuota</Text>
+              <Text style={styles.roleCardSub}>Registra tu mensualidad, matrícula o pago anual</Text>
+            </View>
+            <Text style={[styles.roleCardArrow, { color: '#e65100' }]}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Apoderado: acceso al portal */}
-        {user?.role === 'apoderado' && (
+        {(user?.role === 'apoderado' || esApoderadoTambien) && (
           <TouchableOpacity
             style={[styles.roleCard, { backgroundColor: '#ede7f6', borderColor: '#5c6bc0' }]}
             onPress={() => navigation.navigate('Apoderado')}
@@ -226,6 +435,44 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
             <Text style={[styles.roleCardArrow, { color: '#5c6bc0' }]}>›</Text>
           </TouchableOpacity>
+        )}
+
+        {/* Jugador / Apoderado: evaluar entrenador */}
+        {(user?.role === 'jugador' || user?.role === 'apoderado' || esApoderadoTambien) && (
+          <TouchableOpacity
+            style={[styles.roleCard, { backgroundColor: '#fffbeb', borderColor: '#f59e0b' }]}
+            onPress={() => navigation.navigate('Evaluaciones')}
+          >
+            <Text style={styles.roleCardIcon}>⭐</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.roleCardTitle, { color: '#92400e' }]}>Evaluar Entrenador</Text>
+              <Text style={styles.roleCardSub}>Califica a tu entrenador de forma anónima</Text>
+            </View>
+            <Text style={[styles.roleCardArrow, { color: '#f59e0b' }]}>›</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Avisos del club */}
+        {avisos.length > 0 && (
+          <View style={styles.avisosSection}>
+            {avisos.map(aviso => {
+              const colorMap = {
+                info:    { bg: '#e3f2fd', border: '#1565c0', icon: 'ℹ️', text: '#1565c0' },
+                warning: { bg: '#fff3e0', border: '#e65100', icon: '⚠️', text: '#e65100' },
+                urgente: { bg: '#ffebee', border: '#b71c1c', icon: '🚨', text: '#b71c1c' },
+              };
+              const c = colorMap[aviso.tipo] ?? colorMap.info;
+              return (
+                <View key={aviso.id} style={[styles.avisoCard, { backgroundColor: c.bg, borderLeftColor: c.border }]}>
+                  <View style={styles.avisoHeader}>
+                    <Text style={styles.avisoIcon}>{c.icon}</Text>
+                    <Text style={[styles.avisoTitulo, { color: c.text }]}>{aviso.titulo}</Text>
+                  </View>
+                  <Text style={styles.avisoContenido}>{aviso.contenido}</Text>
+                </View>
+              );
+            })}
+          </View>
         )}
 
         <Text style={styles.sectionTitle}>Selecciona una categoría:</Text>
@@ -255,6 +502,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   disabled={!tieneAcceso}
                 >
                   <Text style={styles.categoryName}>{categoria.nombre}</Text>
+                  {categoria.totalJugadores !== undefined && (
+                    <View style={styles.categoryCountBadge}>
+                      <Text style={styles.categoryCountText}>👥 {categoria.totalJugadores}</Text>
+                    </View>
+                  )}
                   {!tieneAcceso && (
                     <Text style={styles.categoryLocked}>🔒</Text>
                   )}
@@ -266,11 +518,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </ScrollView>
 
       {/* Botón flotante - Solo para admin, admin_club y entrenador */}
-      {(user?.role === 'admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
+      {(user?.role === 'super_admin' || user?.role === 'admin_club' || user?.role === 'entrenador') && (
         <>
           {console.log('✅ [HOME] Mostrando botón flotante para role:', user?.role)}
           <BotonFlotanteInscripcion
-            isAdmin={user?.role === 'admin' || user?.role === 'admin_club'}
+            isAdmin={user?.role === 'super_admin' || user?.role === 'admin_club'}
             onOpenFormulario={() => {
               console.log('📋 [HOME] Callback onOpenFormulario ejecutado');
               setFormularioVisible(true);
@@ -285,7 +537,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         animationType="slide"
         onRequestClose={() => setFormularioVisible(false)}
       >
-        {console.log('📋 [HOME] Modal formulario visible:', formularioVisible)}
         <FormularioAutoinscripcion
           onSuccess={() => {
             setFormularioVisible(false);
@@ -362,6 +613,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 100,
   },
   sectionTitle: {
     fontSize: 18,
@@ -388,6 +640,62 @@ const styles = StyleSheet.create({
   roleCardTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a472a', marginBottom: 2 },
   roleCardSub: { fontSize: 13, color: '#555' },
   roleCardArrow: { fontSize: 24, color: '#1a472a', marginLeft: 8 },
+  avisosSection: {
+    gap: 8,
+    marginBottom: 18,
+  },
+  avisoCard: {
+    borderLeftWidth: 4,
+    borderRadius: 10,
+    padding: 12,
+  },
+  avisoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  avisoIcon: { fontSize: 15 },
+  avisoTitulo: { fontSize: 14, fontWeight: '700', flex: 1 },
+  avisoContenido: { fontSize: 13, color: '#444', lineHeight: 18 },
+
+  // Club selector (super admin)
+  clubSelectorContainer: {
+    backgroundColor: '#1a472a',
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clubSelectorLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+    marginRight: 4,
+    flexShrink: 0,
+  },
+  clubChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  clubChipActivo: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  clubChipText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  clubChipTextActivo: {
+    color: '#1a472a',
+    fontWeight: 'bold',
+  },
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -427,6 +735,18 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
+  categoryCountBadge: {
+    marginTop: 6,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  categoryCountText: {
+    fontSize: 12,
+    color: '#1a472a',
+    fontWeight: '600',
+  },
   categoryLocked: {
     fontSize: 16,
     marginTop: 5,
@@ -450,6 +770,93 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+
+  // ─── Tarjeta de horario de entrenamiento (jugador) ────────────────────────
+  entrenamientoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1a472a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  entrenamientoCardHoy: {
+    borderLeftColor: '#ff6b35',
+    backgroundColor: '#fff8f5',
+  },
+  entrenamientoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  entrenamientoTitulo: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  entrenamientoCat: {
+    fontSize: 12,
+    color: '#1a472a',
+    fontWeight: '600',
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  diasRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  diaChip: {
+    borderWidth: 1.5,
+    borderColor: '#1a472a',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    minWidth: 46,
+  },
+  diaChipHoy: {
+    backgroundColor: '#ff6b35',
+    borderColor: '#ff6b35',
+  },
+  diaChipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1a472a',
+  },
+  diaChipTextHoy: {
+    color: '#fff',
+  },
+  diaChipHora: {
+    fontSize: 10,
+    color: '#1a472a',
+    marginTop: 2,
+  },
+  diaChipHoraHoy: {
+    color: '#fff',
+  },
+  notifRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  notifLabel: {
+    fontSize: 13,
+    color: '#555',
   },
 });
 

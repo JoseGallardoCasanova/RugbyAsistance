@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContextV2';
 import { useClub } from '../context/ClubContext';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
-import { Jugador, Asistencia, Categoria } from '../types/v2';
+import { Jugador, Asistencia, Categoria, Pago } from '../types/v2';
 
 interface Props {
   navigation: any;
@@ -39,6 +39,7 @@ export default function PerfilJugadorScreen({ navigation, route }: Props) {
   });
   const [cargando, setCargando] = useState(true);
   const [seccionExpandida, setSeccionExpandida] = useState<string | null>(null);
+  const [pagos, setPagos] = useState<Pago[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,6 +83,10 @@ export default function PerfilJugadorScreen({ navigation, route }: Props) {
 
       setStats(statsData);
       setAsistencias(asistData || []);
+
+      // Cargar historial de pagos
+      const pagosData = await SupabaseServiceV2.getPagosByJugador(club.id, j.id);
+      setPagos(pagosData);
     } finally {
       setCargando(false);
     }
@@ -140,7 +145,16 @@ export default function PerfilJugadorScreen({ navigation, route }: Props) {
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Perfil Jugador</Text>
-        <View style={{ width: 40 }} />
+        {user?.role !== 'super_admin' && user?.role !== 'admin_club' && user?.role !== 'entrenador' ? (
+          <TouchableOpacity
+            style={styles.pagarHeaderBtn}
+            onPress={() => navigation.navigate('Pago', { jugadorIds: [jugador.id] })}
+          >
+            <Text style={styles.pagarHeaderIcon}>💳</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -232,8 +246,7 @@ export default function PerfilJugadorScreen({ navigation, route }: Props) {
         )}
 
         {/* Datos personales */}
-        <TouchableOpacity style={styles.seccionHeader} onPress={() => toggleSeccion('personales')}>
-          <Text style={styles.seccionTitulo}>👤 Datos personales</Text>
+        <TouchableOpacity style={styles.seccionHeader} onPress={() => toggleSeccion('personales')}>          <Text style={styles.seccionTitulo}>👤 Datos personales</Text>
           <Text style={styles.seccionChevron}>{seccionExpandida === 'personales' ? '▲' : '▼'}</Text>
         </TouchableOpacity>
         {seccionExpandida === 'personales' && (
@@ -275,9 +288,58 @@ export default function PerfilJugadorScreen({ navigation, route }: Props) {
           </View>
         )}
 
+        {/* Historial de pagos */}
+        <TouchableOpacity style={styles.seccionHeader} onPress={() => toggleSeccion('pagos')}>
+          <Text style={styles.seccionTitulo}>💳 Historial de pagos</Text>
+          <View style={styles.seccionHeaderRight}>
+            {pagos.length > 0 && (
+              <View style={styles.pagosBadge}>
+                <Text style={styles.pagosBadgeText}>{pagos.length}</Text>
+              </View>
+            )}
+            <Text style={styles.seccionChevron}>{seccionExpandida === 'pagos' ? '▲' : '▼'}</Text>
+          </View>
+        </TouchableOpacity>
+        {seccionExpandida === 'pagos' && (
+          <View style={styles.seccionBody}>
+            {pagos.length === 0 ? (
+              <Text style={styles.emptyText}>Sin pagos registrados</Text>
+            ) : (
+              pagos.map(p => {
+                const estadoColor: Record<string, string> = {
+                  pagado: '#2e7d32', pendiente: '#f57c00',
+                  fallido: '#c62828', reembolsado: '#6a1b9a',
+                };
+                const tipoLabel: Record<string, string> = {
+                  mensualidad: 'Mensualidad', matricula: 'Matrícula', anual: 'Plan anual',
+                };
+                const fecha = p.fechaPago
+                  ? new Date(p.fechaPago + 'T12:00:00').toLocaleDateString('es-CL')
+                  : new Date(p.createdAt).toLocaleDateString('es-CL');
+                const monto = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(p.monto);
+                return (
+                  <View key={p.id} style={styles.pagoRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pagoTipo}>{tipoLabel[p.tipo] ?? p.tipo}</Text>
+                      <Text style={styles.pagoFecha}>{fecha}</Text>
+                    </View>
+                    <View style={styles.pagoRight}>
+                      <Text style={styles.pagoMonto}>{monto}</Text>
+                      <View style={[styles.estadoBadge, { backgroundColor: (estadoColor[p.estado] ?? '#999') + '22' }]}>
+                        <Text style={[styles.estadoText, { color: estadoColor[p.estado] ?? '#999' }]}>
+                          {p.estado.charAt(0).toUpperCase() + p.estado.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
         {/* Tutor */}
-        {(jugador.nombreTutor || jugador.rutTutor) && (
-          <>
+        {(jugador.nombreTutor || jugador.rutTutor) && (          <>
             <TouchableOpacity style={styles.seccionHeader} onPress={() => toggleSeccion('tutor')}>
               <Text style={styles.seccionTitulo}>👨‍👩‍👧 Tutor / Apoderado</Text>
               <Text style={styles.seccionChevron}>{seccionExpandida === 'tutor' ? '▲' : '▼'}</Text>
@@ -323,6 +385,8 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 28, color: '#fff', fontWeight: 'bold' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+  pagarHeaderBtn: { width: 40, alignItems: 'flex-end', justifyContent: 'center' },
+  pagarHeaderIcon: { fontSize: 22 },
   scroll: { padding: 15, paddingBottom: 40 },
 
   avatarCard: {
@@ -387,6 +451,22 @@ const styles = StyleSheet.create({
   },
   seccionTitulo: { fontSize: 15, fontWeight: '600', color: '#222' },
   seccionChevron: { fontSize: 12, color: '#888' },
+  seccionHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pagosBadge: {
+    backgroundColor: '#1a472a', borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  pagosBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  pagoRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
+  },
+  pagoTipo: { fontSize: 14, fontWeight: '600', color: '#222' },
+  pagoFecha: { fontSize: 12, color: '#888', marginTop: 2 },
+  pagoRight: { alignItems: 'flex-end', gap: 4 },
+  pagoMonto: { fontSize: 15, fontWeight: 'bold', color: '#1a472a' },
+  estadoBadge: { borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
+  estadoText: { fontSize: 11, fontWeight: '700' },
   seccionBody: {
     backgroundColor: '#fff', borderRadius: 12, padding: 14,
     marginBottom: 8,

@@ -30,7 +30,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<UserRole>('ayudante');
+  const [role, setRole] = useState<UserRole>('entrenador');
   const [categoriasAsignadas, setCategoriasAsignadas] = useState<string[]>([]);
   const [guardando, setGuardando] = useState(false);
   
@@ -77,7 +77,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
       setEmail('');
       setPassword('');
       setShowPassword(false);
-      setRole('ayudante');
+      setRole('entrenador');
       setCategoriasAsignadas([]);
     }
   }, [usuario, visible]);
@@ -177,7 +177,7 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
           </View>
 
           {/* Form */}
-          <ScrollView style={styles.form}>
+          <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
             {/* Nombre */}
             <Text style={styles.label}>Nombre *</Text>
             <TextInput
@@ -270,19 +270,6 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
             <Text style={styles.label}>Rol *</Text>
             <View style={styles.roleContainer}>
               <TouchableOpacity
-                style={[styles.roleButton, role === 'admin' && styles.roleButtonActive]}
-                onPress={() => {
-                  setRole('admin');
-                  setCategoriasAsignadas([]);
-                }}
-                disabled={guardando}
-              >
-                <Text style={[styles.roleButtonText, role === 'admin' && styles.roleButtonTextActive]}>
-                  👑 Admin
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 style={[styles.roleButton, role === 'admin_club' && styles.roleButtonActive]}
                 onPress={() => {
                   setRole('admin_club');
@@ -304,19 +291,6 @@ const FormUsuario: React.FC<FormUsuarioProps> = ({ visible, usuario, onClose, on
               >
                 <Text style={[styles.roleButtonText, role === 'entrenador' && styles.roleButtonTextActive]}>
                   🏃 Entrenador
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.roleButton, role === 'ayudante' && styles.roleButtonActive]}
-                onPress={() => {
-                  setRole('ayudante');
-                  setCategoriasAsignadas([]);
-                }}
-                disabled={guardando}
-              >
-                <Text style={[styles.roleButtonText, role === 'ayudante' && styles.roleButtonTextActive]}>
-                  👤 Ayudante
                 </Text>
               </TouchableOpacity>
 
@@ -460,7 +434,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   form: {
+    flexShrink: 1,
     padding: 20,
+  },
+  formContent: {
+    paddingBottom: 20,
   },
   label: {
     fontSize: 16,

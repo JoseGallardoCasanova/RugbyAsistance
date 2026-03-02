@@ -14,6 +14,11 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContextV2';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
+
+type LoginNavProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 const LoginScreen = () => {
   const [username, setUsername] = useState('');
@@ -24,6 +29,7 @@ const LoginScreen = () => {
   const [emailRecuperar, setEmailRecuperar] = useState('');
   const [buscandoUsername, setBuscandoUsername] = useState(false);
   const { login } = useAuth();
+  const navigation = useNavigation<LoginNavProp>();
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -140,6 +146,20 @@ const LoginScreen = () => {
             onPress={() => setModalVisible(true)}
           >
             <Text style={styles.forgotText}>¿Olvidaste tu nombre de usuario?</Text>
+          </TouchableOpacity>
+
+          {/* Registro de club */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>¿Nuevo club?</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate('RegistroClub')}
+          >
+            <Text style={styles.registerButtonText}>🏉 Registrar mi club</Text>
           </TouchableOpacity>
         </View>
 
@@ -292,6 +312,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     textDecorationLine: 'underline',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 25,
+    marginBottom: 15,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  dividerText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    marginHorizontal: 10,
+  },
+  registerButton: {
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

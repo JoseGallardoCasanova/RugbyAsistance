@@ -53,19 +53,75 @@ const PagoScreen: React.FC<PagoScreenProps> = ({ navigation, route }) => {
   const [procesando, setProcesando] = useState(false);
   const [comprobante, setComprobante] = useState<Pago | null>(null);
 
+  // Tipos de pago disponibles según configuración del club
+  const tiposDisponibles = React.useMemo(() => {
+    if (!config) return TIPOS;
+    return TIPOS.filter(t => {
+      if (t.key === 'mensualidad') return config.mensualidadActiva !== false;
+      if (t.key === 'matricula')   return config.matriculaActiva !== false;
+      if (t.key === 'anual')       return config.anualActivo === true;
+      return true;
+    });
+  }, [config]);
+
   useEffect(() => {
     cargarDatos();
   }, []);
 
-  // Actualizar monto sugerido cuando cambia tipo o config
+  // Auto-seleccionar primer tipo disponible si el actual ya no está activo
   useEffect(() => {
     if (!config) return;
-    const sugerido =
+    const disponibles = TIPOS.filter(t => {
+      if (t.key === 'mensualidad') return config.mensualidadActiva !== false;
+      if (t.key === 'matricula')   return config.matriculaActiva !== false;
+      if (t.key === 'anual')       return config.anualActivo === true;
+      return true;
+    });
+    if (disponibles.length > 0 && !disponibles.find(t => t.key === tipo)) {
+      setTipo(disponibles[0].key);
+    }
+  }, [config]);
+
+  // Helper: comprueba si el descuento de un item está vigente hoy según sus fechas
+  const getDescuentoItem = React.useCallback((pct: number, activo: boolean, inicio?: string, fin?: string): number => {
+    if (!activo || !pct) return 0;
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (inicio && hoy < inicio) return 0;
+    if (fin && hoy > fin) return 0;
+    return pct;
+  }, []);
+
+  // Descuento del tipo de pago seleccionado (si está activo y dentro de su rango)
+  const descuentoGlobalTipo = React.useMemo(() => {
+    if (!config) return 0;
+    if (tipo === 'mensualidad') return getDescuentoItem(config.descuentoMensualidad, config.descuentoMensualidadActivo, config.descuentoMensualidadInicio, config.descuentoMensualidadFin);
+    if (tipo === 'matricula') return getDescuentoItem(config.descuentoMatricula, config.descuentoMatriculaActivo, config.descuentoMatriculaInicio, config.descuentoMatriculaFin);
+    if (tipo === 'anual') return getDescuentoItem(config.descuentoAnual, config.descuentoAnualActivo, config.descuentoAnualInicio, config.descuentoAnualFin);
+    return 0;
+  }, [config, tipo, getDescuentoItem]);
+
+  // Descuento efectivo: 1 jugador = max(tipo, personal); varios = solo tipo
+  const descuentoEfectivo = React.useMemo(() => {
+    if (jugadores.length === 1) {
+      return Math.max(descuentoGlobalTipo, jugadores[0].descuentoPersonal ?? 0);
+    }
+    return descuentoGlobalTipo;
+  }, [descuentoGlobalTipo, jugadores]);
+
+  // Actualizar monto sugerido cuando cambia tipo, config, jugadores o descuento
+  useEffect(() => {
+    if (!config) return;
+    const base =
       tipo === 'mensualidad' ? config.precioMensualidad :
       tipo === 'matricula' ? config.precioMatricula :
       tipo === 'anual' ? config.precioAnual : undefined;
-    if (sugerido) setMontoStr(String(sugerido));
-  }, [tipo, config]);
+    if (!base) return;
+    const total = base * (jugadores.length || 1);
+    const conDescuento = descuentoEfectivo > 0
+      ? Math.round(total * (1 - descuentoEfectivo / 100))
+      : total;
+    setMontoStr(String(conDescuento));
+  }, [tipo, config, jugadores, descuentoEfectivo]);
 
   const cargarDatos = async () => {
     if (!club) return;
@@ -220,19 +276,23 @@ const PagoScreen: React.FC<PagoScreenProps> = ({ navigation, route }) => {
 
           {/* Tipo de pago */}
           <Text style={styles.seccion}>📂 Tipo de pago</Text>
-          <View style={styles.chipRow}>
-            {TIPOS.map(t => (
-              <TouchableOpacity
-                key={t.key}
-                style={[styles.chip, tipo === t.key && styles.chipActivo]}
-                onPress={() => setTipo(t.key)}
-              >
-                <Text style={[styles.chipText, tipo === t.key && styles.chipTextoActivo]}>
-                  {t.icon} {t.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {tiposDisponibles.length === 0 ? (
+            <Text style={styles.sinDatos}>No hay modalidades de pago activas en este club.</Text>
+          ) : (
+            <View style={styles.chipRow}>
+              {tiposDisponibles.map(t => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.chip, tipo === t.key && styles.chipActivo]}
+                  onPress={() => setTipo(t.key)}
+                >
+                  <Text style={[styles.chipText, tipo === t.key && styles.chipTextoActivo]}>
+                    {t.icon} {t.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Monto */}
           <Text style={styles.seccion}>💰 Monto (CLP)</Text>
@@ -245,12 +305,22 @@ const PagoScreen: React.FC<PagoScreenProps> = ({ navigation, route }) => {
           />
           {config && (
             <Text style={styles.hint}>
-              Precio configurado:{' '}
+              Precio base:{' '}
               {tipo === 'mensualidad' && config.precioMensualidad ? formatMonto(config.precioMensualidad) :
                tipo === 'matricula' && config.precioMatricula ? formatMonto(config.precioMatricula) :
                tipo === 'anual' && config.precioAnual ? formatMonto(config.precioAnual) :
                'No configurado'}
+              {jugadores.length > 1 ? ` × ${jugadores.length} jugadores` : ''}
             </Text>
+          )}
+          {descuentoEfectivo > 0 && (
+            <View style={styles.descuentoTag}>
+              <Text style={styles.descuentoTagText}>
+                🏷️ Descuento especial aplicado: {descuentoEfectivo}%
+                {jugadores.length === 1 && (jugadores[0].descuentoPersonal ?? 0) > descuentoGlobalTipo
+                  ? ' (personal)' : ' (descuento especial del club)'}
+              </Text>
+            </View>
           )}
 
           {/* Método de pago */}
@@ -364,6 +434,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   hint: { fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' },
+  descuentoTag: {
+    marginTop: 8, backgroundColor: '#fff3e0', borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderLeftWidth: 3, borderLeftColor: '#e65100',
+  },
+  descuentoTagText: { fontSize: 13, color: '#e65100', fontWeight: '600' },
   avisoBox: {
     marginTop: 20,
     padding: 14,

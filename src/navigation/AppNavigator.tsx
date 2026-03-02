@@ -14,6 +14,9 @@ import ExportarAsistenciasScreen from '../screens/admin/ExportarAsistenciasScree
 import PerfilJugadorScreen from '../screens/PerfilJugadorScreen';
 import ApoderadoScreen from '../screens/ApoderadoScreen';
 import PagoScreen from '../screens/PagoScreen';
+import RegistroClubScreen from '../screens/RegistroClubScreen';
+import FormularioAutoinscripcion from '../screens/FormularioAutoinscripcion';
+import EvaluacionesScreen from '../screens/EvaluacionesScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -43,9 +46,14 @@ const AppNavigator = () => {
             <Stack.Screen name="PerfilJugador" component={PerfilJugadorScreen} />
             <Stack.Screen name="Apoderado" component={ApoderadoScreen} />
             <Stack.Screen name="Pago" component={PagoScreen} />
+            <Stack.Screen name="FormularioInscripcion" component={FormularioAutoinscripcion} />
+            <Stack.Screen name="Evaluaciones" component={EvaluacionesScreen} />
           </>
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="RegistroClub" component={RegistroClubScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

@@ -66,6 +66,7 @@ export interface Categoria {
   diasEntrenamiento: string[]; // ['lunes', 'miercoles', 'viernes']
   horarios?: Record<string, string>; // { 'lunes': '18:00-20:00' }
   orden: number;
+  totalJugadores?: number; // conteo de jugadores en la categoría
   createdAt: string;
   updatedAt: string;
 }
@@ -115,7 +116,11 @@ export interface Jugador {
   
   // Datos del formulario dinámico
   datosFormularioExtra?: Record<string, any>;
-  
+
+  // Descuento especial (asignado por admin)
+  descuentoPersonal?: number;  // porcentaje 0-100
+  notaDescuento?: string;       // nota interna, no visible al jugador
+
   createdAt: string;
   updatedAt: string;
 }
@@ -262,6 +267,22 @@ export interface ConfiguracionPagosClub {
   precioMensualidad?: number;
   precioAnual?: number;
   descuentoAnualPorcentaje: number;
+  // Descuentos especiales por tipo (cada uno con rango de fechas opcional)
+  descuentoMensualidad: number;
+  descuentoMensualidadInicio?: string;    // 'YYYY-MM-DD', null = sin límite inicial
+  descuentoMensualidadFin?: string;       // 'YYYY-MM-DD', null = sin límite final
+  descuentoMensualidadActivo: boolean;
+  descuentoMatricula: number;
+  descuentoMatriculaInicio?: string;
+  descuentoMatriculaFin?: string;
+  descuentoMatriculaActivo: boolean;
+  descuentoAnual: number;
+  descuentoAnualInicio?: string;
+  descuentoAnualFin?: string;
+  descuentoAnualActivo: boolean;
+  matriculaActiva: boolean;
+  mensualidadActiva: boolean;
+  anualActivo: boolean;
   moneda: string;
   activo: boolean;
   modoPrueba: boolean;
@@ -350,4 +371,34 @@ export interface GoogleSheetsConfig {
   apiKey: string;
   spreadsheetId: string;
   sheetName: string;
+}
+
+// ============================================
+// CÓDIGO DE INVITACIÓN
+// ============================================
+export interface CodigoInvitacion {
+  id: string;
+  codigo: string;
+  usado: boolean;
+  clubIdCreado?: string;
+  creadoPorId?: string;
+  createdAt: string;
+}
+
+// ============================================
+// AVISO DEL CLUB
+// ============================================
+export type TipoAviso = 'info' | 'warning' | 'urgente';
+
+export interface Aviso {
+  id: string;
+  clubId: string;
+  autorId?: string;
+  autorNombre?: string;
+  titulo: string;
+  contenido: string;
+  tipo: TipoAviso;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
