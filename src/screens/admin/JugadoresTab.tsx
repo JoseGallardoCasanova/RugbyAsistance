@@ -349,11 +349,17 @@ const JugadoresTab: React.FC = () => {
   const handleDescargarPlantilla = async () => {
     if (!club) return;
     try {
-      const columnas = formularioConfig?.campos && formularioConfig.campos.length > 0
-        ? ['categoria', ...formularioConfig.campos.map((c: any) => c.label)]
-        : ['nombre', 'apellido', 'rut', 'fecha_nacimiento', 'email', 'telefono',
-           'categoria', 'contacto_emergencia', 'tel_emergencia', 'sistema_salud', 'actividad'];
-      const wsData = [columnas];
+      // Siempre usar nombres técnicos de columna para que el importador los reconozca
+      const columnas = ['nombre', 'apellido', 'rut', 'fecha_nacimiento', 'email', 'telefono',
+        'categoria', 'contacto_emergencia', 'tel_emergencia', 'sistema_salud', 'actividad', 'contraseña'];
+      // Fila de ayuda con descripción de cada campo
+      const ayuda = ['Nombre(s)', 'Apellido(s)', 'RUT (sin puntos)', 'YYYY-MM-DD', 'Email',
+        'Teléfono', 'Nombre exacto de categoría', 'Nombre contacto', 'Tel contacto',
+        'Fonasa/Isapre', 'Activo/Inactivo', 'jugador123 (modificable)'];
+      // Fila de ejemplo para que quede claro el formato
+      const ejemplo = ['Juan', 'González', '12345678-9', '2005-03-15', 'juan@mail.com',
+        '+56912345678', 'Sub-14', '', '', 'Fonasa', 'Activo', 'jugador123'];
+      const wsData = [columnas, ayuda, ejemplo];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = columnas.map(() => ({ wch: 22 }));
       const wb = XLSX.utils.book_new();
@@ -389,22 +395,67 @@ const JugadoresTab: React.FC = () => {
       const filas: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (!filas.length) { Alert.alert('Vacío', 'El archivo no tiene datos.'); return; }
 
-      setImportTotal(filas.length);
+      // Saltar la fila de ayuda si la 1ª celda coincide con las descripciones de la plantilla
+      const primeraFila = filas[0];
+      const esFilaAyuda = String(primeraFila['nombre'] || '').toLowerCase().includes('nombre') ||
+                          String(primeraFila['rut'] || '').toLowerCase().includes('rut') ||
+                          String(primeraFila['rut'] || '').toLowerCase().includes('punt');
+      const filasData = esFilaAyuda ? filas.slice(1) : filas;
+      if (!filasData.length) { Alert.alert('Vacío', 'El archivo no tiene datos de jugadores.'); return; }
+
+      setImportTotal(filasData.length);
       setImportPaso(0);
       setImportErrores([]);
       setImportDone(false);
       setImportModal(true);
 
       const errores: string[] = [];
-      for (let i = 0; i < filas.length; i++) {
-        const fila = filas[i];
+      for (let i = 0; i < filasData.length; i++) {
+        const fila = filasData[i];
         setImportPaso(i + 1);
-        const nombreVal = String(fila['nombre'] || fila['Nombre'] || '').trim();
-        const apellidoVal = String(fila['apellido'] || fila['Apellido'] || '').trim();
-        const rutVal = String(fila['rut'] || fila['RUT'] || '').trim();
-        const catNombre = String(fila['categoria'] || fila['Categoria'] || fila['Categoría'] || '').trim();
+
+        // Helper: busca el valor en múltiples variantes de clave
+        const get = (...keys: string[]) => {
+          for (const k of keys) {
+            const v = fila[k];
+            if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+          }
+          return '';
+        };
+
+        // Helper: convierte fecha serial de Excel (número) a YYYY-MM-DD
+        const getDate = (...keys: string[]): string | undefined => {
+          for (const k of keys) {
+            const v = fila[k];
+            if (v === undefined || v === null || String(v).trim() === '') continue;
+            if (typeof v === 'number' && v > 1000) {
+              // Número serial de Excel
+              try {
+                const parsed = XLSX.SSF.parse_date_code(v);
+                return `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+              } catch { continue; }
+            }
+            const str = String(v).trim();
+            if (str) return str;
+          }
+          return undefined;
+        };
+
+        // Soporta "Nombre completo" (label del form) y columnas separadas nombre/apellido
+        const nombreCompletoRaw = get('Nombre completo', 'nombre completo', 'NOMBRE COMPLETO');
+        let nombreVal = get('nombre', 'Nombre', 'NOMBRE');
+        let apellidoVal = get('apellido', 'Apellido', 'APELLIDO');
+        if (!nombreVal && nombreCompletoRaw) {
+          const partes = nombreCompletoRaw.split(/\s+/);
+          apellidoVal = apellidoVal || (partes.length > 1 ? partes[partes.length - 1] : '');
+          nombreVal = partes.slice(0, partes.length > 1 ? -1 : 1).join(' ');
+        }
+
+        const rutVal = get('rut', 'RUT', 'Rut', 'r.u.t', 'R.U.T');
+        const catNombre = get('categoria', 'Categoria', 'Categoría', 'CATEGORIA');
+
         if (!nombreVal || !rutVal) {
-          errores.push(`Fila ${i + 2}: nombre y rut son obligatorios`);
+          errores.push(`Fila ${i + (esFilaAyuda ? 3 : 2)}: nombre y rut son obligatorios`);
           continue;
         }
         const catObj = categorias.find(c => c.nombre.toLowerCase() === catNombre.toLowerCase());
@@ -414,21 +465,22 @@ const JugadoresTab: React.FC = () => {
             rut: rutVal,
             nombre: `${nombreVal} ${apellidoVal}`.trim(),
             categoriaId: catObj?.id ?? (categorias[0]?.id ?? ''),
-            email: String(fila['email'] || fila['Email'] || '').trim() || undefined,
-            telefono: String(fila['telefono'] || fila['Telefono'] || '').trim() || undefined,
-            fechaNacimiento: String(fila['fecha_nacimiento'] || '').trim() || undefined,
-            contactoEmergencia: String(fila['contacto_emergencia'] || '').trim() || undefined,
-            telEmergencia: String(fila['tel_emergencia'] || '').trim() || undefined,
-            sistemaSalud: String(fila['sistema_salud'] || '').trim() || undefined,
-            actividad: String(fila['actividad'] || '').trim() || undefined,
+            email: get('email', 'Email', 'E-mail', 'correo', 'Correo') || undefined,
+            telefono: get('telefono', 'Telefono', 'Teléfono', 'TELEFONO', 'tel', 'Tel') || undefined,
+            fechaNacimiento: getDate('fecha_nacimiento', 'Fecha de nacimiento', 'fecha nacimiento', 'Fecha Nacimiento'),
+            contactoEmergencia: get('contacto_emergencia', 'Contacto emergencia', 'contacto emergencia') || undefined,
+            telEmergencia: get('tel_emergencia', 'Tel emergencia', 'tel. emergencia', 'Teléfono emergencia') || undefined,
+            sistemaSalud: get('sistema_salud', 'Sistema salud', 'Sistema de salud', 'Fonasa/Isapre') || undefined,
+            actividad: get('actividad', 'Actividad', 'ACTIVIDAD') || undefined,
           });
           if (jugadorCreado) {
-            await SupabaseServiceV2.autoCrearUsuarioJugador(club.id, jugadorCreado.id, nombreVal, apellidoVal);
+            const passwordImport = get('contraseña', 'Contraseña', 'password', 'Password', 'clave', 'Clave') || 'jugador123';
+            await SupabaseServiceV2.autoCrearUsuarioJugador(club.id, jugadorCreado.id, nombreVal, apellidoVal, undefined, undefined, passwordImport);
           } else {
-            errores.push(`Fila ${i + 2} (${nombreVal}): No se pudo crear`);
+            errores.push(`Fila ${i + (esFilaAyuda ? 3 : 2)} (${nombreVal}): No se pudo crear`);
           }
         } catch (e: any) {
-          errores.push(`Fila ${i + 2} (${nombreVal}): ${e.message}`);
+          errores.push(`Fila ${i + (esFilaAyuda ? 3 : 2)} (${nombreVal}): ${e.message}`);
         }
       }
       setImportErrores(errores);

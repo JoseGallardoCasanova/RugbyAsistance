@@ -18,4 +18,5 @@ export type RootStackParamList = {
   Pago: { jugadorIds: string[]; tipo?: 'mensualidad' | 'matricula' | 'anual' };
   RegistroClub: undefined;
   FormularioInscripcion: undefined;
+  SuperAdminDashboard: undefined;
 };

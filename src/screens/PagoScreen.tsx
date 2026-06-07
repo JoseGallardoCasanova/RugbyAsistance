@@ -280,17 +280,30 @@ const PagoScreen: React.FC<PagoScreenProps> = ({ navigation, route }) => {
             <Text style={styles.sinDatos}>No hay modalidades de pago activas en este club.</Text>
           ) : (
             <View style={styles.chipRow}>
-              {tiposDisponibles.map(t => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.chip, tipo === t.key && styles.chipActivo]}
-                  onPress={() => setTipo(t.key)}
-                >
-                  <Text style={[styles.chipText, tipo === t.key && styles.chipTextoActivo]}>
-                    {t.icon} {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {tiposDisponibles.map(t => {
+                const precio = config
+                  ? (t.key === 'mensualidad' ? config.precioMensualidad
+                    : t.key === 'matricula' ? config.precioMatricula
+                    : t.key === 'anual' ? config.precioAnual
+                    : undefined)
+                  : undefined;
+                return (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[styles.chip, tipo === t.key && styles.chipActivo]}
+                    onPress={() => setTipo(t.key)}
+                  >
+                    <Text style={[styles.chipText, tipo === t.key && styles.chipTextoActivo]}>
+                      {t.icon} {t.label}
+                    </Text>
+                    {precio != null && precio > 0 && (
+                      <Text style={[styles.chipPrecio, tipo === t.key && styles.chipPrecioActivo]}>
+                        {formatMonto(precio)}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
@@ -406,10 +419,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ccc',
     backgroundColor: '#fff',
+    alignItems: 'center',
   },
   chipActivo: { borderColor: '#1a472a', backgroundColor: '#e8f5e9' },
   chipText: { fontSize: 14, color: '#666' },
   chipTextoActivo: { color: '#1a472a', fontWeight: '700' },
+  chipPrecio: { fontSize: 12, color: '#888', marginTop: 2 },
+  chipPrecioActivo: { color: '#1a472a', fontWeight: '600' },
   metodoCard: {
     flex: 1,
     minWidth: 90,

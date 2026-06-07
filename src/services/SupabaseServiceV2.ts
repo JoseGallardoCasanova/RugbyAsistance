@@ -154,6 +154,19 @@ class SupabaseServiceV2 {
     }
   }
 
+  async getClubStats(clubId: string): Promise<{ jugadores: number; usuarios: number; categorias: number }> {
+    try {
+      const [j, u, c] = await Promise.all([
+        this.supabase.from('jugadores').select('*', { count: 'exact', head: true }).eq('club_id', clubId),
+        this.supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('club_id', clubId),
+        this.supabase.from('categorias').select('*', { count: 'exact', head: true }).eq('club_id', clubId),
+      ]);
+      return { jugadores: j.count ?? 0, usuarios: u.count ?? 0, categorias: c.count ?? 0 };
+    } catch {
+      return { jugadores: 0, usuarios: 0, categorias: 0 };
+    }
+  }
+
   async getClubBySlug(slug: string): Promise<Club | null> {
     try {
       console.log(`🏆 [SUPABASE V2] Obteniendo club por slug: ${slug}`);
@@ -318,7 +331,7 @@ class SupabaseServiceV2 {
       const nuevoUsuario = await this.crearUsuario({
         clubId,
         username: customUsername?.trim() || '',
-        email: email ?? '',
+        email: (email?.trim() || null) as any,
         passwordHash: plainPassword,
         nombre,
         apellido,
@@ -729,7 +742,7 @@ class SupabaseServiceV2 {
         .insert([{
           club_id: usuario.clubId,
           username: username,
-          email: usuario.email,
+          email: usuario.email || null,
           password_hash: passwordHashed,
           nombre: usuario.nombre,
           apellido: usuario.apellido,
@@ -741,7 +754,33 @@ class SupabaseServiceV2 {
         .select()
         .single();
 
-      if (error || !data) throw error;
+      if (error) {
+        // Si el error es de email duplicado, reintentamos sin email
+        if (error.message?.includes('unique_email_per_club') && usuario.email) {
+          console.warn('⚠️ [SUPABASE V2] Email duplicado, creando usuario sin email');
+          const { data: data2, error: error2 } = await this.supabase
+            .from('usuarios')
+            .insert([{
+              club_id: usuario.clubId,
+              username: username,
+              email: null,
+              password_hash: passwordHashed,
+              nombre: usuario.nombre,
+              apellido: usuario.apellido,
+              foto_url: usuario.fotoUrl,
+              telefono: usuario.telefono,
+              role: usuario.role,
+              categorias_asignadas: usuario.categoriasAsignadas || [],
+            }])
+            .select()
+            .single();
+          if (error2 || !data2) throw error2 ?? new Error('No se pudo crear el usuario');
+          console.log('✅ [SUPABASE V2] Usuario creado sin email (duplicado):', username);
+          return this.mapUser(data2);
+        }
+        throw error;
+      }
+      if (!data) throw new Error('No se pudo crear el usuario');
 
       console.log('✅ [SUPABASE V2] Usuario creado con username:', username);
       return this.mapUser(data);
@@ -1514,10 +1553,19 @@ class SupabaseServiceV2 {
         .from('pagos')
         .select('*')
         .eq('club_id', clubId)
-        .contains('beneficiarios', [jugadorId])
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map(p => this.mapPago(p));
+      // Filtrar en JS para evitar problemas con json vs jsonb en la columna beneficiarios
+      return (data || [])
+        .filter(p => {
+          try {
+            const bens: string[] = Array.isArray(p.beneficiarios)
+              ? p.beneficiarios
+              : (typeof p.beneficiarios === 'string' ? JSON.parse(p.beneficiarios) : []);
+            return bens.includes(jugadorId);
+          } catch { return false; }
+        })
+        .map(p => this.mapPago(p));
     } catch (error: any) {
       console.error('❌ [SUPABASE V2] Error al obtener pagos del jugador:', error.message);
       return [];

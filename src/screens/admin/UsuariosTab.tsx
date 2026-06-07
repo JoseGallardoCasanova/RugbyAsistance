@@ -189,8 +189,10 @@ const UsuariosTab: React.FC = () => {
   const handleDescargarPlantillaEntrenadores = async () => {
     if (!club) return;
     try {
-      const columnas = ['nombre', 'apellido', 'email', 'telefono'];
-      const wsData = [columnas];
+      const columnas = ['nombre', 'apellido', 'email', 'telefono', 'contraseña'];
+      const ayuda = ['Nombre(s)', 'Apellido(s)', 'Email', 'Teléfono', 'entrenador123 (modificable)'];
+      const ejemplo = ['María', 'López', 'maria@mail.com', '+56912345678', 'entrenador123'];
+      const wsData = [columnas, ayuda, ejemplo];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
       ws['!cols'] = columnas.map(() => ({ wch: 22 }));
       const wb = XLSX.utils.book_new();
@@ -239,6 +241,7 @@ const UsuariosTab: React.FC = () => {
         const nombreVal = String(fila['nombre'] || fila['Nombre'] || '').trim();
         const apellidoVal = String(fila['apellido'] || fila['Apellido'] || '').trim();
         const emailVal = String(fila['email'] || fila['Email'] || '').trim();
+        const passwordVal = String(fila['contraseña'] || fila['Contraseña'] || fila['password'] || fila['Password'] || fila['clave'] || '').trim() || 'entrenador123';
         if (!nombreVal) {
           errores.push(`Fila ${i + 2}: nombre es obligatorio`);
           continue;
@@ -251,7 +254,7 @@ const UsuariosTab: React.FC = () => {
             email: emailVal || undefined,
             telefono: String(fila['telefono'] || fila['Telefono'] || '').trim() || undefined,
             role: 'entrenador',
-            passwordHash: 'entrenador123',
+            passwordHash: passwordVal,
             categoriasAsignadas: [],
           } as any);
           if (!result) {

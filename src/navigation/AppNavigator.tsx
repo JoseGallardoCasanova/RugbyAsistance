@@ -17,6 +17,7 @@ import PagoScreen from '../screens/PagoScreen';
 import RegistroClubScreen from '../screens/RegistroClubScreen';
 import FormularioAutoinscripcion from '../screens/FormularioAutoinscripcion';
 import EvaluacionesScreen from '../screens/EvaluacionesScreen';
+import SuperAdminDashboardScreen from '../screens/admin/SuperAdminDashboardScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -48,6 +49,7 @@ const AppNavigator = () => {
             <Stack.Screen name="Pago" component={PagoScreen} />
             <Stack.Screen name="FormularioInscripcion" component={FormularioAutoinscripcion} />
             <Stack.Screen name="Evaluaciones" component={EvaluacionesScreen} />
+            <Stack.Screen name="SuperAdminDashboard" component={SuperAdminDashboardScreen} />
           </>
         ) : (
           <>

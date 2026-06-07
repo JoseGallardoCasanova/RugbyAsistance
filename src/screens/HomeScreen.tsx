@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContextV2';
 import SupabaseServiceV2 from '../services/SupabaseServiceV2';
 import NotificacionesService from '../services/NotificacionesService';
 import { useClub } from '../context/ClubContext';
-import { Categoria, Aviso, Jugador, Club } from '../types/v2';
+import { Categoria, Aviso, Jugador } from '../types/v2';
 import BotonFlotanteInscripcion from '../components/BotonFlotanteInscripcion';
 import FormularioAutoinscripcion from './FormularioAutoinscripcion';
 
@@ -29,7 +29,7 @@ interface HomeScreenProps {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, logout, reloadUser } = useAuth();
-  const { club, loadClub } = useClub();
+  const { club } = useClub();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [formularioVisible, setFormularioVisible] = useState(false);
@@ -44,9 +44,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Notificaciones semanales de entrenamiento
   const [notifActivas, setNotifActivas] = useState(false);
   const [cargandoNotif, setCargandoNotif] = useState(false);
-  // Super admin: selector de club
-  const [todosLosClubs, setTodosLosClubs] = useState<Club[]>([]);
-  const [cargandoClubes, setCargandoClubes] = useState(false);
 
   // ✅ Refs estables para evitar que useFocusEffect se re-dispare al cambiar user/club
   const clubRef = React.useRef(club);
@@ -97,14 +94,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             .then(activo => setNotifActivas(activo))
             .catch(() => {});
         }
-        // Super admin: cargar todos los clubes para el selector
-        if (currentUser.role === 'super_admin') {
-          setCargandoClubes(true);
-          SupabaseServiceV2.getAllClubs()
-            .then(clubs => setTodosLosClubs(clubs))
-            .catch(() => {})
-            .finally(() => setCargandoClubes(false));
-        }
+        // (Super admin: ya no carga clubes aquí, tiene su propio dashboard)
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []) // ← deps vacías: el callback nunca se recrea, rompe el loop
@@ -285,36 +275,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Lista de categorías */}
-      {/* Super admin: selector de club */}
-      {user?.role === 'super_admin' && todosLosClubs.length > 0 && (
-        <View style={styles.clubSelectorContainer}>
-          <Text style={styles.clubSelectorLabel}>🏟️ Club activo:</Text>
-          {cargandoClubes ? (
-            <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 10 }} />
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-            >
-              {todosLosClubs.map(c => {
-                const activo = c.id === club?.id;
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[styles.clubChip, activo && styles.clubChipActivo]}
-                    onPress={() => { if (!activo) loadClub(c.id); }}
-                  >
-                    <Text style={[styles.clubChipText, activo && styles.clubChipTextActivo]}>
-                      {activo ? '✓ ' : ''}{c.nombre}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
+      {/* Super admin: banner de club activo */}
+      {user?.role === 'super_admin' && (
+        <TouchableOpacity
+          style={styles.superAdminBanner}
+          onPress={() => navigation.navigate('SuperAdminDashboard')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.superAdminBannerLeft}>
+            <Text style={styles.superAdminBannerLabel}>🏟️ Club activo</Text>
+            <Text style={styles.superAdminBannerClub} numberOfLines={1}>
+              {club ? club.nombre : 'Ninguno seleccionado'}
+            </Text>
+          </View>
+          <View style={styles.superAdminBannerRight}>
+            <Text style={styles.superAdminBannerBtn}>Ver todos ›</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
@@ -659,42 +636,40 @@ const styles = StyleSheet.create({
   avisoTitulo: { fontSize: 14, fontWeight: '700', flex: 1 },
   avisoContenido: { fontSize: 13, color: '#444', lineHeight: 18 },
 
-  // Club selector (super admin)
-  clubSelectorContainer: {
-    backgroundColor: '#1a472a',
-    paddingHorizontal: 14,
-    paddingBottom: 10,
+  // Super admin banner (reemplaza el chip-selector horizontal)
+  superAdminBanner: {
+    backgroundColor: '#163d22',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(168,213,168,0.3)',
   },
-  clubSelectorLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+  superAdminBannerLeft: {
+    flex: 1,
+  },
+  superAdminBannerLabel: {
+    fontSize: 11,
+    color: 'rgba(168,213,168,0.8)',
     fontWeight: '600',
-    marginRight: 4,
-    flexShrink: 0,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 1,
   },
-  clubChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  clubChipActivo: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
-  },
-  clubChipText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
-  },
-  clubChipTextActivo: {
-    color: '#1a472a',
+  superAdminBannerClub: {
+    fontSize: 15,
+    color: '#ffffff',
     fontWeight: 'bold',
+  },
+  superAdminBannerRight: {
+    paddingLeft: 12,
+  },
+  superAdminBannerBtn: {
+    fontSize: 13,
+    color: '#a8d5a8',
+    fontWeight: '600',
   },
   categoriesGrid: {
     flexDirection: 'row',
